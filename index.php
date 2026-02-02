@@ -92,6 +92,12 @@ if (!isset($_SESSION['user_cin'])) {
                 </div>
                 <button type="submit">Access Board / دخول</button>
             </form>
+            <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.2);">
+                <a href="guide.php"
+                    style="color:#28a745; text-decoration:none; font-size:14px; display:inline-flex; align-items:center; gap:8px;">
+                    📖 <span>دليل الاستخدام للمبتدئين</span> | <span style="font-size:12px;">Guide d'utilisation</span>
+                </a>
+            </div>
         </div>
     </body>
 
