@@ -172,7 +172,7 @@ sort($locations);
 
 <body>
 
-    <div class="top-nav">
+    <div class="top-nav no-print">
         <div class="top-nav-header">
             <h3>📊 Daily Snapshot</h3>
         </div>
@@ -184,9 +184,27 @@ sort($locations);
     </div>
 
     <div class="container">
-        <h1>📸 Daily Overview / نظرة يومية</h1>
+        <!-- PRINT HEADER (ISO) -->
+        <div class="print-header">
+            <div class="print-logo">
+                🏭 CANDYTEX S.A.R.L<br>
+                <small style="font-size:10pt; font-weight:normal;">Excellence in Textiles</small>
+            </div>
+            <div style="text-align:center;">
+                <h2 style="margin:0;">SQD+C DAILY PERFORMANCE REPORT</h2>
+                <p style="margin:5px 0;">Rapport Quotidien de Performance</p>
+                <b>Date: <?= $selected_date ?></b>
+            </div>
+            <div class="doc-info">
+                <b>Ref:</b> OP-SQDC-004<br>
+                <b>Rev:</b> 2.1 (2026)<br>
+                <b>Type:</b> Confidential
+            </div>
+        </div>
 
-        <form class="controls">
+        <h1 class="no-print">📸 Daily Overview / نظرة يومية</h1>
+
+        <form class="controls no-print">
             <label>Start Date:</label>
             <input type="date" name="date" value="<?= $selected_date ?>" onchange="this.form.submit()"
                 style="padding: 5px;">
@@ -290,7 +308,7 @@ sort($locations);
                     <th>⚠️ Issues</th>
                 </tr>
                 <!-- FILTER ROW -->
-                <tr style="background:#f1f1f1;">
+                <tr class="no-print" style="background:#f1f1f1;">
                     <td style="padding:5px;">
                         <input type="text" id="filterName" onkeyup="filterTable()" placeholder="🔍 Search Name/CIN..."
                             style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
@@ -388,6 +406,31 @@ sort($locations);
         <?php if (empty($managers)): ?>
             <p style="text-align:center; padding:20px; color:#666;">No managers found.</p>
         <?php endif; ?>
+
+        <!-- PRINT LEGEND -->
+        <div class="print-legend">
+            <strong>Key / المفتاح:</strong> &nbsp;
+            <div class="legend-item"><span class="legend-color" style="background:#28a745;"></span> Green (Target Met)
+            </div>
+            <div class="legend-item"><span class="legend-color" style="background:#fd7e14;"></span> Orange (Warning)
+            </div>
+            <div class="legend-item"><span class="legend-color" style="background:#dc3545;"></span> Red (Issue/Stop)
+            </div>
+            <div class="legend-item"><span class="legend-color" style="background:#17a2b8;"></span> Blue (Info)</div>
+            <br>
+            <strong>Categories:</strong> S=Safety, Q=Quality, D=Delivery, 5S=Organization, C=Cost.
+        </div>
+
+        <!-- PRINT FOOTER via HTML (Note: Fixed position covers every page usually) -->
+        <div class="print-footer">
+            <div>Generé par système le: <?= date('Y-m-d H:i') ?> | User: <?= $_SESSION['user_name'] ?? 'Admin' ?></div>
+            <div>
+                Validation Manager: ____________________
+                &nbsp;&nbsp;|&nbsp;&nbsp;
+                Validation Director: ____________________
+            </div>
+            <div>Page <span class="page-number"></span></div>
+        </div>
     </div>
 
     <script>
