@@ -65,19 +65,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
 }
 
 // --- FILTERING ---
-$filter_loc = $_GET['filter_loc'] ?? '';
-$filter_dept = $_GET['filter_dept'] ?? '';
+// Note: location and department columns may not exist yet
+$filter_role = $_GET['filter_role'] ?? '';
 
 $sql = "SELECT * FROM users WHERE 1=1";
 $params = [];
 
-if ($filter_loc) {
-    $sql .= " AND location = ?";
-    $params[] = $filter_loc;
-}
-if ($filter_dept) {
-    $sql .= " AND department = ?";
-    $params[] = $filter_dept;
+if ($filter_role) {
+    $sql .= " AND role = ?";
+    $params[] = $filter_role;
 }
 
 $sql .= " ORDER BY role, name";
@@ -178,13 +174,27 @@ $users = $stmt->fetchAll();
 </head>
 
 <body>
+    <!-- Mobile Top Navigation -->
+    <div class="top-nav">
+        <div class="top-nav-header">
+            <h3>⚙️ Admin Panel</h3>
+        </div>
+        <div class="nav-links">
+            <a href="index.php">📊 لوحة</a>
+            <a href="admin.php" class="active">⚙️ إدارة</a>
+            <a href="global.php">🏭 عام</a>
+            <a href="index.php?logout=1" class="logout">خروج</a>
+        </div>
+    </div>
+
+    <!-- Desktop Sidebar -->
     <div class="sidebar">
         <h3>⚙️ Admin Panel</h3>
         <p>Managing Users</p>
         <hr>
-        <a href="index.php" class="logout-btn" style="background:#007bff; margin-bottom:10px;"> Back to Board</a>
-        <a href="global.php" class="logout-btn" style="background:#6f42c1; margin-bottom:10px;">Global View</a>
-        <a href="index.php?logout=1" class="logout-btn">Logout</a>
+        <a href="index.php" class="logout-btn" style="background:#007bff;">📊 Board</a>
+        <a href="global.php" class="logout-btn" style="background:#6f42c1;">🏭 Global</a>
+        <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 
     <div class="main-content">
@@ -212,31 +222,14 @@ $users = $stmt->fetchAll();
 
             <!-- Filters -->
             <div class="filter-bar">
-                <strong>🔍 Filter Leaders:</strong>
-                <form method="GET" style="display:flex; gap:10px; align-items:center;">
-                    <select name="filter_loc">
-                        <option value="">All Locations / كل المواقع</option>
-                        <option value="Candy 1" <?php if ($filter_loc == 'Candy 1')
-                            echo 'selected'; ?>>Candy 1</option>
-                        <option value="Candy 2" <?php if ($filter_loc == 'Candy 2')
-                            echo 'selected'; ?>>Candy 2</option>
-                        <option value="Flora 1" <?php if ($filter_loc == 'Flora 1')
-                            echo 'selected'; ?>>Flora 1</option>
-                    </select>
-                    <select name="filter_dept">
-                        <option value="">All Departments / كل الأقسام</option>
-                        <option value="Sewing" <?php if ($filter_dept == 'Sewing')
-                            echo 'selected'; ?>>Sewing / الخياطة
-                        </option>
-                        <option value="Cutting" <?php if ($filter_dept == 'Cutting')
-                            echo 'selected'; ?>>Cutting / القص
-                        </option>
-                        <option value="Maintenance" <?php if ($filter_dept == 'Maintenance')
-                            echo 'selected'; ?>
-                            >Maintenance / الصيانة</option>
-                        <option value="Warehouse" <?php if ($filter_dept == 'Warehouse')
-                            echo 'selected'; ?>>Warehouse /
-                            المستودع</option>
+                <strong>🔍 Filter:</strong>
+                <form method="GET" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <select name="filter_role">
+                        <option value="">All Roles / كل الأدوار</option>
+                        <option value="admin" <?php if ($filter_role == 'admin')
+                            echo 'selected'; ?>>Admin</option>
+                        <option value="manager" <?php if ($filter_role == 'manager')
+                            echo 'selected'; ?>>Manager</option>
                     </select>
                     <button type="submit" class="btn btn-blue">Filter</button>
                     <a href="admin.php" class="btn" style="background:#6c757d;">Reset</a>

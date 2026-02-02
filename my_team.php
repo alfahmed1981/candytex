@@ -234,23 +234,27 @@ $my_team = $stmt->fetchAll();
 </head>
 
 <body>
-    <!-- Mobile Header -->
-    <div class="mobile-header">
-        <h3>👥 My Team</h3>
-        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <!-- Mobile Top Navigation -->
+    <div class="top-nav">
+        <div class="top-nav-header">
+            <h3>👥 My Team</h3>
+        </div>
+        <div class="nav-links">
+            <a href="index.php">📊 لوحة</a>
+            <a href="my_team.php" class="active">👥 فريق</a>
+            <a href="guide.php">📖 دليل</a>
+            <a href="index.php?logout=1" class="logout">خروج</a>
+        </div>
     </div>
 
-    <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
-
-    <div class="sidebar" id="sidebar">
-        <button class="close-sidebar" onclick="closeSidebar()">✕</button>
+    <!-- Desktop Sidebar -->
+    <div class="sidebar">
         <div class="profile">
             <h3>👥 HR Manager</h3>
             <p><?php echo $_SESSION['user_name']; ?></p>
         </div>
         <hr>
-        <a href="index.php" class="logout-btn" style="background:#007bff; margin-bottom:10px;">📊 Back to Board</a>
+        <a href="index.php" class="logout-btn" style="background:#007bff;">📊 Board</a>
         <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 

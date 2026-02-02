@@ -152,17 +152,30 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
 </head>
 
 <body>
-    <!-- Mobile Header -->
-    <div class="mobile-header">
-        <h3>📊 SQD+C</h3>
-        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <!-- Mobile Top Navigation -->
+    <div class="top-nav">
+        <div class="top-nav-header">
+            <h3>📊 SQD+C Board</h3>
+            <span class="user-info">👤 <?php echo htmlspecialchars($user_name); ?></span>
+        </div>
+        <div class="nav-links">
+            <a href="index.php" class="active">📊 لوحة</a>
+            <a href="guide.php">📖 دليل</a>
+            <a href="my_team.php">👥 فريق</a>
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <a href="admin.php">⚙️ إدارة</a>
+            <?php endif; ?>
+            <a href="?logout=1" class="logout">خروج</a>
+        </div>
+        <form method="GET" class="date-filter">
+            <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
+            <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
+            <button type="submit">🔍 عرض</button>
+        </form>
     </div>
 
-    <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
-
-    <div class="sidebar" id="sidebar">
-        <button class="close-sidebar" onclick="closeSidebar()">✕</button>
+    <!-- Desktop Sidebar (hidden on mobile) -->
+    <div class="sidebar">
         <div class="profile">
             <h3>👤 <?php echo htmlspecialchars($user_name); ?></h3>
             <p><?php echo htmlspecialchars($user_cin); ?></p>
@@ -170,33 +183,25 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         <hr>
         <div class="filters">
             <form method="GET">
-                <label>Year<br><small>سنة / Année</small></label>
+                <label>Year / سنة</label>
                 <input type="number" name="year" value="<?php echo $year; ?>">
-
-                <label>Month<br><small>شهر / Mois</small></label>
+                <label>Month / شهر</label>
                 <input type="number" name="month" value="<?php echo $month; ?>">
-
-                <button type="submit">Filter<br><small>تصفية / Filtrer</small></button>
+                <button type="submit">Filter / تصفية</button>
             </form>
         </div>
-
-        <a href="guide.php" class="logout-btn" style="background:#28a745; margin-bottom:10px;">📖 دليل الاستخدام</a>
-        <a href="my_team.php" class="logout-btn" style="background:#17a2b8; margin-bottom:10px;">👥 My Team (HR)</a>
-
+        <a href="guide.php" class="logout-btn" style="background:#28a745;">📖 دليل الاستخدام</a>
+        <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 My Team</a>
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-            <a href="admin.php" class="logout-btn" style="background:#6f42c1; margin-bottom:10px;">⚙️ Admin Panel</a>
-            <a href="global.php" class="logout-btn" style="background:#fd7e14; margin-bottom:10px;">🏭 Global View</a>
+            <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ Admin</a>
+            <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 Global</a>
         <?php endif; ?>
-
-        <a href="?logout=1" class="logout-btn" style="background:#dc3545;">Logout<br><small>خروج /
-                Déconnexion</small></a>
+        <a href="?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
-
 
     <div class="main-content">
         <div class="header">
-            <h2>📊 SQD+C Digital Board<br><span style="font-size:0.6em; color:#666;">لوحة القيادة الرقمية / Tableau de
-                    Bord Numérique</span> - <?php echo "$month_name $year"; ?></h2>
+            <h2>📊 SQD+C - <?php echo "$month_name $year"; ?></h2>
         </div>
 
         <div class="sqdc-grid">
