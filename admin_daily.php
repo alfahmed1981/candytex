@@ -198,13 +198,25 @@ sort($locations);
             <?php
             // Stats Calculation
             $total_managers = count($managers);
-            $participated_count = count($daily_data); // Users who have at least one entry
+            $participated_count = count($daily_data);
             $participation_rate = $total_managers > 0 ? round(($participated_count / $total_managers) * 100) : 0;
 
-            $status_counts = ['green' => 0, 'orange' => 0, 'red' => 0, 'blue' => 0];
+            // Detailed Counters
+            $good_counts = ['total' => 0, 'S' => 0, 'Q' => 0, 'D' => 0, '5S' => 0, 'C' => 0];
+            $issue_counts = ['total' => 0, 'S' => 0, 'Q' => 0, 'D' => 0, '5S' => 0, 'C' => 0]; // Red + Orange
+            
             foreach ($logs_raw as $log) {
-                if (isset($status_counts[$log['status']])) {
-                    $status_counts[$log['status']]++;
+                $cat = $log['category'];
+                $stat = $log['status'];
+
+                if ($stat === 'green') {
+                    $good_counts['total']++;
+                    if (isset($good_counts[$cat]))
+                        $good_counts[$cat]++;
+                } elseif ($stat === 'red' || $stat === 'orange') {
+                    $issue_counts['total']++;
+                    if (isset($issue_counts[$cat]))
+                        $issue_counts[$cat]++;
                 }
             }
             ?>
@@ -221,23 +233,36 @@ sort($locations);
 
             <!-- Card 2: Good Performance -->
             <div class="stat-card"
-                style="flex:1; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; border-left:5px solid #28a745;">
-                <h3 style="margin:0; font-size:14px; color:#555;">Good (Green) / جيد</h3>
-                <div style="font-size:24px; font-weight:bold; color:#28a745; margin:10px 0;">
-                    <?= $status_counts['green'] ?>
+                style="flex:1.5; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); border-left:5px solid #28a745;">
+                <div style="text-align:center; margin-bottom:10px;">
+                    <h3 style="margin:0; font-size:14px; color:#555;">Good (Green) / جيد</h3>
+                    <div style="font-size:24px; font-weight:bold; color:#28a745;"><?= $good_counts['total'] ?></div>
                 </div>
-                <div style="font-size:12px; color:#777;">Marks</div>
+                <div
+                    style="display:flex; justify-content:space-around; font-size:11px; color:#555; background:#f0fff2; padding:5px; border-radius:5px;">
+                    <span><b>S:</b> <?= $good_counts['S'] ?></span>
+                    <span><b>Q:</b> <?= $good_counts['Q'] ?></span>
+                    <span><b>D:</b> <?= $good_counts['D'] ?></span>
+                    <span><b>5S:</b> <?= $good_counts['5S'] ?></span>
+                    <span><b>C:</b> <?= $good_counts['C'] ?></span>
+                </div>
             </div>
 
             <!-- Card 3: Issues -->
             <div class="stat-card"
-                style="flex:1; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; border-left:5px solid #dc3545;">
-                <h3 style="margin:0; font-size:14px; color:#555;">Issues (Red/Orange) / مشاكل</h3>
-                <div style="font-size:24px; font-weight:bold; color:#dc3545; margin:10px 0;">
-                    <?= $status_counts['red'] + $status_counts['orange'] ?>
+                style="flex:1.5; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); border-left:5px solid #dc3545;">
+                <div style="text-align:center; margin-bottom:10px;">
+                    <h3 style="margin:0; font-size:14px; color:#555;">Issues (Red/Orange) / مشاكل</h3>
+                    <div style="font-size:24px; font-weight:bold; color:#dc3545;"><?= $issue_counts['total'] ?></div>
                 </div>
-                <div style="font-size:12px; color:#777;">Red: <?= $status_counts['red'] ?> | Orange:
-                    <?= $status_counts['orange'] ?></div>
+                <div
+                    style="display:flex; justify-content:space-around; font-size:11px; color:#555; background:#fff0f0; padding:5px; border-radius:5px;">
+                    <span><b>S:</b> <?= $issue_counts['S'] ?></span>
+                    <span><b>Q:</b> <?= $issue_counts['Q'] ?></span>
+                    <span><b>D:</b> <?= $issue_counts['D'] ?></span>
+                    <span><b>5S:</b> <?= $issue_counts['5S'] ?></span>
+                    <span><b>C:</b> <?= $issue_counts['C'] ?></span>
+                </div>
             </div>
         </div>
 
