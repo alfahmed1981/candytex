@@ -4,7 +4,8 @@ session_start();
 // Configuration
 $csv_file = 'users.csv';
 $data_dir = 'data/';
-if (!is_dir($data_dir)) mkdir($data_dir, 0755, true);
+if (!is_dir($data_dir))
+    mkdir($data_dir, 0755, true);
 
 // Handle Logout
 if (isset($_GET['logout'])) {
@@ -22,20 +23,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (($handle = fopen($csv_file, "r")) !== FALSE) {
         $header = fgetcsv($handle, 1000, ",");
         // Find columns dynamically (simplistic approach based on known headers)
-        $col_cin = -1; $col_phone = -1; $col_name = -1;
-        
+        $col_cin = -1;
+        $col_phone = -1;
+        $col_name = -1;
+
         foreach ($header as $index => $col) {
             $c = strtolower($col);
-            if (strpos($c, 'national id') !== false || strpos($c, 'cnie') !== false) $col_cin = $index;
-            if (strpos($c, 'phone') !== false) $col_phone = $index;
-            if (strpos($c, 'name') !== false && strpos($c, 'id') === false) $col_name = $index;
+            if (strpos($c, 'national id') !== false || strpos($c, 'cnie') !== false)
+                $col_cin = $index;
+            if (strpos($c, 'phone') !== false)
+                $col_phone = $index;
+            if (strpos($c, 'name') !== false && strpos($c, 'id') === false)
+                $col_name = $index;
         }
 
         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
             if ($col_cin > -1 && $col_phone > -1) {
                 $file_cin = trim(strtolower($data[$col_cin]));
                 $file_phone = trim($data[$col_phone]);
-                
+
                 if ($file_cin === $cin_input && $file_phone === $phone_input) {
                     $_SESSION['user_cin'] = $file_cin;
                     $_SESSION['user_name'] = ($col_name > -1) ? $data[$col_name] : 'User';
@@ -56,16 +62,19 @@ if (!isset($_SESSION['user_cin'])) {
     ?>
     <!DOCTYPE html>
     <html lang="en" dir="ltr">
+
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>SQD+C Login</title>
         <link rel="stylesheet" href="style.css">
     </head>
+
     <body class="login-body">
         <div class="login-container">
             <h1>🔐 SQD+C Board</h1>
-            <?php if($error) echo "<p class='error'>$error</p>"; ?>
+            <?php if ($error)
+                echo "<p class='error'>$error</p>"; ?>
             <form method="POST">
                 <input type="hidden" name="action" value="login">
                 <div class="form-group">
@@ -80,6 +89,7 @@ if (!isset($_SESSION['user_cin'])) {
             </form>
         </div>
     </body>
+
     </html>
     <?php
     exit;
@@ -99,13 +109,16 @@ if (file_exists($data_file)) {
 // Helpers
 $year = date('Y');
 $month = date('m');
-if (isset($_GET['year'])) $year = intval($_GET['year']);
-if (isset($_GET['month'])) $month = intval($_GET['month']);
+if (isset($_GET['year']))
+    $year = intval($_GET['year']);
+if (isset($_GET['month']))
+    $month = intval($_GET['month']);
 
 $month_name = date("F", mktime(0, 0, 0, $month, 10));
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,6 +127,7 @@ $month_name = date("F", mktime(0, 0, 0, $month, 10));
     <!-- SweetAlert2 for nice popups -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
+
 <body>
     <div class="sidebar">
         <div class="profile">
@@ -123,41 +137,44 @@ $month_name = date("F", mktime(0, 0, 0, $month, 10));
         <hr>
         <div class="filters">
             <form method="GET">
-                <label>Year</label>
+                <label>Year<br><small>سنة / Année</small></label>
                 <input type="number" name="year" value="<?php echo $year; ?>">
-                <label>Month</label>
+
+                <label>Month<br><small>شهر / Mois</small></label>
                 <input type="number" name="month" value="<?php echo $month; ?>">
-                <button type="submit">Filter</button>
+
+                <button type="submit">Filter<br><small>تصفية / Filtrer</small></button>
             </form>
         </div>
-        <a href="?logout=1" class="logout-btn">Logout / خروج</a>
+        <a href="?logout=1" class="logout-btn">Logout<br><small>خروج / Déconnexion</small></a>
     </div>
 
     <div class="main-content">
         <div class="header">
-            <h2>📊 SQD+C Digital Board - <?php echo "$month_name $year"; ?></h2>
+            <h2>📊 SQD+C Digital Board<br><span style="font-size:0.6em; color:#666;">لوحة القيادة الرقمية / Tableau de
+                    Bord Numérique</span> - <?php echo "$month_name $year"; ?></h2>
         </div>
 
         <div class="sqdc-grid">
             <?php
             $columns = [
-                'S' => 'SAFETY',
-                'Q' => 'QUALITY',
-                'D' => 'DELIVERY',
-                '5S' => '5S / +',
-                'C' => 'COST'
+                'S' => ['title' => 'SAFETY', 'sub' => 'السلامة / SÉCURITÉ'],
+                'Q' => ['title' => 'QUALITY', 'sub' => 'الجودة / QUALITÉ'],
+                'D' => ['title' => 'DELIVERY', 'sub' => 'التسليم / LIVRAISON'],
+                '5S' => ['title' => '5S / +', 'sub' => 'التحسين / Amélioration'],
+                'C' => ['title' => 'COST', 'sub' => 'التكلفة / COÛT']
             ];
 
-            foreach ($columns as $key => $title) {
+            foreach ($columns as $key => $info) {
                 echo "<div class='kpi-column'>";
-                echo "<h3>$title</h3>";
+                echo "<h3>{$info['title']}<br><small style='font-size:0.6em'>{$info['sub']}</small></h3>";
                 echo "<div class='days-container'>";
-                
+
                 // Always 31 days for layout consistency
                 for ($d = 1; $d <= 31; $d++) {
                     $date_key = "$year-$month-$d";
                     $status = $sqdc_data['days'][$key][$date_key] ?? 'gray';
-                    
+
                     // Ghost out non-existent days (e.g., Feb 30)
                     $real_date = checkdate($month, $d, $year);
                     $opacity = $real_date ? '1' : '0.3';
@@ -172,16 +189,17 @@ $month_name = date("F", mktime(0, 0, 0, $month, 10));
 
         <hr>
         <div class="countermeasures-section">
-            <h3>🛠️ Counter Measures / الإجراءات المضادة</h3>
-            <button onclick="addCounterMeasure()" class="add-btn">+ Add Issue</button>
+            <h3>🛠️ Counter Measures<br><span style="font-size:0.6em">الإجراءات المضادة / Contre-mesures</span></h3>
+            <button onclick="addCounterMeasure()" class="add-btn">+ Add Issue<br><small>إضافة مشكلة /
+                    Ajouter</small></button>
             <table id="cm-table">
                 <thead>
                     <tr>
-                        <th>Issue / المشكلة</th>
-                        <th>Action / الإجراء</th>
-                        <th>Who / المسؤول</th>
-                        <th>Due Date / التاريخ</th>
-                        <th>Status</th>
+                        <th>Issue<br><small>المشكلة / Problème</small></th>
+                        <th>Action<br><small>الإجراء / Action</small></th>
+                        <th>Who<br><small>المسؤول / Qui</small></th>
+                        <th>Due Date<br><small>الموعد / Échéance</small></th>
+                        <th>Status<br><small>الحالة / Statut</small></th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -198,4 +216,5 @@ $month_name = date("F", mktime(0, 0, 0, $month, 10));
     </script>
     <script src="script.js"></script>
 </body>
+
 </html>
