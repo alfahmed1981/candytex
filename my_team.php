@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_cin'])) {
 }
 
 $user_cin = $_SESSION['user_cin'];
+$is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
 // Handle Form Submission (Add Worker)
 $msg = "";
@@ -16,26 +17,49 @@ $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_worker'])) {
-        $w_cin = trim($_POST['cin']);
-        $w_name = trim($_POST['name']);
+        $w_cin = strtoupper(trim($_POST['cin'])); // Force Upper
+        $w_name = strtoupper(trim($_POST['name']));
         $w_phone = trim($_POST['phone']);
         $w_location = $_POST['location'];
         $w_dept = $_POST['department'];
         $w_job = trim($_POST['job_title']);
         $w_shift = $_POST['shift'];
 
+        // Target Manager (Who are we adding this worker for?)
+        // If Admin is viewing a specific manager, add to THAT manager? 
+        // Or always add to themselves? Usually "My Team" adds to ME.
+        // Let's assume Admin adds to THEMSELVES unless we want advanced "Add for others". 
+        // For simplicity and safety, keeps adding to Session User OR currently viewed manager?
+        // Prompt says "each team leader sees only his team". Admin sees all.
+        // Let's default to adding to the CURRENTLY VIEWED manager if Admin, or Session User.
+
+        $target_manager = $user_cin;
+        if ($is_admin && isset($_POST['target_manager']) && !empty($_POST['target_manager'])) {
+            $target_manager = $_POST['target_manager'];
+        }
+
         // Strict Validation
         if (!preg_match('/^[a-zA-Z0-9]+$/', $w_cin)) {
             $error = "❌ Security Alert: CIN must contain ONLY Latin letters and numbers.";
         } else {
-            try {
-                $stmt = $pdo->prepare("INSERT INTO workers (cin, name, phone, location, department, job_title, shift, manager_cin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$w_cin, $w_name, $w_phone, $w_location, $w_dept, $w_job, $w_shift, $user_cin]);
-                $msg = "✅ Worker added successfully!";
-            } catch (PDOException $e) {
-                if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
-                    $error = "⚠️ Error: This CIN already exists.";
-                } else {
+            // GLOBAL UNIQUENESS CHECK
+            $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM workers WHERE cin = ?");
+            $stmt_check->execute([$w_cin]);
+            $exists_workers = $stmt_check->fetchColumn();
+
+            // Also check Users table to be safe?
+            $stmt_check_users = $pdo->prepare("SELECT COUNT(*) FROM users WHERE cin = ?");
+            $stmt_check_users->execute([$w_cin]);
+            $exists_users = $stmt_check_users->fetchColumn();
+
+            if ($exists_workers > 0 || $exists_users > 0) {
+                $error = "⚠️ Error: This CIN ($w_cin) already exists in the system (Worker or User).";
+            } else {
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO workers (cin, name, phone, location, department, job_title, shift, manager_cin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$w_cin, $w_name, $w_phone, $w_location, $w_dept, $w_job, $w_shift, $target_manager]);
+                    $msg = "✅ Worker added successfully to " . ($target_manager === $user_cin ? "your" : "selected") . " team!";
+                } catch (PDOException $e) {
                     $error = "Database Error: " . $e->getMessage();
                 }
             }
@@ -45,16 +69,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Delete Worker
     if (isset($_POST['delete_worker'])) {
         $del_id = $_POST['worker_id'];
-        $stmt = $pdo->prepare("DELETE FROM workers WHERE id = ? AND manager_cin = ?");
-        $stmt->execute([$del_id, $user_cin]);
+        // Admin can delete anyone's worker. Manager only theirs.
+        if ($is_admin) {
+            $stmt = $pdo->prepare("DELETE FROM workers WHERE id = ?");
+            $stmt->execute([$del_id]);
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM workers WHERE id = ? AND manager_cin = ?");
+            $stmt->execute([$del_id, $user_cin]);
+        }
         $msg = "🗑️ Worker removed.";
     }
 }
 
-// Fetch My Team
+// ADMIN: Select Manager View
+$view_cin = $user_cin;
+$all_managers = [];
+if ($is_admin) {
+    // Fetch all managers for dropdown
+    $stmt_m = $pdo->query("SELECT cin, name FROM users WHERE role = 'manager' ORDER BY name");
+    $all_managers = $stmt_m->fetchAll();
+
+    if (isset($_GET['manager_cin']) && !empty($_GET['manager_cin'])) {
+        $view_cin = $_GET['manager_cin'];
+    }
+}
+
+// Fetch Team (Based on View CIN)
 $stmt = $pdo->prepare("SELECT * FROM workers WHERE manager_cin = ? ORDER BY name");
-$stmt->execute([$user_cin]);
+$stmt->execute([$view_cin]);
 $my_team = $stmt->fetchAll();
+
+// Get Name of current view
+$view_name = "My Team";
+if ($view_cin !== $user_cin && $is_admin) {
+    foreach ($all_managers as $m) {
+        if ($m['cin'] === $view_cin) {
+            $view_name = "Team: " . $m['name'];
+            break;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -260,7 +314,23 @@ $my_team = $stmt->fetchAll();
 
     <div class="main-content">
         <div class="container">
-            <h2>👷 My Team & Shift Management</h2>
+            <h2>👷 <?= htmlspecialchars($view_name) ?> & Shift Management</h2>
+            
+            <?php if ($is_admin): ?>
+                    <div style="background:#e9ecef; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #ccc;">
+                        <form method="GET" style="display:flex; gap:10px; align-items:center;">
+                            <label style="font-weight:bold;">👮 Admin View / اختر الفريق:</label>
+                            <select name="manager_cin" onchange="this.form.submit()" style="padding:8px; border-radius:4px; border:1px solid #aaa;">
+                                <option value="<?= $_SESSION['user_cin'] ?>">My Team (Admin)</option>
+                                <?php foreach ($all_managers as $mgr): ?>
+                                        <option value="<?= $mgr['cin'] ?>" <?= $view_cin === $mgr['cin'] ? 'selected' : '' ?>>
+                                            Team: <?= htmlspecialchars($mgr['name']) ?> (<?= $mgr['cin'] ?>)
+                                        </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
+                    </div>
+            <?php endif; ?>
             <p style="color:#666; font-size:14px;">Manage your workforce. <br><small>إدارة فريق العمل / Gestion
                     d'équipe</small></p>
 
@@ -276,8 +346,9 @@ $my_team = $stmt->fetchAll();
             <?php endif; ?>
 
             <div class="form-box">
-                <h4>+ Add New Worker / إضافة عامل / Ajouter</h4>
+                <h4>+ Add New Worker to: <?= htmlspecialchars($view_name) ?></h4>
                 <form method="POST">
+                    <input type="hidden" name="target_manager" value="<?= htmlspecialchars($view_cin) ?>">
                     <div class="form-grid">
                         <!-- Row 1 -->
                         <div class="form-group">
