@@ -202,6 +202,12 @@ $users = $stmt->fetchAll();
             <h1>👥 User Management / إدارة المستخدمين</h1>
             <p>Add, edit, or impersonate users. <small>Gestion des utilisateurs</small></p>
 
+            <!-- Quick Links -->
+            <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                <a href="admin_advanced.php" class="btn btn-blue" style="background:#6f42c1;">⚙️ إدارة متقدمة</a>
+                <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 استيراد CSV</a>
+            </div>
+
             <?php if (isset($msg))
                 echo "<p style='color:green; background:#d4edda; padding:10px; border:1px solid #c3e6cb; border-radius:4px;'>$msg</p>"; ?>
 
