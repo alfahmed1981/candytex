@@ -204,6 +204,7 @@ $users = $stmt->fetchAll();
 
             <!-- Quick Links -->
             <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                <a href="admin_reports.php" class="btn btn-blue" style="background:#fd7e14;">📅 Daily Tracking</a>
                 <a href="admin_advanced.php" class="btn btn-blue" style="background:#6f42c1;">⚙️ إدارة متقدمة</a>
                 <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 استيراد CSV</a>
             </div>
