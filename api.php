@@ -19,6 +19,12 @@ if (!$input) {
 if (isset($input['action'])) {
 
     if ($input['action'] === 'update_day') {
+        $target_cin = $user_cin;
+        // Allow Admin to override target user
+        if (isset($input['target_cin']) && $_SESSION['role'] === 'admin') {
+            $target_cin = $input['target_cin'];
+        }
+
         $kpi = $input['kpi'];
         $date = $input['date'];
         $status = $input['status'];
@@ -28,11 +34,31 @@ if (isset($input['action'])) {
                 ON DUPLICATE KEY UPDATE status = VALUES(status)";
 
         $stmt = $pdo->prepare($sql);
-        if ($stmt->execute([$user_cin, $date, $kpi, $status])) {
+        if ($stmt->execute([$target_cin, $date, $kpi, $status])) {
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false]);
         }
+
+    } elseif ($input['action'] === 'get_day_details') {
+        $target_cin = $user_cin;
+        // Allow Admin to view other users
+        if (isset($input['target_cin']) && $_SESSION['role'] === 'admin') {
+            $target_cin = $input['target_cin'];
+        }
+
+        $date = $input['date'];
+        $stmt = $pdo->prepare("SELECT category, status FROM sqdc_daily WHERE user_cin = ? AND day_date = ?");
+        $stmt->execute([$target_cin, $date]);
+        $rows = $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // Returns ['S'=>'green', 'Q'=>'red', ...]
+
+        // Ensure all categories exist with default 'gray'
+        $result = [];
+        foreach (['S', 'Q', 'D', '5S', 'C'] as $cat) {
+            $result[$cat] = $rows[$cat] ?? 'gray';
+        }
+
+        echo json_encode(['success' => true, 'data' => $result]);
 
     } elseif ($input['action'] === 'save_countermeasures') {
         // Full Sync Strategy: Delete All & Re-Insert (Simplest for Table Sync)
