@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $error = "⏳ Account pending approval. Please wait.";
             } else {
                 $login_ok = false;
-                
+
                 // 1. Password Check
                 if (!empty($user['password']) && password_verify($cred_input, $user['password'])) {
                     $login_ok = true;
@@ -82,12 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($stmt->fetchColumn() > 0) {
                 $error = "⚠️ CIN already registered.";
             } else {
-                $hash = password_hash($reg_pass, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO users (cin, name, password, role, status) VALUES (?, ?, ?, ?, 'pending')");
-                if ($stmt->execute([$reg_cin, $reg_name, $hash, $reg_role])) {
+                try {
+                    $hash = password_hash($reg_pass, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("INSERT INTO users (cin, name, password, role, status) VALUES (?, ?, ?, ?, 'pending')");
+                    $stmt->execute([$reg_cin, $reg_name, $hash, $reg_role]);
                     $success = "✅ Registered! Please wait for Admin approval.";
-                } else {
-                    $error = "Database Error.";
+                } catch (PDOException $e) {
+                    // Friendly Error instead of 500
+                    $error = "System Error: " . $e->getMessage();
                 }
             }
         }
@@ -138,11 +140,13 @@ if (!isset($_SESSION['user_cin'])) {
 
             <?php if ($error): ?>
                 <div class="error" style="background:#ffd2d2; color:#a00; padding:10px; border-radius:5px; margin-bottom:10px;">
-                    <?php echo $error; ?></div>
+                    <?php echo $error; ?>
+                </div>
             <?php endif; ?>
             <?php if ($success): ?>
                 <div style="background:#d4edda; color:#155724; padding:10px; border-radius:5px; margin-bottom:10px;">
-                    <?php echo $success; ?></div>
+                    <?php echo $success; ?>
+                </div>
             <?php endif; ?>
 
             <!-- LOGIN FORM -->
