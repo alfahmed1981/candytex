@@ -1,7 +1,13 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/candytex/public_html/dash
-    - /bin/cp -R *.php $DEPLOYPATH/
-    - /bin/cp -R *.css $DEPLOYPATH/
-    - /bin/cp -R *.js $DEPLOYPATH/
+    - export DEPLOYPATH=/home/candytex/public_html/dash/
+    - /bin/cp index.php $DEPLOYPATH
+    - /bin/cp api.php $DEPLOYPATH
+    - /bin/cp db.php $DEPLOYPATH
+    - /bin/cp style.css $DEPLOYPATH
+    - /bin/cp script.js $DEPLOYPATH
+    - /bin/cp admin.php $DEPLOYPATH
+    - /bin/cp global.php $DEPLOYPATH
+    - /bin/cp my_team.php $DEPLOYPATH
+    - /bin/cp guide.php $DEPLOYPATH
