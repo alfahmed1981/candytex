@@ -204,7 +204,8 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
 
                 // Always 31 days for layout consistency
                 for ($d = 1; $d <= 31; $d++) {
-                    $date_key = "$year-$month-$d";
+                    // Format date with leading zeros to match DB format (YYYY-MM-DD)
+                    $date_key = sprintf("%04d-%02d-%02d", $year, $month, $d);
                     $status = $sqdc_data['days'][$key][$date_key] ?? 'gray';
 
                     // Ghost out non-existent days (e.g., Feb 30)
