@@ -108,7 +108,20 @@ if (!isset($_SESSION['user_cin'])) {
 
 // --- DASHBOARD LOGIC ---
 $user_cin = $_SESSION['user_cin'];
+$user_cin = $_SESSION['user_cin'];
 $user_name = $_SESSION['user_name'];
+
+// --- FORCE PROFILE COMPLETION ---
+// Check if Department, Location, or Birth Date is missing
+$stmt_check = $pdo->prepare("SELECT department, location, birth_date FROM users WHERE cin = ?");
+$stmt_check->execute([$user_cin]);
+$u_check = $stmt_check->fetch();
+
+if (empty($u_check['department']) || empty($u_check['location']) || empty($u_check['birth_date'])) {
+    header("Location: complete_profile.php");
+    exit;
+}
+// --------------------------------
 
 // Helpers
 $year = date('Y');

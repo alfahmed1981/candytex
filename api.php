@@ -95,6 +95,21 @@ if (isset($input['action'])) {
 
         $pdo->commit();
         echo json_encode(['success' => true]);
+
+    } elseif ($input['action'] === 'update_profile') {
+        // --- UPDATE PROFILE ---
+        $dept = $input['department'];
+        $loc = $input['location'];
+        $bdate = $input['birth_date'];
+
+        $sql = "UPDATE users SET department = ?, location = ?, birth_date = ? WHERE cin = ?";
+        $stmt = $pdo->prepare($sql);
+
+        if ($stmt->execute([$dept, $loc, $bdate, $_SESSION['user_cin']])) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'DB Error']);
+        }
     }
 }
 ?>
