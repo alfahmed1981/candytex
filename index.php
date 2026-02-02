@@ -69,11 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'register') {
         $reg_cin = strtoupper(str_replace(' ', '', trim($_POST['cin'])));
         $reg_name = strtoupper(trim($_POST['name']));
+        $reg_phone = trim($_POST['phone']);
         $reg_pass = $_POST['password'];
         $reg_role = $_POST['role'];
 
         // Validate
-        if (empty($reg_cin) || empty($reg_name) || empty($reg_pass)) {
+        if (empty($reg_cin) || empty($reg_name) || empty($reg_pass) || empty($reg_phone)) {
             $error = "All fields required.";
         } else {
             // Duplicate Check
@@ -84,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             } else {
                 try {
                     $hash = password_hash($reg_pass, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("INSERT INTO users (cin, name, password, role, status) VALUES (?, ?, ?, ?, 'pending')");
-                    $stmt->execute([$reg_cin, $reg_name, $hash, $reg_role]);
+                    $stmt = $pdo->prepare("INSERT INTO users (cin, name, phone, password, role, status) VALUES (?, ?, ?, ?, ?, 'pending')");
+                    $stmt->execute([$reg_cin, $reg_name, $reg_phone, $hash, $reg_role]);
                     $success = "✅ Registered! Please wait for Admin approval.";
                 } catch (PDOException $e) {
                     // Friendly Error instead of 500
@@ -206,6 +207,11 @@ if (!isset($_SESSION['user_cin'])) {
                     <div class="form-group">
                         <label>Full Name / الاسم الكامل</label>
                         <input type="text" name="name" placeholder="Name..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Phone / الهاتف</label>
+                        <input type="text" name="phone" placeholder="06..." required>
                     </div>
 
                     <div class="form-group">
