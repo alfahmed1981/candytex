@@ -11,30 +11,88 @@ if (isset($_GET['logout'])) {
 
 // Handle Login and Registration
 $error = '';
+$success = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+
+    // --- ANTI-BOT CHECKS ---
+    if (!empty($_POST['website_hp']))
+        die("Bot detected.");
+    if (isset($_POST['login_ts']) && (time() - intval($_POST['login_ts'])) < 1)
+        die("Too fast.");
+
+    // --- LOGIN LOGIC ---
+    if ($_POST['action'] === 'login') {
+        $cin = strtoupper(str_replace(' ', '', trim($_POST['cin'])));
+        $cred_input = trim($_POST['password']); // Unified field
+
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE cin = ?");
+        $stmt->execute([$cin]);
+        $user = $stmt->fetch();
+
+        if ($user) {
+            if ($user['status'] === 'pending') {
+                $error = "⏳ Account pending approval. Please wait.";
+            } else {
+                $login_ok = false;
+                
+                // 1. Password Check
+                if (!empty($user['password']) && password_verify($cred_input, $user['password'])) {
                     $login_ok = true;
-                } else {
-                    $error = "Phone number does not match CIN.";
                 }
-            }
-
-            if ($login_ok) {
-                $_SESSION['user_cin'] = $user['cin'];
-                $_SESSION['user_name'] = $user['name'];
-                $_SESSION['role'] = $user['role'];
-
-                // Redirect based on Role
-                if ($user['role'] === 'admin') {
-                    header("Location: admin.php"); // Admins go to Dashboard directly
-                } else {
-                    header("Location: index.php");
+                // 2. Legacy Phone Check (Treat input as phone)
+                elseif (empty($user['password']) && $user['phone'] === $cred_input) {
+                    $login_ok = true;
                 }
-                exit;
+
+                if ($login_ok) {
+                    $_SESSION['user_cin'] = $user['cin'];
+                    $_SESSION['user_name'] = $user['name'];
+                    $_SESSION['role'] = $user['role'];
+
+                    if ($user['role'] === 'admin') {
+                        header("Location: admin.php");
+                    } else {
+                        header("Location: index.php");
+                    }
+                    exit;
+                } else {
+                    $error = "❌ Incorrect Credential (Password or Phone).";
+                }
             }
         } else {
-            $error = "User not found. Please ask Admin to import you.";
+            $error = "❌ User not found.";
         }
-    } // End if (!$error)
-} // End POST Check
+    }
+
+    // --- REGISTRATION LOGIC ---
+    if ($_POST['action'] === 'register') {
+        $reg_cin = strtoupper(str_replace(' ', '', trim($_POST['cin'])));
+        $reg_name = strtoupper(trim($_POST['name']));
+        $reg_pass = $_POST['password'];
+        $reg_role = $_POST['role'];
+
+        // Validate
+        if (empty($reg_cin) || empty($reg_name) || empty($reg_pass)) {
+            $error = "All fields required.";
+        } else {
+            // Duplicate Check
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE cin = ?");
+            $stmt->execute([$reg_cin]);
+            if ($stmt->fetchColumn() > 0) {
+                $error = "⚠️ CIN already registered.";
+            } else {
+                $hash = password_hash($reg_pass, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("INSERT INTO users (cin, name, password, role, status) VALUES (?, ?, ?, ?, 'pending')");
+                if ($stmt->execute([$reg_cin, $reg_name, $hash, $reg_role])) {
+                    $success = "✅ Registered! Please wait for Admin approval.";
+                } else {
+                    $error = "Database Error.";
+                }
+            }
+        }
+    }
+}
 
 // Ensure Login
 if (!isset($_SESSION['user_cin'])) {
@@ -50,35 +108,120 @@ if (!isset($_SESSION['user_cin'])) {
         <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
     </head>
 
+    <script>
+        function toggleForm() {
+            var loginForm = document.getElementById('login-form');
+            var regForm = document.getElementById('reg-form');
+            var title = document.getElementById('page-title');
+
+            if (loginForm.style.display === 'none') {
+                loginForm.style.display = 'block';
+                regForm.style.display = 'none';
+                title.innerText = '🔐 Login / دخول';
+            } else {
+                loginForm.style.display = 'none';
+                regForm.style.display = 'block';
+                title.innerText = '📝 Register / تسجيل جديد';
+            }
+        }
+    </script>
+    <style>
+        .visually-hidden {
+            position: absolute;
+            left: -9999px;
+        }
+    </style>
+
     <body class="login-body">
         <div class="login-container">
-            <h1>🔐 SQD+C Board</h1>
-            <?php if ($error)
-                echo "<p class='error'>$error</p>"; ?>
-            <form method="POST">
-                <input type="hidden" name="action" value="login">
+            <h2 id="page-title">🔐 Login / دخول</h2>
 
-                <!-- ANTI-BOT TRAPS -->
-                <!-- Inline style to ensure hidden even if CSS fails -->
-                <input type="text" name="website_hp" class="visually-hidden" tabindex="-1" autocomplete="off"
-                    style="position:absolute; opacity:0; z-index:-1; width:0; height:0;">
-                <input type="hidden" name="login_ts" value="<?php echo time(); ?>">
+            <?php if ($error): ?>
+                <div class="error" style="background:#ffd2d2; color:#a00; padding:10px; border-radius:5px; margin-bottom:10px;">
+                    <?php echo $error; ?></div>
+            <?php endif; ?>
+            <?php if ($success): ?>
+                <div style="background:#d4edda; color:#155724; padding:10px; border-radius:5px; margin-bottom:10px;">
+                    <?php echo $success; ?></div>
+            <?php endif; ?>
 
-                <div class="form-group">
-                    <label>National ID (CNIE) / رقم البطاقة</label>
-                    <input type="text" name="cin" required placeholder="AB123456" style="text-transform:uppercase;">
-                </div>
-                <div class="form-group">
-                    <label>Phone Number / رقم الهاتف</label>
-                    <input type="text" name="phone" required placeholder="06...">
-                </div>
-                <button type="submit">Access Board / دخول</button>
-            </form>
-            <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.2);">
-                <a href="guide.php"
-                    style="color:#28a745; text-decoration:none; font-size:14px; display:inline-flex; align-items:center; gap:8px;">
-                    📖 <span>دليل الاستخدام للمبتدئين</span> | <span style="font-size:12px;">Guide d'utilisation</span>
-                </a>
+            <!-- LOGIN FORM -->
+            <div id="login-form">
+                <form method="POST">
+                    <input type="hidden" name="action" value="login">
+
+                    <!-- ANTI-BOT TRAPS -->
+                    <input type="text" name="website_hp" class="visually-hidden" tabindex="-1" autocomplete="off">
+                    <input type="hidden" name="login_ts" value="<?= time() ?>">
+
+                    <div class="form-group">
+                        <label>CIN (رقم البطاقة)</label>
+                        <input type="text" name="cin" placeholder="AB12345" required style="text-transform:uppercase;">
+                    </div>
+
+                    <!-- Note: For legacy support we keep 'phone' input? Or use 'password' input? -->
+                    <!-- Let's use two fields: Phone (Legacy) OR Password (New) -->
+                    <!-- To keep UI simple, let's just use "Password" field, but label it "Password or Phone" -->
+
+                    <div class="form-group">
+                        <label>Password (or Phone) / كلمة السر</label>
+                        <input type="password" name="password" placeholder="******">
+                    </div>
+
+                    <!-- Hidden Phone field for strict legacy compatibility if needed? -->
+                    <!-- My Logic above checks: if password matches OR if phone matches input -->
+                    <!-- So we can reuse the "password" input name for both? -->
+                    <!-- Wait, line 23 above: $phone_input = trim($_POST['phone']); -->
+                    <!-- So i need a phone input or change logic above. -->
+                    <!-- Let's add a hidden phone input mirroring password? No that's hacky. -->
+                    <!-- Better: Add a phone input for legacy users visible? Or just change logic above to use $_POST['password'] as phone? -->
+                    <!-- Let's add a separate Phone input for Legacy Users to avoid confusion? -->
+                    <!-- User request: "Registration". New users use password. Old users use phone. -->
+                    <!-- Simplest UX: User Enters CIN. -->
+                    <!-- User Enters "Credential". -->
+                    <!-- Backend checks if Credential matches Password OR Credential matches Phone. -->
+                    <!-- I will update Logic above to use $_POST['password'] as the universal credential input. -->
+
+                    <button type="submit">Login 🚀</button>
+                </form>
+                <p style="margin-top:15px; font-size:14px;">
+                    New? <a href="#" onclick="toggleForm()">Create Account / تسجيل</a>
+                </p>
+            </div>
+
+            <!-- REGISTRATION FORM -->
+            <div id="reg-form" style="display:none;">
+                <form method="POST">
+                    <input type="hidden" name="action" value="register">
+
+                    <div class="form-group">
+                        <label>CIN (Unique ID)</label>
+                        <input type="text" name="cin" placeholder="AB12345" required style="text-transform:uppercase;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Full Name / الاسم الكامل</label>
+                        <input type="text" name="name" placeholder="Name..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Password / كلمة السر</label>
+                        <input type="password" name="password" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Role / الدور</label>
+                        <select name="role" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="manager">Manager / Chef d'équipe</option>
+                            <!-- Admins: usually manual -->
+                        </select>
+                    </div>
+
+                    <button type="submit" style="background:#28a745;">Register ✅</button>
+                </form>
+                <p style="margin-top:15px; font-size:14px;">
+                    Have account? <a href="#" onclick="toggleForm()">Login / دخول</a>
+                </p>
             </div>
         </div>
     </body>
