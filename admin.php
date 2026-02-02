@@ -44,8 +44,8 @@ if (isset($_GET['action'])) {
 
 // --- ADD USER ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
-    $cin = $_POST['cin'];
-    $name = $_POST['name'];
+    $cin = strtoupper(str_replace(' ', '', trim($_POST['cin'])));
+    $name = strtoupper(trim($_POST['name']));
     $phone = $_POST['phone'];
     $role = $_POST['role'];
 
@@ -221,7 +221,8 @@ $users = $stmt->fetchAll();
             <div style="background:#f1f1f1; padding:20px; border-radius:8px; margin-bottom:20px;">
                 <h3>+ Add New User / إضافة مستخدم</h3>
                 <form method="POST" style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <input type="text" name="cin" placeholder="CIN (Login ID)" required style="width:120px; text-transform:uppercase;">
+                    <input type="text" name="cin" placeholder="CIN (Login ID)" required
+                        style="width:120px; text-transform:uppercase;">
                     <input type="text" name="name" placeholder="Full Name / الاسم" required>
                     <input type="text" name="phone" placeholder="Phone" required style="width:120px;">
 
