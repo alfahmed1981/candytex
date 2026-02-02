@@ -1,0 +1,10 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/candytex/public_html/dashboard/
+    - /bin/cp index.php $DEPLOYPATH
+    - /bin/cp api.php $DEPLOYPATH
+    - /bin/cp style.css $DEPLOYPATH
+    - /bin/cp script.js $DEPLOYPATH
+    - /bin/cp users.csv $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH/data
