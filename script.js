@@ -3,7 +3,58 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof initialCM !== 'undefined') {
         renderTable(initialCM);
     }
+    // Create modal dynamically if it doesn't exist
+    createStatusModal();
 });
+
+// --- CREATE STATUS MODAL DYNAMICALLY ---
+function createStatusModal() {
+    if (document.getElementById('statusModal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'statusModal';
+    modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;';
+
+    modal.innerHTML = `
+        <div style="background:white; padding:30px; border-radius:15px; text-align:center; max-width:400px; width:90%;">
+            <h3 id="modalTitle" style="margin-bottom:20px;">Update Status</h3>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;">
+                <button onclick="selectStatus('green')" style="background:#28a745; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
+                    ✓ موافق<br><small>Met / Conforme</small>
+                </button>
+                <button onclick="selectStatus('orange')" style="background:#fd7e14; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
+                    ⚠️ إجراء<br><small>Action Required</small>
+                </button>
+                <button onclick="selectStatus('red')" style="background:#dc3545; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
+                    ✗ خطر<br><small>Missed / Accident</small>
+                </button>
+                <button onclick="selectStatus('blue')" style="background:#007bff; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
+                    📅 عطلة<br><small>Holiday / N.A.</small>
+                </button>
+            </div>
+            <button onclick="selectStatus('gray')" style="background:#6c757d; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; margin-bottom:15px;">
+                ○ مسح<br><small>Clear</small>
+            </button>
+            <br>
+            <button onclick="closeModal()" style="background:#eee; color:#333; padding:10px 30px; border:none; border-radius:8px; cursor:pointer;">
+                إلغاء / Cancel
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+// --- GLOBAL FUNCTION CALLED BY INDEX.PHP ---
+function openDate(category, dateKey, currentStatus) {
+    // Parse the date from the dateKey (format: YYYY-M-D)
+    const parts = dateKey.split('-');
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]);
+    const day = parseInt(parts[2]);
+
+    openModal(category, day, year, month);
+}
 
 // --- MODAL LOGIC FOR DAY SELECTION ---
 let currentDay = null;
