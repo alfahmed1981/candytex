@@ -1,11 +1,6 @@
 <?php
 session_start();
-
-// Configuration
-$csv_file = 'users.csv';
-$data_dir = 'data/';
-if (!is_dir($data_dir))
-    mkdir($data_dir, 0755, true);
+require 'db.php'; // DB Connection
 
 // Handle Logout
 if (isset($_GET['logout'])) {
@@ -17,43 +12,28 @@ if (isset($_GET['logout'])) {
 // Handle Login
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'login') {
-    $cin_input = trim(strtolower($_POST['cin']));
+    $cin_input = trim($_POST['cin']);
     $phone_input = trim($_POST['phone']);
 
-    if (($handle = fopen($csv_file, "r")) !== FALSE) {
-        $header = fgetcsv($handle, 1000, ",");
-        // Find columns dynamically (simplistic approach based on known headers)
-        $col_cin = -1;
-        $col_phone = -1;
-        $col_name = -1;
+    // Database Auth
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE cin = ?");
+    $stmt->execute([$cin_input]);
+    $user = $stmt->fetch();
 
-        foreach ($header as $index => $col) {
-            $c = strtolower($col);
-            if (strpos($c, 'national id') !== false || strpos($c, 'cnie') !== false)
-                $col_cin = $index;
-            if (strpos($c, 'phone') !== false)
-                $col_phone = $index;
-            if (strpos($c, 'name') !== false && strpos($c, 'id') === false)
-                $col_name = $index;
+    if ($user) {
+        // Verify Phone (Simple mismatch check since we authenticated by CIN)
+        // In a stricter system, we would check phone exactly.
+        if ($user['phone'] === $phone_input) {
+            $_SESSION['user_cin'] = $user['cin'];
+            $_SESSION['user_name'] = $user['name'];
+            $_SESSION['role'] = $user['role'];
+            header("Location: index.php");
+            exit;
+        } else {
+            $error = "Phone number does not match CIN.";
         }
-
-        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-            if ($col_cin > -1 && $col_phone > -1) {
-                $file_cin = trim(strtolower($data[$col_cin]));
-                $file_phone = trim($data[$col_phone]);
-
-                if ($file_cin === $cin_input && $file_phone === $phone_input) {
-                    $_SESSION['user_cin'] = $file_cin;
-                    $_SESSION['user_name'] = ($col_name > -1) ? $data[$col_name] : 'User';
-                    header("Location: index.php");
-                    exit;
-                }
-            }
-        }
-        fclose($handle);
-        $error = "Invalid Credentials / بيانات خاطئة";
     } else {
-        $error = "User verification file missing.";
+        $error = "User not found. Please ask Admin to import you.";
     }
 }
 
@@ -98,13 +78,6 @@ if (!isset($_SESSION['user_cin'])) {
 // --- DASHBOARD LOGIC ---
 $user_cin = $_SESSION['user_cin'];
 $user_name = $_SESSION['user_name'];
-$data_file = $data_dir . 'sqdc_' . $user_cin . '.json';
-
-// Load Data
-$sqdc_data = ['days' => [], 'countermeasures' => []];
-if (file_exists($data_file)) {
-    $sqdc_data = json_decode(file_get_contents($data_file), true);
-}
 
 // Helpers
 $year = date('Y');
@@ -113,8 +86,28 @@ if (isset($_GET['year']))
     $year = intval($_GET['year']);
 if (isset($_GET['month']))
     $month = intval($_GET['month']);
-
 $month_name = date("F", mktime(0, 0, 0, $month, 10));
+
+// Load SQDC Data from DB
+$sql = "SELECT category, day_date, status FROM sqdc_daily 
+        WHERE user_cin = ? AND MONTH(day_date) = ? AND YEAR(day_date) = ?";
+$stmt = $pdo->prepare($sql);
+$stmt->execute([$user_cin, $month, $year]);
+$rows = $stmt->fetchAll();
+
+// Reformat for View
+$sqdc_data = ['days' => []];
+foreach ($rows as $r) {
+    if (!isset($sqdc_data['days'][$r['category']]))
+        $sqdc_data['days'][$r['category']] = [];
+    $sqdc_data['days'][$r['category']][$r['day_date']] = $r['status'];
+}
+
+// Load Countermeasures from DB
+$cm_sql = "SELECT * FROM countermeasures WHERE user_cin = ? ORDER BY created_at DESC";
+$cm_stmt = $pdo->prepare($cm_sql);
+$cm_stmt->execute([$user_cin]);
+$sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,7 +117,6 @@ $month_name = date("F", mktime(0, 0, 0, $month, 10));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SQD+C Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <!-- SweetAlert2 for nice popups -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -148,6 +140,7 @@ $month_name = date("F", mktime(0, 0, 0, $month, 10));
         </div>
         <a href="?logout=1" class="logout-btn">Logout<br><small>خروج / Déconnexion</small></a>
     </div>
+
 
     <div class="main-content">
         <div class="header">
