@@ -152,7 +152,17 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
 </head>
 
 <body>
-    <div class="sidebar">
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <h3>📊 SQD+C</h3>
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <button class="close-sidebar" onclick="closeSidebar()">✕</button>
         <div class="profile">
             <h3>👤 <?php echo htmlspecialchars($user_name); ?></h3>
             <p><?php echo htmlspecialchars($user_cin); ?></p>
@@ -170,14 +180,16 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             </form>
         </div>
 
+        <a href="guide.php" class="logout-btn" style="background:#28a745; margin-bottom:10px;">📖 دليل الاستخدام</a>
         <a href="my_team.php" class="logout-btn" style="background:#17a2b8; margin-bottom:10px;">👥 My Team (HR)</a>
 
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-            <a href="admin.php" class="logout-btn" style="background:#28a745; margin-bottom:10px;">⚙️ Admin Panel</a>
-            <a href="global.php" class="logout-btn" style="background:#6f42c1; margin-bottom:10px;">🏭 Global View</a>
+            <a href="admin.php" class="logout-btn" style="background:#6f42c1; margin-bottom:10px;">⚙️ Admin Panel</a>
+            <a href="global.php" class="logout-btn" style="background:#fd7e14; margin-bottom:10px;">🏭 Global View</a>
         <?php endif; ?>
 
-        <a href="?logout=1" class="logout-btn">Logout<br><small>خروج / Déconnexion</small></a>
+        <a href="?logout=1" class="logout-btn" style="background:#dc3545;">Logout<br><small>خروج /
+                Déconnexion</small></a>
     </div>
 
 

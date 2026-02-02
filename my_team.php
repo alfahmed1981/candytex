@@ -170,6 +170,54 @@ $my_team = $stmt->fetchAll();
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
+        /* Mobile Responsive */
+        @media screen and (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .form-box {
+                padding: 15px;
+            }
+
+            table {
+                font-size: 13px;
+            }
+
+            th,
+            td {
+                padding: 10px 6px;
+            }
+
+            h2 {
+                font-size: 1.3em;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .container {
+                margin: 8px;
+                padding: 12px;
+            }
+
+            .form-group input,
+            .form-group select {
+                padding: 12px 10px;
+                font-size: 16px;
+            }
+
+            button[name="add_worker"] {
+                padding: 14px;
+                font-size: 16px;
+            }
+        }
     </style>
     <script>
         function validateCIN(input) {
@@ -186,16 +234,24 @@ $my_team = $stmt->fetchAll();
 </head>
 
 <body>
-    <div class="sidebar">
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <h3>👥 My Team</h3>
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <button class="close-sidebar" onclick="closeSidebar()">✕</button>
         <div class="profile">
             <h3>👥 HR Manager</h3>
-            <p>
-                <?php echo $_SESSION['user_name']; ?>
-            </p>
+            <p><?php echo $_SESSION['user_name']; ?></p>
         </div>
         <hr>
-        <a href="index.php" class="logout-btn" style="background:#007bff; margin-bottom:10px;"> Back to Board</a>
-        <a href="index.php?logout=1" class="logout-btn">Logout</a>
+        <a href="index.php" class="logout-btn" style="background:#007bff; margin-bottom:10px;">📊 Back to Board</a>
+        <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 
     <div class="main-content">
@@ -343,6 +399,29 @@ $my_team = $stmt->fetchAll();
             </table>
         </div>
     </div>
+
+    <script>
+        // Mobile sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 768) closeSidebar();
+        });
+    </script>
 </body>
 
 </html>

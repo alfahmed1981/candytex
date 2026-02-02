@@ -211,3 +211,27 @@ function saveCM() {
         })
     });
 }
+
+// --- MOBILE SIDEBAR TOGGLE ---
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Close sidebar on window resize (if desktop)
+window.addEventListener('resize', function () {
+    if (window.innerWidth > 768) {
+        closeSidebar();
+    }
+});
