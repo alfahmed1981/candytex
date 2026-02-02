@@ -12,7 +12,7 @@ if (isset($_GET['logout'])) {
 // Handle Login
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'login') {
-    $cin_input = strtoupper(trim($_POST['cin'])); // Force Uppercase
+    $cin_input = strtoupper(str_replace(' ', '', trim($_POST['cin']))); // Force Uppercase & No Spaces
     $phone_input = trim($_POST['phone']);
 
     // Database Auth
