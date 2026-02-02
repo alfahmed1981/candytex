@@ -12,7 +12,7 @@ if (isset($_GET['logout'])) {
 // Handle Login
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'login') {
-    $cin_input = trim($_POST['cin']);
+    $cin_input = strtoupper(trim($_POST['cin'])); // Force Uppercase
     $phone_input = trim($_POST['phone']);
 
     // Database Auth
@@ -84,7 +84,7 @@ if (!isset($_SESSION['user_cin'])) {
                 <input type="hidden" name="action" value="login">
                 <div class="form-group">
                     <label>National ID (CNIE) / رقم البطاقة</label>
-                    <input type="text" name="cin" required placeholder="AB123456">
+                    <input type="text" name="cin" required placeholder="AB123456" style="text-transform:uppercase;">
                 </div>
                 <div class="form-group">
                     <label>Phone Number / رقم الهاتف</label>
