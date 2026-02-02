@@ -55,9 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
         $password = password_hash('123456', PASSWORD_DEFAULT);
     }
 
-    $stmt = $pdo->prepare("INSERT INTO users (cin, name, phone, role, password) VALUES (?, ?, ?, ?, ?)");
+    // New Fields
+    $dept = $_POST['department'] ?? null;
+    $loc = $_POST['location'] ?? null;
+
+    $stmt = $pdo->prepare("INSERT INTO users (cin, name, phone, role, password, department, location) VALUES (?, ?, ?, ?, ?, ?, ?)");
     try {
-        $stmt->execute([$cin, $name, $phone, $role, $password]);
+        $stmt->execute([$cin, $name, $phone, $role, $password, $dept, $loc]);
         $msg = "User Added!";
     } catch (Exception $e) {
         $msg = "Error: " . $e->getMessage();
@@ -204,9 +208,10 @@ $users = $stmt->fetchAll();
 
             <!-- Quick Links -->
             <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-                <a href="admin_reports.php" class="btn btn-blue" style="background:#fd7e14;">📅 Daily Tracking</a>
-                <a href="admin_advanced.php" class="btn btn-blue" style="background:#6f42c1;">⚙️ إدارة متقدمة</a>
-                <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 استيراد CSV</a>
+                <a href="admin_daily.php" class="btn btn-blue" style="background:#28a745;">📸 Daily Snapshot</a>
+                <a href="admin_reports.php" class="btn btn-blue" style="background:#fd7e14;">📅 Monthly Matrix</a>
+                <a href="admin_advanced.php" class="btn btn-blue" style="background:#6f42c1;">⚙️ Advanced</a>
+                <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 Import CSV</a>
             </div>
 
             <?php if (isset($msg))
@@ -216,9 +221,12 @@ $users = $stmt->fetchAll();
             <div style="background:#f1f1f1; padding:20px; border-radius:8px; margin-bottom:20px;">
                 <h3>+ Add New User / إضافة مستخدم</h3>
                 <form method="POST" style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <input type="text" name="cin" placeholder="CIN (Login ID)" required>
+                    <input type="text" name="cin" placeholder="CIN (Login ID)" required style="width:120px;">
                     <input type="text" name="name" placeholder="Full Name / الاسم" required>
-                    <input type="text" name="phone" placeholder="Phone (Password)" required>
+                    <input type="text" name="phone" placeholder="Phone" required style="width:120px;">
+
+                    <input type="text" name="department" placeholder="Dept (e.g. Sewing)" style="width:120px;">
+                    <input type="text" name="location" placeholder="Loc (e.g. Floor 1)" style="width:120px;">
                     <select name="role">
                         <option value="manager">Manager / Chef d'équipe</option>
                         <option value="admin">Administrator</option>
