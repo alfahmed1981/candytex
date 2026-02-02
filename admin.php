@@ -217,6 +217,22 @@ $users = $stmt->fetchAll();
             <?php if (isset($msg))
                 echo "<p style='color:green; background:#d4edda; padding:10px; border:1px solid #c3e6cb; border-radius:4px;'>$msg</p>"; ?>
 
+            <?php
+            // Fetch Dynamic Data for Dropdowns
+            $d_stmt = $pdo->query("SELECT name FROM departments ORDER BY name");
+            $dept_list = $d_stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            $l_stmt = $pdo->query("SELECT name FROM locations ORDER BY name");
+            $loc_list = $l_stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            $r_stmt = $pdo->query("SELECT slug, name FROM system_roles ORDER BY name");
+            $role_list = $r_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+            // Fallback for roles if table empty (initial migration)
+            if (empty($role_list)) {
+                $role_list = ['manager' => 'Manager / Chef d\'équipe', 'admin' => 'Administrator'];
+            }
+            ?>
+
             <!-- Add User Form -->
             <div style="background:#f1f1f1; padding:20px; border-radius:8px; margin-bottom:20px;">
                 <h3>+ Add New User / إضافة مستخدم</h3>
@@ -226,12 +242,29 @@ $users = $stmt->fetchAll();
                     <input type="text" name="name" placeholder="Full Name / الاسم" required>
                     <input type="text" name="phone" placeholder="Phone" required style="width:120px;">
 
-                    <input type="text" name="department" placeholder="Dept (e.g. Sewing)" style="width:120px;">
-                    <input type="text" name="location" placeholder="Loc (e.g. Floor 1)" style="width:120px;">
-                    <select name="role">
-                        <option value="manager">Manager / Chef d'équipe</option>
-                        <option value="admin">Administrator</option>
+                    <!-- Dynamic Department -->
+                    <select name="department" style="width:130px;">
+                        <option value="">Dept...</option>
+                        <?php foreach ($dept_list as $d): ?>
+                            <option value="<?= htmlspecialchars($d) ?>"><?= htmlspecialchars($d) ?></option>
+                        <?php endforeach; ?>
                     </select>
+
+                    <!-- Dynamic Location -->
+                    <select name="location" style="width:130px;">
+                        <option value="">Loc...</option>
+                        <?php foreach ($loc_list as $l): ?>
+                            <option value="<?= htmlspecialchars($l) ?>"><?= htmlspecialchars($l) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <!-- Dynamic Roles -->
+                    <select name="role">
+                        <?php foreach ($role_list as $slug => $r_name): ?>
+                            <option value="<?= htmlspecialchars($slug) ?>"><?= htmlspecialchars($r_name) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+
                     <button type="submit" name="add_user" class="btn btn-green">Add User</button>
                 </form>
             </div>

@@ -315,21 +315,23 @@ if ($view_cin !== $user_cin && $is_admin) {
     <div class="main-content">
         <div class="container">
             <h2>👷 <?= htmlspecialchars($view_name) ?> & Shift Management</h2>
-            
+
             <?php if ($is_admin): ?>
-                    <div style="background:#e9ecef; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #ccc;">
-                        <form method="GET" style="display:flex; gap:10px; align-items:center;">
-                            <label style="font-weight:bold;">👮 Admin View / اختر الفريق:</label>
-                            <select name="manager_cin" onchange="this.form.submit()" style="padding:8px; border-radius:4px; border:1px solid #aaa;">
-                                <option value="<?= $_SESSION['user_cin'] ?>">My Team (Admin)</option>
-                                <?php foreach ($all_managers as $mgr): ?>
-                                        <option value="<?= $mgr['cin'] ?>" <?= $view_cin === $mgr['cin'] ? 'selected' : '' ?>>
-                                            Team: <?= htmlspecialchars($mgr['name']) ?> (<?= $mgr['cin'] ?>)
-                                        </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </form>
-                    </div>
+                <div
+                    style="background:#e9ecef; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #ccc;">
+                    <form method="GET" style="display:flex; gap:10px; align-items:center;">
+                        <label style="font-weight:bold;">👮 Admin View / اختر الفريق:</label>
+                        <select name="manager_cin" onchange="this.form.submit()"
+                            style="padding:8px; border-radius:4px; border:1px solid #aaa;">
+                            <option value="<?= $_SESSION['user_cin'] ?>">My Team (Admin)</option>
+                            <?php foreach ($all_managers as $mgr): ?>
+                                <option value="<?= $mgr['cin'] ?>" <?= $view_cin === $mgr['cin'] ? 'selected' : '' ?>>
+                                    Team: <?= htmlspecialchars($mgr['name']) ?> (<?= $mgr['cin'] ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </form>
+                </div>
             <?php endif; ?>
             <p style="color:#666; font-size:14px;">Manage your workforce. <br><small>إدارة فريق العمل / Gestion
                     d'équipe</small></p>
@@ -365,26 +367,28 @@ if ($view_cin !== $user_cin && $is_admin) {
                             <input type="text" name="phone" placeholder="06XXXXXXXX">
                         </div>
 
+                        <?php
+                        // Fetch Drops for Form
+                        $locs = $pdo->query("SELECT name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+                        $depts = $pdo->query("SELECT name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+                        $shifts = $pdo->query("SELECT code, name FROM shifts ORDER BY code")->fetchAll();
+                        ?>
+
                         <!-- Row 2 -->
                         <div class="form-group">
                             <label>Site / موقع العمل</label>
                             <select name="location">
-                                <option value="Candy 1">Candy 1</option>
-                                <option value="Candy 2">Candy 2</option>
-                                <option value="Flora 1">Flora 1</option>
+                                <?php foreach ($locs as $l): ?>
+                                    <option value="<?= htmlspecialchars($l) ?>"><?= htmlspecialchars($l) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Dept / القسم</label>
                             <select name="department">
-                                <option value="Sewing">Sewing / الخياطة</option>
-                                <option value="Cutting">Cutting / القص</option>
-                                <option value="Finishing">Finishing / التشطيب</option>
-                                <option value="Packing">Packing / التغليف</option>
-                                <option value="Warehouse">Warehouse / المستودع</option>
-                                <option value="Maintenance">Maintenance / الصيانة</option>
-                                <option value="Quality">Quality / الجودة</option>
-                                <option value="HR_Admin">HR & Admin / الإدارة</option>
+                                <?php foreach ($depts as $d): ?>
+                                    <option value="<?= htmlspecialchars($d) ?>"><?= htmlspecialchars($d) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
@@ -396,10 +400,10 @@ if ($view_cin !== $user_cin && $is_admin) {
                         <div class="form-group">
                             <label>Shift / الفترة</label>
                             <select name="shift">
-                                <option value="A">Shift A (Matin)</option>
-                                <option value="B">Shift B (Après-midi)</option>
-                                <option value="C">Shift C (Nuit)</option>
-                                <option value="Normal">Normal Day</option>
+                                <?php foreach ($shifts as $s): ?>
+                                    <option value="<?= htmlspecialchars($s['code']) ?>"><?= htmlspecialchars($s['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group"></div>
