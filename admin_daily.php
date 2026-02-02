@@ -316,6 +316,78 @@ sort($locations);
         <?php endif; ?>
     </div>
 
+    <script>
+        function filterTable() {
+            // Get input values
+            const nameFilter = document.getElementById('filterName').value.toUpperCase();
+            const deptFilter = document.getElementById('filterDept').value.toUpperCase();
+            const locFilter = document.getElementById('filterLoc').value.toUpperCase();
+            const issueFilter = document.getElementById('filterIssues').value;
+
+            // KPI Filters
+            const kpiFilters = {
+                'S': document.getElementById('filterS').value,
+                'Q': document.getElementById('filterQ').value,
+                'D': document.getElementById('filterD').value,
+                '5S': document.getElementById('filter5S').value,
+                'C': document.getElementById('filterC').value
+            };
+
+            const table = document.querySelector('.data-table tbody');
+            const rows = table.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                if (cells.length < 9) continue;
+
+                // 1. Name/CIN (Index 0)
+                const nameText = cells[0].textContent || cells[0].innerText;
+                const showName = nameText.toUpperCase().indexOf(nameFilter) > -1;
+
+                // 2. Dept (Index 1)
+                const deptText = cells[1].textContent || cells[1].innerText;
+                const showDept = deptFilter === "" || deptText.toUpperCase().indexOf(deptFilter) > -1;
+
+                // 3. Loc (Index 2)
+                const locText = cells[2].textContent || cells[2].innerText;
+                const showLoc = locFilter === "" || locText.toUpperCase().indexOf(locFilter) > -1;
+
+                // 4. Issues (Index 8)
+                const issueText = cells[8].textContent || cells[8].innerText;
+                const hasIssues = issueText.trim() !== '-' && issueText.trim() !== '';
+                const showIssues = issueFilter === "" || (issueFilter === "yes" && hasIssues);
+
+                // 5. KPIs
+                let showKPIsClass = true;
+                const kpiIndices = { 'S': 3, 'Q': 4, 'D': 5, '5S': 6, 'C': 7 };
+                
+                for (const [key, filterVal] of Object.entries(kpiFilters)) {
+                    if (filterVal !== "") {
+                        const cell = cells[kpiIndices[key]];
+                        const badge = cell.querySelector('.badge');
+                        
+                        let targetClass = '';
+                        if(filterVal === 'G') targetClass = 'bg-green';
+                        if(filterVal === 'O') targetClass = 'bg-orange';
+                        if(filterVal === 'R') targetClass = 'bg-red';
+                        if(filterVal === 'B') targetClass = 'bg-blue';
+                        if(filterVal === 'gray') targetClass = 'bg-gray';
+
+                        if (!badge || !badge.classList.contains(targetClass)) {
+                            showKPIsClass = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (showName && showDept && showLoc && showIssues && showKPIsClass) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+    </script>
 </body>
 
 </html>
