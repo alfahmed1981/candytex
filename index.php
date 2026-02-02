@@ -12,8 +12,26 @@ if (isset($_GET['logout'])) {
 // Handle Login
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'login') {
-    $cin_input = strtoupper(str_replace(' ', '', trim($_POST['cin']))); // Force Uppercase & No Spaces
-    $phone_input = trim($_POST['phone']);
+    
+    // --- ANTI-BOT CHECKS ---
+    // 1. Honeypot Check (Must be empty)
+    if (!empty($_POST['website_hp'])) {
+        die("Security Check Failed: Bot Detected.");
+    }
+
+    // 2. Time Check (Must take at least 1 second)
+    $min_time = 1; 
+    if (!isset($_POST['login_ts']) || (time() - intval($_POST['login_ts']) < $min_time)) {
+       // $error = "Too fast! Are you a robot? Please try again.";
+       // Actually, let's just fail silently or show generic error to confuse bots
+       $error = "Security Check: Please wait a moment before clicking Login.";
+    } 
+    
+    if (!$error) {
+        $cin_input = strtoupper(str_replace(' ', '', trim($_POST['cin']))); // Force Uppercase & No Spaces
+        $phone_input = trim($_POST['phone']);
+        
+        // ... (rest of logic) ...
 
     // Database Auth
     $stmt = $pdo->prepare("SELECT * FROM users WHERE cin = ?");
@@ -82,6 +100,11 @@ if (!isset($_SESSION['user_cin'])) {
                 echo "<p class='error'>$error</p>"; ?>
             <form method="POST">
                 <input type="hidden" name="action" value="login">
+                
+                <!-- ANTI-BOT TRAPS -->
+                <input type="text" name="website_hp" class="visually-hidden" tabindex="-1" autocomplete="off">
+                <input type="hidden" name="login_ts" value="<?php echo time(); ?>">
+
                 <div class="form-group">
                     <label>National ID (CNIE) / رقم البطاقة</label>
                     <input type="text" name="cin" required placeholder="AB123456" style="text-transform:uppercase;">
