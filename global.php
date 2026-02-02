@@ -94,6 +94,25 @@ $columns = [
 </head>
 
 <body>
+    <!-- Mobile Top Navigation -->
+    <div class="top-nav">
+        <div class="top-nav-header">
+            <h3>🏭 Factory View</h3>
+        </div>
+        <div class="nav-links">
+            <a href="index.php">📊 لوحة</a>
+            <a href="global.php" class="active">🏭 عام</a>
+            <a href="admin.php">⚙️ إدارة</a>
+            <a href="index.php?logout=1" class="logout">خروج</a>
+        </div>
+        <form method="GET" class="date-filter">
+            <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
+            <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
+            <button type="submit">🔍 عرض</button>
+        </form>
+    </div>
+
+    <!-- Desktop Sidebar -->
     <div class="sidebar">
         <div class="profile">
             <h3>🏭 Factory View</h3>
@@ -109,10 +128,8 @@ $columns = [
                 <button type="submit">Filter</button>
             </form>
         </div>
-        <!-- Link back to My Area -->
-        <a href="index.php" class="logout-btn" style="background:#007bff; margin-bottom:10px;">My
-            Area<br><small>منطقتي</small></a>
-        <a href="index.php?logout=1" class="logout-btn">Logout</a>
+        <a href="index.php" class="logout-btn" style="background:#007bff;">📊 Board</a>
+        <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 
     <div class="main-content">
