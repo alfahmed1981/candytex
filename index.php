@@ -91,7 +91,8 @@ if (!isset($_SESSION['user_cin'])) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>SQD+C Login</title>
-        <link rel="stylesheet" href="style.css">
+        <!-- Force CSS Reload -->
+        <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
     </head>
 
     <body class="login-body">
@@ -103,7 +104,9 @@ if (!isset($_SESSION['user_cin'])) {
                 <input type="hidden" name="action" value="login">
 
                 <!-- ANTI-BOT TRAPS -->
-                <input type="text" name="website_hp" class="visually-hidden" tabindex="-1" autocomplete="off">
+                <!-- Inline style to ensure hidden even if CSS fails -->
+                <input type="text" name="website_hp" class="visually-hidden" tabindex="-1" autocomplete="off"
+                    style="position:absolute; opacity:0; z-index:-1; width:0; height:0;">
                 <input type="hidden" name="login_ts" value="<?php echo time(); ?>">
 
                 <div class="form-group">
