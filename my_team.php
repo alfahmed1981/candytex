@@ -18,19 +18,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_worker'])) {
         $w_cin = trim($_POST['cin']);
         $w_name = trim($_POST['name']);
+        $w_phone = trim($_POST['phone']);
+        $w_location = $_POST['location'];
+        $w_dept = $_POST['department'];
+        $w_job = trim($_POST['job_title']);
         $w_shift = $_POST['shift'];
 
-        // Strict Validation: Latin Letters and Numbers ONLY (No spaces, no symbols)
+        // Strict Validation
         if (!preg_match('/^[a-zA-Z0-9]+$/', $w_cin)) {
-            $error = "❌ Security Alert: CIN must contain ONLY Latin letters and numbers. No spaces or symbols allowed.";
+            $error = "❌ Security Alert: CIN must contain ONLY Latin letters and numbers.";
         } else {
             try {
-                $stmt = $pdo->prepare("INSERT INTO workers (cin, name, shift, manager_cin) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$w_cin, $w_name, $w_shift, $user_cin]);
+                $stmt = $pdo->prepare("INSERT INTO workers (cin, name, phone, location, department, job_title, shift, manager_cin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$w_cin, $w_name, $w_phone, $w_location, $w_dept, $w_job, $w_shift, $user_cin]);
                 $msg = "✅ Worker added successfully!";
             } catch (PDOException $e) {
                 if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
-                    $error = "⚠️ Error: This CIN already exists in the system.";
+                    $error = "⚠️ Error: This CIN already exists.";
                 } else {
                     $error = "Database Error: " . $e->getMessage();
                 }
@@ -48,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch My Team
-$stmt = $pdo->prepare("SELECT * FROM workers WHERE manager_cin = ? ORDER BY shift, name");
+$stmt = $pdo->prepare("SELECT * FROM workers WHERE manager_cin = ? ORDER BY location, department, shift, name");
 $stmt->execute([$user_cin]);
 $my_team = $stmt->fetchAll();
 ?>
@@ -61,7 +65,7 @@ $my_team = $stmt->fetchAll();
     <link rel="stylesheet" href="style.css">
     <style>
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 20px auto;
             padding: 20px;
             background: white;
@@ -71,25 +75,21 @@ $my_team = $stmt->fetchAll();
 
         .form-box {
             background: #f8f9fa;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
             border: 1px solid #ddd;
             margin-bottom: 20px;
         }
 
-        .form-row {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-        }
-
-        .form-group {
-            flex: 1;
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
         }
 
         .form-group label {
             display: block;
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 5px;
             font-weight: bold;
             color: #555;
@@ -108,11 +108,12 @@ $my_team = $stmt->fetchAll();
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
+            font-size: 14px;
         }
 
         th,
         td {
-            padding: 10px;
+            padding: 8px;
             border-bottom: 1px solid #eee;
             text-align: left;
         }
@@ -125,7 +126,7 @@ $my_team = $stmt->fetchAll();
         .shift-badge {
             padding: 3px 8px;
             border-radius: 10px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             color: white;
         }
@@ -200,8 +201,8 @@ $my_team = $stmt->fetchAll();
     <div class="main-content">
         <div class="container">
             <h2>👷 My Team & Shift Management</h2>
-            <p style="color:#666; font-size:14px;">Manage the workers under your supervision. Add new members and assign
-                shifts.</p>
+            <p style="color:#666; font-size:14px;">Manage your workforce. <br><small>إدارة فريق العمل / Gestion
+                    d'équipe</small></p>
 
             <?php if ($error): ?>
                 <div class="alert alert-error">
@@ -215,21 +216,54 @@ $my_team = $stmt->fetchAll();
             <?php endif; ?>
 
             <div class="form-box">
-                <h4>+ Add New Worker</h4>
+                <h4>+ Add New Worker / إضافة عامل / Ajouter</h4>
                 <form method="POST">
-                    <div class="form-row">
+                    <div class="form-grid">
+                        <!-- Row 1 -->
                         <div class="form-group">
                             <label>CIN (Unique ID)</label>
-                            <input type="text" name="cin" placeholder="Ex: AB12345" required
-                                onkeyup="validateCIN(this)">
-                            <small style="color:#888;">Latin letters & Numbers only.</small>
+                            <input type="text" name="cin" placeholder="AB12345" required pattern="[A-Za-z0-9]+"
+                                title="Letters and numbers only">
                         </div>
                         <div class="form-group">
-                            <label>Full Name</label>
-                            <input type="text" name="name" placeholder="Worker Name" required>
+                            <label>Full Name / الاسم الكامل</label>
+                            <input type="text" name="name" required>
                         </div>
                         <div class="form-group">
-                            <label>Shift</label>
+                            <label>Phone / الهاتف</label>
+                            <input type="text" name="phone" placeholder="06XXXXXXXX">
+                        </div>
+
+                        <!-- Row 2 -->
+                        <div class="form-group">
+                            <label>Site / موقع العمل</label>
+                            <select name="location">
+                                <option value="Candy 1">Candy 1</option>
+                                <option value="Candy 2">Candy 2</option>
+                                <option value="Flora 1">Flora 1</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dept / القسم</label>
+                            <select name="department">
+                                <option value="Sewing">Sewing / الخياطة</option>
+                                <option value="Cutting">Cutting / القص</option>
+                                <option value="Finishing">Finishing / التشطيب</option>
+                                <option value="Packing">Packing / التغليف</option>
+                                <option value="Warehouse">Warehouse / المستودع</option>
+                                <option value="Maintenance">Maintenance / الصيانة</option>
+                                <option value="Quality">Quality / الجودة</option>
+                                <option value="HR_Admin">HR & Admin / الإدارة</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Job Title / الوظيفة</label>
+                            <input type="text" name="job_title" placeholder="Ex: Operator">
+                        </div>
+
+                        <!-- Row 3 -->
+                        <div class="form-group">
+                            <label>Shift / الفترة</label>
                             <select name="shift">
                                 <option value="A">Shift A (Matin)</option>
                                 <option value="B">Shift B (Après-midi)</option>
@@ -237,21 +271,22 @@ $my_team = $stmt->fetchAll();
                                 <option value="Normal">Normal Day</option>
                             </select>
                         </div>
-                        <div class="form-group" style="flex:0.5;">
+                        <div class="form-group"></div>
+                        <div class="form-group">
                             <label>&nbsp;</label>
-                            <button type="submit" name="add_worker"
-                                style="background:#28a745; cursor:pointer;">Add</button>
+                            <button type="submit" name="add_worker" style="background:#28a745; cursor:pointer;">Save
+                                Worker / حفظ</button>
                         </div>
                     </div>
                 </form>
             </div>
 
-            <h3>📋 Current Team List</h3>
+            <h3>📋 Team List</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>CIN</th>
-                        <th>Name</th>
+                        <th>Info</th>
+                        <th>Job / Location</th>
                         <th>Shift</th>
                         <th>Actions</th>
                     </tr>
@@ -259,7 +294,7 @@ $my_team = $stmt->fetchAll();
                 <tbody>
                     <?php if (count($my_team) == 0): ?>
                         <tr>
-                            <td colspan="4" style="text-align:center; padding:20px; color:#999;">No workers added yet.</td>
+                            <td colspan="4" style="text-align:center;">No workers added yet.</td>
                         </tr>
                     <?php endif; ?>
 
@@ -273,11 +308,23 @@ $my_team = $stmt->fetchAll();
                             $badgeClass = 'shift-C';
                         ?>
                         <tr>
-                            <td><strong>
-                                    <?php echo htmlspecialchars($w['cin']); ?>
-                                </strong></td>
                             <td>
-                                <?php echo htmlspecialchars($w['name']); ?>
+                                <strong>
+                                    <?php echo htmlspecialchars($w['name']); ?>
+                                </strong><br>
+                                <small class="text-muted">
+                                    <?php echo htmlspecialchars($w['cin']); ?>
+                                </small>
+                                <?php if ($w['phone']): ?><br><small>📞
+                                        <?php echo htmlspecialchars($w['phone']); ?>
+                                    </small><?php endif; ?>
+                            </td>
+                            <td>
+                                <?php echo htmlspecialchars($w['department']); ?> /
+                                <?php echo htmlspecialchars($w['location']); ?><br>
+                                <small style="color:#666;">
+                                    <?php echo htmlspecialchars($w['job_title']); ?>
+                                </small>
                             </td>
                             <td><span class="shift-badge <?php echo $badgeClass; ?>">
                                     <?php echo $w['shift']; ?>

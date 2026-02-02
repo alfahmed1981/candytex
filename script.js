@@ -6,18 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- DATE LOGIC ---
-function openDate(kpi, date, currentStatus) {
-    Swal.fire({
-        title: `Update ${kpi} - ${date}`,
-        html: `
-            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button class="swal2-confirm swal2-styled" style="background-color: #28a745;" onclick="selectStatus('${kpi}', '${date}', 'green')">Met (Green)</button>
-                <button class="swal2-confirm swal2-styled" style="background-color: #fd7e14;" onclick="selectStatus('${kpi}', '${date}', 'orange')">Action Req</button>
-                <button class="swal2-confirm swal2-styled" style="background-color: #dc3545;" onclick="selectStatus('${kpi}', '${date}', 'red')">Missed/Accident</button>
-                <button class="swal2-confirm swal2-styled" style="background-color: #007bff;" onclick="selectStatus('${kpi}', '${date}', 'blue')">Holiday</button>
-                <button class="swal2-confirm swal2-styled" style="background-color: #e9ecef; color: #333;" onclick="selectStatus('${kpi}', '${date}', 'gray')">Clear</button>
-            </div>
-        `,
+`,
         showConfirmButton: false,
         showCancelButton: true
     });
@@ -63,15 +52,15 @@ function renderTable(data) {
 
         // Category Select
         const catOptions = ['S', 'Q', 'D', '5S', 'C'].map(c =>
-            `<option value="${c}" ${row.category === c ? 'selected' : ''}>${c}</option>`
+            `< option value = "${c}" ${ row.category === c ? 'selected' : '' }> ${ c }</option > `
         ).join('');
 
         tr.innerHTML = `
-            <td>
-                <select onchange="updateRow(${index}, 'category', this.value)" style="font-weight:bold;">
-                    ${catOptions}
-                </select>
-            </td>
+    < td >
+    <select onchange="updateRow(${index}, 'category', this.value)" style="font-weight:bold;">
+        ${catOptions}
+    </select>
+            </td >
             <td contenteditable="true" onblur="updateRow(${index}, 'issue', this.innerText)">${row.issue || ''}</td>
             <td contenteditable="true" onblur="updateRow(${index}, 'action_plan', this.innerText)">${row.action_plan || ''}</td>
             <td contenteditable="true" onblur="updateRow(${index}, 'responsible', this.innerText)">${row.responsible || ''}</td>
@@ -84,7 +73,7 @@ function renderTable(data) {
                 </select>
             </td>
             <td><button style="background:red; padding:5px; color:white; border:none; cursor:pointer;" onclick="deleteRow(${index})">X</button></td>
-        `;
+`;
         tbody.appendChild(tr);
     });
 }

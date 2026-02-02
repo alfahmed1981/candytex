@@ -18,7 +18,7 @@ try {
     }
 
     // 2. Create 'workers' table (New Step)
-    echo "<h3>Step 2: Creating Workers Table...</h3>";
+    echo "<h3>Step 2: Creating/Updating Workers Table...</h3>";
     $sql_workers = "CREATE TABLE IF NOT EXISTS `workers` (
         `id` INT AUTO_INCREMENT PRIMARY KEY,
         `cin` VARCHAR(20) NOT NULL UNIQUE,
@@ -28,9 +28,30 @@ try {
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX (`manager_cin`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-
     $pdo->exec($sql_workers);
-    echo "✅ Table 'workers' is ready.<br>";
+
+    // Add new columns if they don't exist (Safe Alter)
+    $cols_to_add = [
+        "ALTER TABLE `workers` ADD COLUMN `phone` VARCHAR(20) NULL AFTER `name`",
+        "ALTER TABLE `workers` ADD COLUMN `location` VARCHAR(50) NULL AFTER `phone`", // Candy 1, Flora 1
+        "ALTER TABLE `workers` ADD COLUMN `department` VARCHAR(50) NULL AFTER `location`", // Sewing, Cutting...
+        "ALTER TABLE `workers` ADD COLUMN `job_title` VARCHAR(100) NULL AFTER `department`",
+
+        "ALTER TABLE `users` ADD COLUMN `location` VARCHAR(50) NULL AFTER `role`",
+        "ALTER TABLE `users` ADD COLUMN `department` VARCHAR(50) NULL AFTER `location`",
+        "ALTER TABLE `users` ADD COLUMN `job_title` VARCHAR(100) NULL AFTER `department`"
+    ];
+
+    foreach ($cols_to_add as $sql) {
+        try {
+            $pdo->exec($sql);
+            echo "✅ Column added/checked.<br>";
+        } catch (PDOException $e) {
+            // Ignore "Duplicate column" checks
+        }
+    }
+
+    echo "✅ Table 'workers' & 'users' updated.<br>";
 
     echo "<h1>🚀 Database Update Complete!</h1>";
 

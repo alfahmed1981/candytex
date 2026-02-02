@@ -97,107 +97,38 @@ $users = $pdo->query("SELECT * FROM users ORDER BY role, name")->fetchAll();
 
         th {
             background: #2c3e50;
-            color: white;
-        }
-
-        .btn-small {
-            padding: 5px 10px;
-            font-size: 12px;
-            text-decoration: none;
-            border-radius: 4px;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-login {
-            background: #28a745;
-        }
-
-        .btn-del {
-            background: #dc3545;
-        }
-
-        .form-inline {
-            display: flex;
-            gap: 10px;
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-        }
-
-        .form-inline input,
-        .form-inline select {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .user-card { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-left: 5px solid #007bff; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+        .user-card.admin { border-left-color: #28a745; background: #e8f5e9; }
+        .role-badge { background: #007bff; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+        .role-admin { background: #28a745; }
+        
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 5px; }
+        .btn { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; color: white; text-decoration: none; font-size: 14px; }
+        .btn-green { background: #28a745; }
+        .btn-red { background: #dc3545; }
+        .btn-blue { background: #007bff; }
+        
+        .filter-bar { background: #eee; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
     </style>
 </head>
-
 <body>
     <div class="sidebar">
-        <div class="profile">
-            <h3>🛡️ Admin Panel</h3>
-            <p>
-                <?php echo $_SESSION['user_name']; ?>
-            </p>
-        </div>
+        <h3>⚙️ Admin Panel</h3>
+        <p>Managing Users</p>
         <hr>
-        <a href="index.php" class="logout-btn" style="background:#007bff; margin-bottom:10px;">My Board</a>
-        <a href="global.php" class="logout-btn" style="background:#6f42c1; margin-bottom:10px;">Global View</a>
-        <a href="index.php?logout=1" class="logout-btn">Logout</a>
+        <a href="index.php" class="logout-btn" style="background:#007bff; margin-bottom:10px;"> Back to Board</a>
     </div>
 
     <div class="main-content">
-        <div class="admin-container">
-            <h2>👥 Team Management / إدارة الفريق</h2>
+        <div class="container">
+            <h1>👥 User Management</h1>
+            <p>Add, edit, or impersonate users. <br><small>إدارة المستخدمين / Gestion des utilisateurs</small></p>
+
+            <?php if (isset($msg)) echo "<p style='color:green; background:#d4edda; padding:10px; border:1px solid #c3e6cb;'>$msg</p>"; ?>
 
             <!-- Add User Form -->
-            <form method="POST" class="form-inline">
-                <input type="text" name="cin" placeholder="CIN (Login ID)" required>
-                <input type="text" name="name" placeholder="Full Name / الاسم" required>
-                <input type="text" name="phone" placeholder="Phone (Pass)" required>
-                <select name="role">
-                    <option value="manager">Manager (Standard)</option>
-                    <option value="admin">Admin</option>
-                </select>
-                <button type="submit" name="add_user" class="add-btn" style="width:auto;">+ Add User</button>
-            </form>
-
-            <!-- User List -->
-            <table>
-                <thead>
-                    <tr>
-                        <th>CIN</th>
-                        <th>Name</th>
-                        <th>Role</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($users as $u): ?>
-                        <tr>
-                            <td>
-                                <?php echo htmlspecialchars($u['cin']); ?>
-                            </td>
-                            <td>
-                                <?php echo htmlspecialchars($u['name']); ?>
-                            </td>
-                            <td>
-                                <span
-                                    style="padding: 2px 5px; border-radius: 4px; background: <?php echo $u['role'] == 'admin' ? '#ffd700' : '#e9ecef'; ?>;">
-                                    <?php echo $u['role']; ?>
-                                </span>
-                            </td>
-                            <td>
-                                <!-- IMPERSONATION BUTTON -->
-                                <?php if ($u['cin'] !== $_SESSION['user_cin']): ?>
-                                    <a href="?action=login_as&cin=<?php echo $u['cin']; ?>" class="btn-small btn-login">
-                                        🔑 Open Board
-                                    </a>
-                                    <a href="?action=delete&id=<?php echo $u['id']; ?>" class="btn-small btn-del"
                                         onclick="return confirm('Are you sure?');">
                                         🗑️
                                     </a>

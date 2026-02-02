@@ -71,7 +71,44 @@ button:hover { background: #0056b3; }
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     text-align: center;
+    border-top: 5px solid #ccc; /* Default border */
 }
+
+/* ISO/Standard Visual Management Colors for Columns */
+.col-S { border-color: #28a745; background: #ebf9ed; } /* Safety - Green */
+.col-Q { border-color: #007bff; background: #e6f2ff; } /* Quality - Blue */
+.col-D { border-color: #fd7e14; background: #fff4e6; } /* Delivery - Orange */
+.col-5S { border-color: #17a2b8; background: #e0f7fa; } /* 5S - Cyan */
+.col-C { border-color: #dc3545; background: #fce8e8; } /* Cost - Red */
+
+.col-S h3 { color: #1e7e34; }
+.col-Q h3 { color: #0056b3; }
+.col-D h3 { color: #aa540e; }
+.col-5S h3 { color: #138496; }
+.col-C h3 { color: #bd2130; }
+
+/* Modal Buttons Enhanced */
+.status-options { display: flex; flex-direction: column; gap: 10px; }
+.status-btn { 
+    padding: 15px; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    color: white; 
+    text-align: left;
+    transition: transform 0.1s;
+    font-size: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.status-btn:active { transform: scale(0.98); }
+.status-btn small { font-weight: normal; opacity: 0.9; font-size: 0.8em; }
+
+.btn-green { background: linear-gradient(135deg, #28a745, #218838); box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
+.btn-orange { background: linear-gradient(135deg, #fd7e14, #e06f0e); box-shadow: 0 4px 6px rgba(253, 126, 20, 0.2); }
+.btn-red { background: linear-gradient(135deg, #dc3545, #c82333); box-shadow: 0 4px 6px rgba(220, 53, 69, 0.2); }
+.btn-blue { background: linear-gradient(135deg, #007bff, #0069d9); box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2); }
 
 .days-container {
     display: grid;
