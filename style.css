@@ -167,7 +167,7 @@ button:active {
 
 /* ========== SIDEBAR (Desktop Only) ========== */
 .sidebar {
-    display: none;
+    display: none !important;
 }
 
 /* ========== MAIN CONTENT ========== */
