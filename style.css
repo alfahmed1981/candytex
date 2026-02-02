@@ -165,9 +165,9 @@ button:active {
     border-radius: 8px;
 }
 
-/* ========== SIDEBAR (Desktop Only) ========== */
+/* ========== SIDEBAR (Hidden on Mobile) ========== */
 .sidebar {
-    display: none !important;
+    display: none;
 }
 
 /* ========== MAIN CONTENT ========== */
@@ -405,11 +405,11 @@ td select {
     }
 
     .top-nav {
-        display: none;
+        display: none !important;
     }
 
     .sidebar {
-        display: flex;
+        display: flex !important;
         flex-direction: column;
         width: 250px;
         min-width: 250px;
