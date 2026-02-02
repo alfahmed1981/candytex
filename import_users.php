@@ -63,7 +63,7 @@ if (isset($_POST['import_csv'])) {
                 continue;
             } // Skip header
 
-            $name = trim($data[$col_name] ?? '');
+            $name = strtoupper(trim($data[$col_name] ?? '')); // Force Uppercase Name
             $phone = preg_replace('/[^0-9+]/', '', $data[$col_phone] ?? '');
             $cin = strtoupper(trim(str_replace(' ', '', $data[$col_cin] ?? '')));
             $location = trim($data[$col_location] ?? '');
