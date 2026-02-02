@@ -15,8 +15,17 @@ $updated = 0;
 
 // Process CSV Upload
 if (isset($_POST['preview_csv']) && isset($_FILES['csv_file'])) {
-    $file = $_FILES['csv_file']['tmp_name'];
-    if (($handle = fopen($file, "r")) !== FALSE) {
+    $tmp_file = $_FILES['csv_file']['tmp_name'];
+
+    // Save to permanent location
+    $upload_dir = __DIR__ . '/uploads/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+    }
+    $saved_file = $upload_dir . 'import_' . time() . '.csv';
+    move_uploaded_file($tmp_file, $saved_file);
+
+    if (($handle = fopen($saved_file, "r")) !== FALSE) {
         $row = 0;
         while (($data = fgetcsv($handle, 10000, ",")) !== FALSE) {
             if ($row === 0) {
@@ -31,9 +40,10 @@ if (isset($_POST['preview_csv']) && isset($_FILES['csv_file'])) {
         }
         fclose($handle);
         $_SESSION['csv_headers'] = $headers;
-        $_SESSION['csv_file'] = $file;
+        $_SESSION['csv_file'] = $saved_file;
     }
 }
+
 
 // Import CSV
 if (isset($_POST['import_csv'])) {
