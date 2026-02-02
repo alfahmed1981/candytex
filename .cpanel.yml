@@ -11,3 +11,7 @@ deployment:
     - /bin/cp global.php $DEPLOYPATH
     - /bin/cp my_team.php $DEPLOYPATH
     - /bin/cp guide.php $DEPLOYPATH
+    - /bin/cp import_users.php $DEPLOYPATH
+    - /bin/cp schema.sql $DEPLOYPATH
+    - /bin/cp update_db.php $DEPLOYPATH
+    - /bin/cp init_admin.php $DEPLOYPATH
