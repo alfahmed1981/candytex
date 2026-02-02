@@ -194,6 +194,53 @@ sort($locations);
             <button type="button" onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
         </form>
 
+        <div class="stats-container" style="display:flex; gap:20px; margin-bottom:20px; flex-wrap:wrap;">
+            <?php
+            // Stats Calculation
+            $total_managers = count($managers);
+            $participated_count = count($daily_data); // Users who have at least one entry
+            $participation_rate = $total_managers > 0 ? round(($participated_count / $total_managers) * 100) : 0;
+
+            $status_counts = ['green' => 0, 'orange' => 0, 'red' => 0, 'blue' => 0];
+            foreach ($logs_raw as $log) {
+                if (isset($status_counts[$log['status']])) {
+                    $status_counts[$log['status']]++;
+                }
+            }
+            ?>
+
+            <!-- Card 1: Participation -->
+            <div class="stat-card"
+                style="flex:1; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; border-left:5px solid #007bff;">
+                <h3 style="margin:0; font-size:14px; color:#555;">Participation / المشاركة</h3>
+                <div style="font-size:24px; font-weight:bold; color:#007bff; margin:10px 0;">
+                    <?= $participated_count ?> / <?= $total_managers ?>
+                </div>
+                <div style="font-size:12px; color:#777;">Rate: <?= $participation_rate ?>%</div>
+            </div>
+
+            <!-- Card 2: Good Performance -->
+            <div class="stat-card"
+                style="flex:1; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; border-left:5px solid #28a745;">
+                <h3 style="margin:0; font-size:14px; color:#555;">Good (Green) / جيد</h3>
+                <div style="font-size:24px; font-weight:bold; color:#28a745; margin:10px 0;">
+                    <?= $status_counts['green'] ?>
+                </div>
+                <div style="font-size:12px; color:#777;">Marks</div>
+            </div>
+
+            <!-- Card 3: Issues -->
+            <div class="stat-card"
+                style="flex:1; background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05); text-align:center; border-left:5px solid #dc3545;">
+                <h3 style="margin:0; font-size:14px; color:#555;">Issues (Red/Orange) / مشاكل</h3>
+                <div style="font-size:24px; font-weight:bold; color:#dc3545; margin:10px 0;">
+                    <?= $status_counts['red'] + $status_counts['orange'] ?>
+                </div>
+                <div style="font-size:12px; color:#777;">Red: <?= $status_counts['red'] ?> | Orange:
+                    <?= $status_counts['orange'] ?></div>
+            </div>
+        </div>
+
         <table class="data-table">
             <thead>
                 <tr>
@@ -229,7 +276,8 @@ sort($locations);
                             <option value="">All</option>
                             <?php foreach ($departments as $d):
                                 if ($d)
-                                    echo "<option value='$d'>$d</option>"; endforeach; ?>
+                                    echo "<option value='$d'>$d</option>";
+                            endforeach; ?>
                         </select>
                     </td>
                     <td style="padding:5px;">
@@ -238,7 +286,8 @@ sort($locations);
                             <option value="">All</option>
                             <?php foreach ($locations as $l):
                                 if ($l)
-                                    echo "<option value='$l'>$l</option>"; endforeach; ?>
+                                    echo "<option value='$l'>$l</option>";
+                            endforeach; ?>
                         </select>
                     </td>
                     <?php foreach (['S', 'Q', 'D', '5S', 'C'] as $cat): ?>
@@ -360,18 +409,18 @@ sort($locations);
                 // 5. KPIs
                 let showKPIsClass = true;
                 const kpiIndices = { 'S': 3, 'Q': 4, 'D': 5, '5S': 6, 'C': 7 };
-                
+
                 for (const [key, filterVal] of Object.entries(kpiFilters)) {
                     if (filterVal !== "") {
                         const cell = cells[kpiIndices[key]];
                         const badge = cell.querySelector('.badge');
-                        
+
                         let targetClass = '';
-                        if(filterVal === 'G') targetClass = 'bg-green';
-                        if(filterVal === 'O') targetClass = 'bg-orange';
-                        if(filterVal === 'R') targetClass = 'bg-red';
-                        if(filterVal === 'B') targetClass = 'bg-blue';
-                        if(filterVal === 'gray') targetClass = 'bg-gray';
+                        if (filterVal === 'G') targetClass = 'bg-green';
+                        if (filterVal === 'O') targetClass = 'bg-orange';
+                        if (filterVal === 'R') targetClass = 'bg-red';
+                        if (filterVal === 'B') targetClass = 'bg-blue';
+                        if (filterVal === 'gray') targetClass = 'bg-gray';
 
                         if (!badge || !badge.classList.contains(targetClass)) {
                             showKPIsClass = false;
