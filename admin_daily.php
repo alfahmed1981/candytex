@@ -66,6 +66,12 @@ if (strpos($sort_by, '_status') !== false) {
         return ($order === 'ASC') ? ($valA - $valB) : ($valB - $valA);
     });
 }
+
+// 5. Extract Unique Lists for Filters
+$departments = array_unique(array_column($managers, 'department'));
+$locations = array_unique(array_column($managers, 'location'));
+sort($departments);
+sort($locations);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -193,9 +199,11 @@ if (strpos($sort_by, '_status') !== false) {
                 <tr>
                     <th><a href="?date=<?= $selected_date ?>&sort=name&order=<?= $order === 'ASC' ? 'desc' : 'asc' ?>">Manager
                             👤</a></th>
-                    <th><a href="?date=<?= $selected_date ?>&sort=department&order=<?= $order === 'ASC' ? 'desc' : 'asc' ?>">Dept
+                    <th><a
+                            href="?date=<?= $selected_date ?>&sort=department&order=<?= $order === 'ASC' ? 'desc' : 'asc' ?>">Dept
                             🏭</a></th>
-                    <th><a href="?date=<?= $selected_date ?>&sort=location&order=<?= $order === 'ASC' ? 'desc' : 'asc' ?>">Location
+                    <th><a
+                            href="?date=<?= $selected_date ?>&sort=location&order=<?= $order === 'ASC' ? 'desc' : 'asc' ?>">Location
                             📍</a></th>
 
                     <?php foreach (['S', 'Q', 'D', '5S', 'C'] as $cat): ?>
@@ -208,6 +216,51 @@ if (strpos($sort_by, '_status') !== false) {
                     <?php endforeach; ?>
 
                     <th>⚠️ Issues</th>
+                </tr>
+                <!-- FILTER ROW -->
+                <tr style="background:#f1f1f1;">
+                    <td style="padding:5px;">
+                        <input type="text" id="filterName" onkeyup="filterTable()" placeholder="🔍 Search Name/CIN..."
+                            style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                    </td>
+                    <td style="padding:5px;">
+                        <select id="filterDept" onchange="filterTable()"
+                            style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                            <option value="">All</option>
+                            <?php foreach ($departments as $d):
+                                if ($d)
+                                    echo "<option value='$d'>$d</option>"; endforeach; ?>
+                        </select>
+                    </td>
+                    <td style="padding:5px;">
+                        <select id="filterLoc" onchange="filterTable()"
+                            style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                            <option value="">All</option>
+                            <?php foreach ($locations as $l):
+                                if ($l)
+                                    echo "<option value='$l'>$l</option>"; endforeach; ?>
+                        </select>
+                    </td>
+                    <?php foreach (['S', 'Q', 'D', '5S', 'C'] as $cat): ?>
+                        <td style="padding:5px; text-align:center;">
+                            <select id="filter<?= $cat ?>" onchange="filterTable()"
+                                style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                                <option value="">All</option>
+                                <option value="G" style="background:#28a745; color:white;">G</option>
+                                <option value="O" style="background:#fd7e14; color:white;">O</option>
+                                <option value="R" style="background:#dc3545; color:white;">R</option>
+                                <option value="B" style="background:#17a2b8; color:white;">B</option>
+                                <option value="gray" style="background:#e9ecef; color:#333;">Gray</option>
+                            </select>
+                        </td>
+                    <?php endforeach; ?>
+                    <td style="padding:5px;">
+                        <select id="filterIssues" onchange="filterTable()"
+                            style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                            <option value="">All</option>
+                            <option value="yes">Has Issues</option>
+                        </select>
+                    </td>
                 </tr>
             </thead>
             <tbody>
