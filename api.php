@@ -1,5 +1,6 @@
 <?php
 session_start();
+require 'db.php';
 
 if (!isset($_SESSION['user_cin'])) {
     http_response_code(403);
@@ -8,9 +9,6 @@ if (!isset($_SESSION['user_cin'])) {
 }
 
 $user_cin = $_SESSION['user_cin'];
-$data_file = 'data/sqdc_' . $user_cin . '.json';
-
-// Get JSON Input
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!$input) {
@@ -18,35 +16,58 @@ if (!$input) {
     exit;
 }
 
-// Load existing data
-$current_data = ['days' => [], 'countermeasures' => []];
-if (file_exists($data_file)) {
-    $current_data = json_decode(file_get_contents($data_file), true);
-}
-
-// Action Handler
 if (isset($input['action'])) {
+
     if ($input['action'] === 'update_day') {
-        // Update a specific day
         $kpi = $input['kpi'];
         $date = $input['date'];
         $status = $input['status'];
 
-        if (!isset($current_data['days'][$kpi]))
-            $current_data['days'][$kpi] = [];
-        $current_data['days'][$kpi][$date] = $status;
+        $sql = "INSERT INTO sqdc_daily (user_cin, day_date, category, status) 
+                VALUES (?, ?, ?, ?) 
+                ON DUPLICATE KEY UPDATE status = VALUES(status)";
+
+        $stmt = $pdo->prepare($sql);
+        if ($stmt->execute([$user_cin, $date, $kpi, $status])) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
 
     } elseif ($input['action'] === 'save_countermeasures') {
-        // Update full table
-        $current_data['countermeasures'] = $input['data'];
-    }
+        // Full Sync Strategy: Delete All & Re-Insert (Simplest for Table Sync)
+        // Or better: Upsert based on IDs. For now, let's keep it simple since we handle the array in JS.
+        // Actually, pure syncing from a JS array to DB row-by-row is tricky.
+        // Let's assume the JS sends the full list, and we wipe/replace for this user? 
+        // No, that destroys history timestamps.
 
-    // Save back to file
-    if (file_put_contents($data_file, json_encode($current_data, JSON_PRETTY_PRINT))) {
+        // Let's switch strategy: The JS should send "Upsert" for a single row.
+        // But the previous architecture sent the WHOLE table.
+        // To be safe and quick: Delete all columns for this user and Re-Insert. 
+        // (Not ideal for large data, but fine for small per-user lists).
+
+        $pdo->beginTransaction();
+
+        // 1. Delete all previous
+        $del = $pdo->prepare("DELETE FROM countermeasures WHERE user_cin = ?");
+        $del->execute([$user_cin]);
+
+        // 2. Insert all new
+        $ins = $pdo->prepare("INSERT INTO countermeasures (user_cin, issue, action_plan, responsible, due_date, status) VALUES (?, ?, ?, ?, ?, ?)");
+
+        foreach ($input['data'] as $row) {
+            $ins->execute([
+                $user_cin,
+                $row['issue'],
+                $row['action'],
+                $row['who'],
+                $row['due'],
+                $row['status']
+            ]);
+        }
+
+        $pdo->commit();
         echo json_encode(['success' => true]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => 'Write failed']);
     }
 }
 ?>
