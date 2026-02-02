@@ -8,6 +8,7 @@ deployment:
     - /bin/cp style.css $DEPLOYPATH
     - /bin/cp script.js $DEPLOYPATH
     - /bin/cp admin.php $DEPLOYPATH
+    - /bin/cp admin_advanced.php $DEPLOYPATH
     - /bin/cp global.php $DEPLOYPATH
     - /bin/cp my_team.php $DEPLOYPATH
     - /bin/cp guide.php $DEPLOYPATH
@@ -15,3 +16,4 @@ deployment:
     - /bin/cp schema.sql $DEPLOYPATH
     - /bin/cp update_db.php $DEPLOYPATH
     - /bin/cp init_admin.php $DEPLOYPATH
+
