@@ -21,16 +21,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $user = $stmt->fetch();
 
     if ($user) {
-        // Verify Phone (Simple mismatch check since we authenticated by CIN)
-        // In a stricter system, we would check phone exactly.
-        if ($user['phone'] === $phone_input) {
+        $login_ok = false;
+
+        // 1. If Admin, Check Password
+        if ($user['role'] === 'admin') {
+            // If password set, verify it
+            if (!empty($user['password']) && password_verify($phone_input, $user['password'])) {
+                // User entered Password in the Phone field (since we reused the UI)
+                // OR we can add a dedicated password field.
+                // Let's keep it simple: "Phone field" acts as "Password" for admins.
+                $login_ok = true;
+            } else {
+                $error = "Incorrect Password for Admin.";
+            }
+        }
+        // 2. If Manager/Worker, Check Phone
+        else {
+            if ($user['phone'] === $phone_input) {
+                $login_ok = true;
+            } else {
+                $error = "Phone number does not match CIN.";
+            }
+        }
+
+        if ($login_ok) {
             $_SESSION['user_cin'] = $user['cin'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['role'] = $user['role'];
-            header("Location: index.php");
+
+            // Redirect based on Role
+            if ($user['role'] === 'admin') {
+                header("Location: admin.php"); // Admins go to Dashboard directly
+            } else {
+                header("Location: index.php");
+            }
             exit;
-        } else {
-            $error = "Phone number does not match CIN.";
         }
     } else {
         $error = "User not found. Please ask Admin to import you.";
@@ -138,6 +163,14 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
                 <button type="submit">Filter<br><small>تصفية / Filtrer</small></button>
             </form>
         </div>
+
+        <a href="my_team.php" class="logout-btn" style="background:#17a2b8; margin-bottom:10px;">👥 My Team (HR)</a>
+
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+            <a href="admin.php" class="logout-btn" style="background:#28a745; margin-bottom:10px;">⚙️ Admin Panel</a>
+            <a href="global.php" class="logout-btn" style="background:#6f42c1; margin-bottom:10px;">🏭 Global View</a>
+        <?php endif; ?>
+
         <a href="?logout=1" class="logout-btn">Logout<br><small>خروج / Déconnexion</small></a>
     </div>
 
@@ -188,6 +221,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             <table id="cm-table">
                 <thead>
                     <tr>
+                        <th>Cat<br><small>فئة</small></th>
                         <th>Issue<br><small>المشكلة / Problème</small></th>
                         <th>Action<br><small>الإجراء / Action</small></th>
                         <th>Who<br><small>المسؤول / Qui</small></th>

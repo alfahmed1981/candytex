@@ -53,15 +53,16 @@ if (isset($input['action'])) {
         $del->execute([$user_cin]);
 
         // 2. Insert all new
-        $ins = $pdo->prepare("INSERT INTO countermeasures (user_cin, issue, action_plan, responsible, due_date, status) VALUES (?, ?, ?, ?, ?, ?)");
+        $ins = $pdo->prepare("INSERT INTO countermeasures (user_cin, category, issue, action_plan, responsible, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
         foreach ($input['data'] as $row) {
             $ins->execute([
                 $user_cin,
+                $row['category'] ?? 'S', // Default to Safety if missing
                 $row['issue'],
-                $row['action'],
-                $row['who'],
-                $row['due'],
+                $row['action_plan'], // JS uses 'action_plan' now
+                $row['responsible'], // JS uses 'responsible' now
+                $row['due_date'],    // JS uses 'due_date' now
                 $row['status']
             ]);
         }

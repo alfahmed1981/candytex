@@ -60,11 +60,22 @@ function renderTable(data) {
 
     cmData.forEach((row, index) => {
         const tr = document.createElement('tr');
+
+        // Category Select
+        const catOptions = ['S', 'Q', 'D', '5S', 'C'].map(c =>
+            `<option value="${c}" ${row.category === c ? 'selected' : ''}>${c}</option>`
+        ).join('');
+
         tr.innerHTML = `
+            <td>
+                <select onchange="updateRow(${index}, 'category', this.value)" style="font-weight:bold;">
+                    ${catOptions}
+                </select>
+            </td>
             <td contenteditable="true" onblur="updateRow(${index}, 'issue', this.innerText)">${row.issue || ''}</td>
-            <td contenteditable="true" onblur="updateRow(${index}, 'action', this.innerText)">${row.action || ''}</td>
-            <td contenteditable="true" onblur="updateRow(${index}, 'who', this.innerText)">${row.who || ''}</td>
-            <td><input type="date" value="${row.due || ''}" onchange="updateRow(${index}, 'due', this.value)"></td>
+            <td contenteditable="true" onblur="updateRow(${index}, 'action_plan', this.innerText)">${row.action_plan || ''}</td>
+            <td contenteditable="true" onblur="updateRow(${index}, 'responsible', this.innerText)">${row.responsible || ''}</td>
+            <td><input type="date" value="${row.due_date || ''}" onchange="updateRow(${index}, 'due_date', this.value)"></td>
             <td>
                 <select onchange="updateRow(${index}, 'status', this.value)">
                     <option value="Open" ${row.status === 'Open' ? 'selected' : ''}>Open</option>
@@ -72,14 +83,15 @@ function renderTable(data) {
                     <option value="Done" ${row.status === 'Done' ? 'selected' : ''}>Done</option>
                 </select>
             </td>
-            <td><button style="background:red; padding:5px;" onclick="deleteRow(${index})">X</button></td>
+            <td><button style="background:red; padding:5px; color:white; border:none; cursor:pointer;" onclick="deleteRow(${index})">X</button></td>
         `;
         tbody.appendChild(tr);
     });
 }
 
 function addCounterMeasure() {
-    cmData.push({ issue: '', action: '', who: '', due: '', status: 'Open' });
+    // Default to 'S' (Safety)
+    cmData.push({ category: 'S', issue: '', action_plan: '', responsible: '', due_date: '', status: 'Open' });
     renderTable(cmData);
     saveCM();
 }
