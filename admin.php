@@ -40,6 +40,22 @@ if (isset($_GET['action'])) {
         header("Location: admin.php?msg=deleted");
         exit;
     }
+
+    // --- APPROVE USER ---
+    if ($_GET['action'] === 'approve' && isset($_GET['id'])) {
+        $stmt = $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?");
+        $stmt->execute([$_GET['id']]);
+        header("Location: admin.php?msg=Approved");
+        exit;
+    }
+
+    // --- REJECT USER ---
+    if ($_GET['action'] === 'reject' && isset($_GET['id'])) {
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$_GET['id']]);
+        header("Location: admin.php?msg=Rejected");
+        exit;
+    }
 }
 
 // --- ADD USER ---
@@ -216,6 +232,36 @@ $users = $stmt->fetchAll();
 
             <?php if (isset($msg))
                 echo "<p style='color:green; background:#d4edda; padding:10px; border:1px solid #c3e6cb; border-radius:4px;'>$msg</p>"; ?>
+
+            <!-- PENDING APPROVALS -->
+            <?php
+            $pending_stmt = $pdo->query("SELECT * FROM users WHERE status = 'pending' ORDER BY id DESC");
+            $pending_users = $pending_stmt->fetchAll();
+            ?>
+            <?php if (count($pending_users) > 0): ?>
+                <div
+                    style="background:#fff3cd; color:#856404; padding:15px; border:1px solid #ffeeba; border-radius:8px; margin-bottom:20px;">
+                    <h3>🔔 Pending Registrations (<?= count($pending_users) ?>) / طلبات التسجيل</h3>
+                    <table style="width:100%; margin-top:10px; background:white; border-collapse:collapse;">
+                        <?php foreach ($pending_users as $pu): ?>
+                            <tr style="border-bottom:1px solid #eee;">
+                                <td style="padding:10px;">
+                                    <strong><?= htmlspecialchars($pu['name']) ?></strong>
+                                    (<?= htmlspecialchars($pu['cin']) ?>)<br>
+                                    <small>Role: <?= htmlspecialchars($pu['role']) ?></small>
+                                </td>
+                                <td style="text-align:right; padding:10px;">
+                                    <a href="?action=approve&id=<?= $pu['id'] ?>" class="btn btn-green"
+                                        style="padding:5px 10px; font-size:12px;">✅ Approve</a>
+                                    <a href="?action=reject&id=<?= $pu['id'] ?>" class="btn btn-red"
+                                        style="padding:5px 10px; font-size:12px;"
+                                        onclick="return confirm('Reject this user?')">❌ Reject</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </table>
+                </div>
+            <?php endif; ?>
 
             <?php
             // Fetch Dynamic Data for Dropdowns
