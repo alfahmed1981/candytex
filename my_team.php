@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch My Team
-$stmt = $pdo->prepare("SELECT * FROM workers WHERE manager_cin = ? ORDER BY location, department, shift, name");
+$stmt = $pdo->prepare("SELECT * FROM workers WHERE manager_cin = ? ORDER BY name");
 $stmt->execute([$user_cin]);
 $my_team = $stmt->fetchAll();
 ?>
