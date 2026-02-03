@@ -295,7 +295,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SQD+C Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
@@ -309,14 +309,13 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         <div class="nav-links">
             <a href="index.php" class="active">📊 لوحة</a>
             <a href="guide.php">📖 دليل</a>
-            <a href="my_team.php">👥 فريق</a>
+            <a href="my_team.php">👥 فريقي</a>
+            <a href="global.php">🏭 المصنع</a>
             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <a href="admin_issues.php">🛠️ مشاكل</a>
-            <?php endif; ?>
-            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <a href="admin.php">⚙️ إدارة</a>
             <?php endif; ?>
-            <a href="?logout=1" class="logout">خروج</a>
+            <a href="?logout=1" class="logout">🚪 خروج</a>
         </div>
         <form method="GET" class="date-filter">
             <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
@@ -342,12 +341,13 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             </form>
         </div>
         <a href="guide.php" class="logout-btn" style="background:#28a745;">📖 دليل الاستخدام</a>
-        <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 My Team</a>
+        <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
+        <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-            <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ Admin</a>
-            <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 Global</a>
+            <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
+            <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
         <?php endif; ?>
-        <a href="?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
+        <a href="?logout=1" class="logout-btn" style="background:#dc3545;">🚪 خروج</a>
     </div>
 
     <div class="main-content">
