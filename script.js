@@ -62,6 +62,7 @@ let currentCategory = null;
 
 function openModal(type, day, currentYear, currentMonth) {
     // --- DATE VALIDATION LOGIC ---
+    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of today
 
@@ -77,7 +78,23 @@ function openModal(type, day, currentYear, currentMonth) {
         return;
     }
 
-    // 2. Prevent Old Days (> 7 days)
+    // 2. Prevent filling TODAY before 7 PM GMT (19:00)
+    const isSameDay = selectedDate.getTime() === today.getTime();
+    if (isSameDay) {
+        const gmtHour = now.getUTCHours();
+        if (gmtHour < 19) {
+            Swal.fire({
+                icon: 'warning',
+                title: '⏰ مبكر جداً / Too Early',
+                html: `لا يمكن ملء بيانات اليوم إلا بعد <strong>الساعة 7 مساءً</strong> (توقيت غرينيتش).<br><br>
+                       You can only fill today's data after <strong>7:00 PM GMT</strong>.<br><br>
+                       <small>الوقت الحالي GMT: ${now.getUTCHours()}:${String(now.getUTCMinutes()).padStart(2, '0')}</small>`
+            });
+            return;
+        }
+    }
+
+    // 3. Prevent Old Days (> 7 days)
     const diffTime = Math.abs(today - selectedDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
