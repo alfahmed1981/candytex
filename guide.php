@@ -362,7 +362,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
         <!-- Header -->
         <div class="guide-header">
             <h1>📊 دليل استخدام لوحة SQD+C</h1>
-            <p>دليل سهل ومبسط لرؤساء الفرق لملء لوحة المتابعة اليومية</p>
+            <p>دليل شامل للمستخدمين: رؤساء الفرق والعاملين</p>
             <?php if ($is_logged_in): ?>
                 <p style="margin-top:15px; font-size:0.9em;">👋 مرحباً
                     <?php echo htmlspecialchars($user_name); ?>
@@ -378,6 +378,10 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                     <span class="icon">📊</span>
                     <span>لوحة المتابعة الرئيسية</span>
                 </a>
+                <a href="global.php" class="quick-link">
+                    <span class="icon">🏭</span>
+                    <span>الوضع العام للمصنع</span>
+                </a>
                 <a href="my_team.php" class="quick-link">
                     <span class="icon">👥</span>
                     <span>إدارة الفريق</span>
@@ -390,6 +394,41 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                     <span class="icon">✏️</span>
                     <span>كيفية ملء اللوحة</span>
                 </a>
+                <a href="#viewer-section" class="quick-link">
+                    <span class="icon">👁️</span>
+                    <span>دليل المستخدم العادي</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- User Types Section -->
+        <div class="section" style="border-right-color: #6f42c1;">
+            <h2><span class="emoji">👤</span> أنواع المستخدمين</h2>
+            <div class="step-content">
+                <p>يوجد في النظام <strong>ثلاثة أنواع</strong> من المستخدمين، لكل منهم صلاحيات مختلفة:</p>
+            </div>
+
+            <div class="kpi-grid" style="margin-top: 15px;">
+                <div class="kpi-card" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                    <h3>👔 Admin</h3>
+                    <p>مدير النظام</p>
+                    <p style="font-size:0.75em; margin-top:8px;">إدارة المستخدمين، استيراد البيانات، تعديل السجلات</p>
+                </div>
+                <div class="kpi-card" style="background: linear-gradient(135deg, #007bff, #6610f2);">
+                    <h3>👷 Manager</h3>
+                    <p>رئيس الفريق</p>
+                    <p style="font-size:0.75em; margin-top:8px;">ملء اللوحة اليومية، إدارة الفريق، إضافة الإجراءات</p>
+                </div>
+                <div class="kpi-card" style="background: linear-gradient(135deg, #6c757d, #495057);">
+                    <h3>👁️ Viewer</h3>
+                    <p>مستخدم عادي</p>
+                    <p style="font-size:0.75em; margin-top:8px;">مشاهدة البيانات فقط، بدون صلاحيات تعديل</p>
+                </div>
+            </div>
+
+            <div class="tip-box" style="margin-top: 20px;">
+                إذا كنت <strong>مستخدماً عادياً (Viewer)</strong>: يمكنك مشاهدة اللوحة ومتابعة أداء الفريق، لكن لا يمكنك
+                تعديل البيانات.
             </div>
         </div>
 
@@ -616,25 +655,71 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                 </div>
             </div>
 
-            <div class="step-box">
+            <div class="step-box" style="border-right-color: #6f42c1;">
                 <span class="step-number">2</span>
-                <span class="step-title">املأ المعلومات المطلوبة</span>
+                <span class="step-title">اختر الفئة والمشكلة من القائمة</span>
+                <div class="step-content">
+                    <p><strong>🆕 ميزة جديدة:</strong> عند اختيار الفئة (S, Q, D, +, C)، ستظهر لك <strong>قائمة مشاكل
+                            جاهزة</strong> خاصة بتلك الفئة!</p>
+
+                    <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:10px;">
+                        <h4 style="margin-top:0;">🦺 مشاكل السلامة (S):</h4>
+                        <ul style="line-height:1.8; font-size:0.9em;">
+                            <li>عطل في معدات الوقاية (PPE Damaged)</li>
+                            <li>انزلاق/تعثر (Slip/Trip Hazard)</li>
+                            <li>إصابة عمل خفيفة (Minor Injury)</li>
+                            <li>ممر مسدود (Blocked Exit)</li>
+                            <li>خطر كهربائي (Electrical Hazard)</li>
+                        </ul>
+
+                        <h4>⭐ مشاكل الجودة (Q):</h4>
+                        <ul style="line-height:1.8; font-size:0.9em;">
+                            <li>عيب في الخياطة (Sewing Defect)</li>
+                            <li>مشكلة في القياسات (Measurement Issue)</li>
+                            <li>بقع/أوساخ (Stains/Dirt)</li>
+                            <li>خطأ في القماش/اللون (Fabric Mismatch)</li>
+                            <li>عيب في الملحقات (Accessories Defect)</li>
+                        </ul>
+
+                        <h4>🚚 مشاكل التسليم (D):</h4>
+                        <ul style="line-height:1.8; font-size:0.9em;">
+                            <li>تأخر المواد الأولية (Material Delay)</li>
+                            <li>عطل في الآلة (Machine Breakdown)</li>
+                            <li>غياب المشغلين (Absenteeism)</li>
+                            <li>عنق زجاجة (Process Bottleneck)</li>
+                            <li>انقطاع التيار (Power Failure)</li>
+                        </ul>
+
+                        <h4>🧹 مشاكل التحسين (5S):</h4>
+                        <ul style="line-height:1.8; font-size:0.9em;">
+                            <li>أدوات غير مرتبة (Items Not in Place)</li>
+                            <li>نظافة المكان (Workstation Dirty)</li>
+                            <li>ممرات غير مخططة (Fading Floor Lines)</li>
+                            <li>تكدس المخزون (Excess Inventory)</li>
+                            <li>غياب الملصقات (Missing Labels)</li>
+                        </ul>
+
+                        <h4>💰 مشاكل التكلفة (C):</h4>
+                        <ul style="line-height:1.8; font-size:0.9em;">
+                            <li>هدر في المواد (Material Waste)</li>
+                            <li>استهلاك طاقة زائد (Excess Energy)</li>
+                            <li>عمل إضافي غير مبرر (Unplanned Overtime)</li>
+                            <li>إصلاحات متكررة (Rework Cost)</li>
+                            <li>تلف أدوات (Tool Breakage)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">3</span>
+                <span class="step-title">أكمل باقي المعلومات</span>
                 <div class="step-content">
                     <table class="help-table">
                         <tr>
                             <th>الحقل</th>
                             <th>الشرح</th>
                             <th>مثال</th>
-                        </tr>
-                        <tr>
-                            <td><strong>الفئة (Cat)</strong></td>
-                            <td>اختر المؤشر المعني (S, Q, D, +, C)</td>
-                            <td>Q (الجودة)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>المشكلة (Issue)</strong></td>
-                            <td>اشرح المشكلة بوضوح</td>
-                            <td>تم اكتشاف 10 قطع معيبة</td>
                         </tr>
                         <tr>
                             <td><strong>الإجراء (Action)</strong></td>
@@ -656,7 +741,84 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
             </div>
 
             <div class="tip-box">
-                كلما كان الشرح واضحاً ومفصلاً، كان أفضل لمتابعة المشاكل وحلها.
+                اختيار المشكلة من القائمة الجاهزة يجعل التحليل والتقارير أكثر دقة وسهولة!
+            </div>
+        </div>
+
+        <!-- For Viewers: Global Factory Status -->
+        <div class="section" id="viewer-section" style="border-right-color: #6c757d;">
+            <h2><span class="emoji">🏭</span> للمستخدم العادي: مشاهدة الوضع العام</h2>
+
+            <div class="step-content">
+                <p>إذا كنت <strong>مستخدماً عادياً (Viewer)</strong>، يمكنك الاستفادة من النظام بالطرق التالية:</p>
+            </div>
+
+            <div class="step-box" style="border-right-color: #6f42c1;">
+                <span class="step-number">1</span>
+                <span class="step-title">مشاهدة الوضع العام للمصنع</span>
+                <div class="step-content">
+                    <p>اذهب إلى صفحة <a href="global.php" style="color:#6f42c1; font-weight:bold;">🏭 Factory Global
+                            Status</a> لمشاهدة أداء المصنع بالكامل.</p>
+                    <p>هذه الصفحة تجمع بيانات جميع الفرق وتعرض <strong>الوضع الأسوأ</strong> لكل يوم:</p>
+                    <ul style="margin-top:10px; line-height:2;">
+                        <li>🟢 <strong>أخضر</strong>: جميع الفرق حققت الهدف</li>
+                        <li>🟠 <strong>برتقالي</strong>: فريق واحد على الأقل يحتاج انتباه</li>
+                        <li>🔴 <strong>أحمر</strong>: فريق واحد على الأقل لديه مشكلة</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-box" style="border-right-color: #17a2b8;">
+                <span class="step-number">2</span>
+                <span class="step-title">فهم البيانات المعروضة</span>
+                <div class="step-content">
+                    <p>كل مربع يمثل <strong>يوماً من الشهر</strong> (1-31)، وكل عمود يمثل <strong>مؤشر أداء</strong>:
+                    </p>
+                    <table class="help-table" style="margin-top:10px;">
+                        <tr>
+                            <th>الرمز</th>
+                            <th>المعنى</th>
+                            <th>مثال</th>
+                        </tr>
+                        <tr>
+                            <td><strong>S</strong></td>
+                            <td>السلامة (Safety)</td>
+                            <td>هل وقعت حوادث؟</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Q</strong></td>
+                            <td>الجودة (Quality)</td>
+                            <td>هل توجد عيوب؟</td>
+                        </tr>
+                        <tr>
+                            <td><strong>D</strong></td>
+                            <td>التسليم (Delivery)</td>
+                            <td>هل تم التسليم في الوقت؟</td>
+                        </tr>
+                        <tr>
+                            <td><strong>+</strong></td>
+                            <td>التحسين (5S)</td>
+                            <td>النظافة والتنظيم</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C</strong></td>
+                            <td>التكلفة (Cost)</td>
+                            <td>هل تجاوزنا الميزانية؟</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="step-box" style="border-right-color: #28a745;">
+                <span class="step-number">3</span>
+                <span class="step-title">تصفية البيانات حسب الشهر</span>
+                <div class="step-content">
+                    <p>يمكنك عرض بيانات أشهر سابقة باستخدام <strong>فلتر الشهر والسنة</strong> في أعلى الصفحة.</p>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                كمستخدم عادي، يمكنك <strong>المشاهدة فقط</strong>. إذا لاحظت مشكلة أو لديك اقتراح، تواصل مع رئيس فريقك.
             </div>
         </div>
 
@@ -691,6 +853,29 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                     <p>أنت والمدير فقط. كل رئيس فريق يرى بياناته الخاصة.</p>
                 </div>
             </div>
+
+            <div class="step-box" style="border-right-color: #6f42c1;">
+                <span class="step-title">❓ ما هي صفحة "الوضع العام للمصنع"؟</span>
+                <div class="step-content">
+                    <p>صفحة <a href="global.php" style="color:#6f42c1;">🏭 Factory Global Status</a> تجمع بيانات جميع
+                        الفرق وتعرض الحالة الإجمالية للمصنع. مفيدة للإدارة لمتابعة الأداء العام.</p>
+                </div>
+            </div>
+
+            <div class="step-box" style="border-right-color: #fd7e14;">
+                <span class="step-title">❓ أنا مستخدم عادي (Viewer)، ماذا يمكنني أن أفعل؟</span>
+                <div class="step-content">
+                    <p>يمكنك <strong>مشاهدة</strong> لوحة المتابعة والوضع العام للمصنع. لا يمكنك تعديل البيانات. إذا
+                        لاحظت مشكلة، أبلغ رئيس فريقك.</p>
+                </div>
+            </div>
+
+            <div class="step-box" style="border-right-color: #28a745;">
+                <span class="step-title">❓ كيف أطلب ترقية صلاحياتي؟</span>
+                <div class="step-content">
+                    <p>تواصل مع مدير النظام (Admin) أو قسم الموارد البشرية لتغيير دورك في النظام.</p>
+                </div>
+            </div>
         </div>
 
         <!-- Action Buttons -->
@@ -698,6 +883,11 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
             <a href="index.php" class="btn btn-primary">
                 <span>🚀</span>
                 <span>ابدأ الآن - دخول اللوحة</span>
+            </a>
+            <a href="global.php" class="btn btn-secondary"
+                style="background: linear-gradient(135deg, #6f42c1, #805ad5);">
+                <span>🏭</span>
+                <span>الوضع العام للمصنع</span>
             </a>
             <a href="my_team.php" class="btn btn-secondary">
                 <span>👥</span>
