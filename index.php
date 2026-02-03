@@ -310,6 +310,9 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             <a href="index.php" class="active">📊 لوحة</a>
             <a href="guide.php">📖 دليل</a>
             <a href="my_team.php">👥 فريق</a>
+            <?php if (isset($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'manager'])): ?>
+                <a href="admin_issues.php">🛠️ مشاكل</a>
+            <?php endif; ?>
             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <a href="admin.php">⚙️ إدارة</a>
             <?php endif; ?>
@@ -438,7 +441,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         const initialCM = <?php echo json_encode($sqdc_data['countermeasures'] ?? []); ?>;
     </script>
     <script src="script.js?v=<?php echo time(); ?>"></script>
-    
+
     <!-- Live Clock Script -->
     <script>
         function updateClock() {
@@ -446,16 +449,16 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             const gmtHour = now.getUTCHours();
             const gmtMin = String(now.getUTCMinutes()).padStart(2, '0');
             const gmtSec = String(now.getUTCSeconds()).padStart(2, '0');
-            
+
             // Update time
             document.getElementById('clock-time').textContent = `${gmtHour}:${gmtMin}:${gmtSec}`;
-            
+
             // Update date
             const day = String(now.getUTCDate()).padStart(2, '0');
             const month = String(now.getUTCMonth() + 1).padStart(2, '0');
             const year = now.getUTCFullYear();
             document.getElementById('clock-date').textContent = `${day}/${month}/${year}`;
-            
+
             // Update fill status
             const statusEl = document.getElementById('fill-status-text');
             const statusBox = document.getElementById('fill-status');
@@ -469,7 +472,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
                 statusBox.style.background = 'rgba(220, 53, 69, 0.6)';
             }
         }
-        
+
         // Update every second
         updateClock();
         setInterval(updateClock, 1000);
