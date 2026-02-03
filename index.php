@@ -413,7 +413,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
     <script>
         const initialCM = <?php echo json_encode($sqdc_data['countermeasures'] ?? []); ?>;
     </script>
-    <script src="script.js"></script>
+    <script src="script.js?v=<?php echo time(); ?>"></script>
 </body>
 
 </html>
