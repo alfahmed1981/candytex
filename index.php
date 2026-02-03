@@ -348,6 +348,30 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
     </div>
 
     <div class="main-content">
+        <!-- Live Clock Bar -->
+        <div id="live-clock"
+            style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.5em;">🕐</span>
+                <div>
+                    <div style="font-size: 0.8em; opacity: 0.9;">التوقيت الحالي (GMT)</div>
+                    <div id="clock-time" style="font-size: 1.3em; font-weight: bold;">--:--:--</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.5em;">📅</span>
+                <div>
+                    <div style="font-size: 0.8em; opacity: 0.9;">تاريخ اليوم</div>
+                    <div id="clock-date" style="font-size: 1.1em; font-weight: bold;">--/--/----</div>
+                </div>
+            </div>
+            <div id="fill-status"
+                style="background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75em;">ملء اليوم</div>
+                <div id="fill-status-text" style="font-weight: bold;">⏳ انتظر...</div>
+            </div>
+        </div>
+
         <div class="header">
             <h2>📊 SQD+C - <?php echo "$month_name $year"; ?></h2>
         </div>
@@ -414,6 +438,42 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         const initialCM = <?php echo json_encode($sqdc_data['countermeasures'] ?? []); ?>;
     </script>
     <script src="script.js?v=<?php echo time(); ?>"></script>
+    
+    <!-- Live Clock Script -->
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const gmtHour = now.getUTCHours();
+            const gmtMin = String(now.getUTCMinutes()).padStart(2, '0');
+            const gmtSec = String(now.getUTCSeconds()).padStart(2, '0');
+            
+            // Update time
+            document.getElementById('clock-time').textContent = `${gmtHour}:${gmtMin}:${gmtSec}`;
+            
+            // Update date
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const year = now.getUTCFullYear();
+            document.getElementById('clock-date').textContent = `${day}/${month}/${year}`;
+            
+            // Update fill status
+            const statusEl = document.getElementById('fill-status-text');
+            const statusBox = document.getElementById('fill-status');
+            if (gmtHour >= 19) {
+                statusEl.innerHTML = '✅ مفتوح الآن';
+                statusBox.style.background = 'rgba(40, 167, 69, 0.8)';
+            } else {
+                const hoursLeft = 19 - gmtHour - 1;
+                const minsLeft = 60 - now.getUTCMinutes();
+                statusEl.innerHTML = `🔒 يفتح الساعة 19:00<br><small>(${hoursLeft}س ${minsLeft}د)</small>`;
+                statusBox.style.background = 'rgba(220, 53, 69, 0.6)';
+            }
+        }
+        
+        // Update every second
+        updateClock();
+        setInterval(updateClock, 1000);
+    </script>
 </body>
 
 </html>
