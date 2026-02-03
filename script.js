@@ -190,21 +190,113 @@ const predefinedIssues = {
     ]
 };
 
-function getIssueOptions(category, selectedValue) {
-    const issues = predefinedIssues[category] || [];
-    let options = '<option value="">-- اختر المشكلة --</option>';
+// Predefined Actions for each category (Cascading Dropdown)
+const predefinedActions = {
+    'S': [
+        { label: '🦺 استبدال معدات الوقاية (Replace PPE)' },
+        { label: '🧹 تنظيف انسكاب (Clean Spill)' },
+        { label: '⚠️ وضع علامة تحذيرية (Place Warning Sign)' },
+        { label: '🚫 إزالة العائق (Clear Obstruction)' },
+        { label: '🩹 إسعاف أولي (First Aid Given)' },
+        { label: '🔒 عزل المنطقة (Isolate Area)' },
+        { label: '📝 أخرى (Other)' }
+    ],
+    'Q': [
+        { label: '🔄 إعادة العمل (Rework)' },
+        { label: '🗑️ إتلاف/خردة (Scrap)' },
+        { label: '📦 عزل المنتج (Quarantine)' },
+        { label: '⚙️ تعديل ضبط الآلة (Adjust Machine)' },
+        { label: '📢 تنبيه الجودة (Quality Alert)' },
+        { label: '🔍 فرز 100% (100% Sorting)' },
+        { label: '📝 أخرى (Other)' }
+    ],
+    'D': [
+        { label: '🔧 طلب صيانة عاجل (Call Maintenance)' },
+        { label: '📦 استخدام مخزون الأمان (Use Buffer Stock)' },
+        { label: '⏰ ساعات إضافية (Overtime)' },
+        { label: '👥 إعادة توزيع العمال (Reassign Operators)' },
+        { label: '🚚 تسريع المواد (Expedite Material)' },
+        { label: '📝 أخرى (Other)' }
+    ],
+    '5S': [
+        { label: '🧹 تنظيف فوري (Clean Immediately)' },
+        { label: '📍 إعادة للمكان (Return to Home)' },
+        { label: '🏷️ طباعة ملصق (Print Label)' },
+        { label: '🔴 وضع بطاقة حمراء (Red Tagging)' },
+        { label: '📐 تخطيط الحدود (Mark Boundaries)' },
+        { label: '📝 أخرى (Other)' }
+    ],
+    'C': [
+        { label: '🔌 إيقاف التشغيل (Shutdown)' },
+        { label: '🔍 تحقيق في السبب (Investigate Root Cause)' },
+        { label: '♻️ استرجاع/إعادة استخدام (Reuse/Recover)' },
+        { label: '📊 مراجعة التخطيط (Review Planning)' },
+        { label: '📝 أخرى (Other)' }
+    ]
+};
 
-    issues.forEach(issue => {
-        const selected = selectedValue === issue.value || selectedValue === issue.label ? 'selected' : '';
-        options += `<option value="${issue.label}" ${selected}>${issue.label}</option>`;
+// Predefined Responsible Roles for each category
+const predefinedResponsible = {
+    'S': [
+        { label: '👷 رئيس الفريق (Team Leader)' },
+        { label: '🦺 مسؤول السلامة (HSE Officer)' },
+        { label: '🔧 عامل الصيانة (Maintenance Tech)' },
+        { label: '🧹 عامل النظافة (Cleaner)' },
+        { label: '👔 مشرف الإنتاج (Supervisor)' }
+    ],
+    'Q': [
+        { label: '🔍 مراقب الجودة (Quality Controller)' },
+        { label: '👷 رئيس الفريق (Team Leader)' },
+        { label: '⚙️ المكتب التقني (Technical/Methods)' },
+        { label: '👔 مشرف الإنتاج (Supervisor)' }
+    ],
+    'D': [
+        { label: '🔧 عامل الصيانة (Maintenance Tech)' },
+        { label: '📦 مسؤول المخزن (Storekeeper)' },
+        { label: '👷 رئيس الفريق (Team Leader)' },
+        { label: '👔 مشرف الإنتاج (Supervisor)' },
+        { label: '👥 إعادة توزيع (HR/Planning)' }
+    ],
+    '5S': [
+        { label: '👷 رئيس الفريق (Team Leader)' },
+        { label: '🧹 عامل النظافة (Cleaner)' },
+        { label: '📦 مسؤول المخزن (Storekeeper)' },
+        { label: '⚙️ المكتب التقني (Technical/Methods)' }
+    ],
+    'C': [
+        { label: '👔 مشرف الإنتاج (Supervisor)' },
+        { label: '👷 رئيس الفريق (Team Leader)' },
+        { label: '🔧 عامل الصيانة (Maintenance Tech)' },
+        { label: '📊 المحاسبة/الإدارة (Admin/Finance)' }
+    ]
+};
+
+function getOptions(list, selectedValue, placeholder) {
+    let options = `<option value="">${placeholder}</option>`;
+
+    list.forEach(item => {
+        const selected = selectedValue === item.label ? 'selected' : '';
+        options += `<option value="${item.label}" ${selected}>${item.label}</option>`;
     });
 
     // Check if current value is custom (not in predefined list)
-    if (selectedValue && !issues.some(i => i.value === selectedValue || i.label === selectedValue)) {
+    if (selectedValue && !list.some(i => i.label === selectedValue)) {
         options += `<option value="${selectedValue}" selected>📝 ${selectedValue}</option>`;
     }
 
     return options;
+}
+
+function getIssueOptions(category, selectedValue) {
+    return getOptions(predefinedIssues[category] || [], selectedValue, '-- اختر المشكلة --');
+}
+
+function getActionOptions(category, selectedValue) {
+    return getOptions(predefinedActions[category] || [], selectedValue, '-- اختر الإجراء --');
+}
+
+function getResponsibleOptions(category, selectedValue) {
+    return getOptions(predefinedResponsible[category] || [], selectedValue, '-- اختر المسؤول --');
 }
 
 function renderTable(data) {
@@ -223,8 +315,10 @@ function renderTable(data) {
             `<option value="${c}" ${category === c ? 'selected' : ''}>${c}</option>`
         ).join('');
 
-        // Issue Select (Dynamic based on category)
+        // Dynamic Dropdowns based on category
         const issueOptions = getIssueOptions(category, row.issue);
+        const actionOptions = getActionOptions(category, row.action_plan);
+        const responsibleOptions = getResponsibleOptions(category, row.responsible);
 
         tr.innerHTML = `
             <td>
@@ -233,12 +327,20 @@ function renderTable(data) {
                 </select>
             </td>
             <td>
-                <select onchange="updateRow(${index}, 'issue', this.value)" style="min-width:200px; font-size:12px;" id="issue-select-${index}">
+                <select onchange="updateRow(${index}, 'issue', this.value)" style="min-width:180px; font-size:11px;">
                     ${issueOptions}
                 </select>
             </td>
-            <td contenteditable="true" onblur="updateRow(${index}, 'action_plan', this.innerText)" style="min-width:150px;">${row.action_plan || ''}</td>
-            <td contenteditable="true" onblur="updateRow(${index}, 'responsible', this.innerText)">${row.responsible || ''}</td>
+            <td>
+                <select onchange="updateRow(${index}, 'action_plan', this.value)" style="min-width:160px; font-size:11px;">
+                    ${actionOptions}
+                </select>
+            </td>
+            <td>
+                <select onchange="updateRow(${index}, 'responsible', this.value)" style="min-width:140px; font-size:11px;">
+                    ${responsibleOptions}
+                </select>
+            </td>
             <td><input type="date" value="${row.due_date || ''}" onchange="updateRow(${index}, 'due_date', this.value)"></td>
             <td>
                 <select onchange="updateRow(${index}, 'status', this.value)">
@@ -253,10 +355,12 @@ function renderTable(data) {
     });
 }
 
-// Update category and refresh issue dropdown
+// Update category and refresh all cascading dropdowns
 function updateCategory(index, newCategory) {
     cmData[index].category = newCategory;
-    cmData[index].issue = ''; // Reset issue when category changes
+    cmData[index].issue = ''; // Reset when category changes
+    cmData[index].action_plan = ''; // Reset when category changes
+    cmData[index].responsible = ''; // Reset when category changes
     renderTable(cmData);
     saveCM();
 }
