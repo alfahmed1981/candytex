@@ -16,4 +16,5 @@ deployment:
     - /bin/cp schema.sql $DEPLOYPATH
     - /bin/cp update_db.php $DEPLOYPATH
     - /bin/cp init_admin.php $DEPLOYPATH
+    - /bin/cp admin_issues.php $DEPLOYPATH
 
