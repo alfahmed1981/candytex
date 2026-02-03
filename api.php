@@ -61,34 +61,33 @@ if (isset($input['action'])) {
         echo json_encode(['success' => true, 'data' => $result]);
 
     } elseif ($input['action'] === 'save_countermeasures') {
-        // Full Sync Strategy: Delete All & Re-Insert (Simplest for Table Sync)
-        // Or better: Upsert based on IDs. For now, let's keep it simple since we handle the array in JS.
-        // Actually, pure syncing from a JS array to DB row-by-row is tricky.
-        // Let's assume the JS sends the full list, and we wipe/replace for this user? 
-        // No, that destroys history timestamps.
-
-        // Let's switch strategy: The JS should send "Upsert" for a single row.
-        // But the previous architecture sent the WHOLE table.
-        // To be safe and quick: Delete all columns for this user and Re-Insert. 
-        // (Not ideal for large data, but fine for small per-user lists).
+        // Check user role
+        $isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
         $pdo->beginTransaction();
 
-        // 1. Delete all previous
-        $del = $pdo->prepare("DELETE FROM countermeasures WHERE user_cin = ?");
-        $del->execute([$user_cin]);
+        // For non-admins: Only delete records created within the last hour
+        // For admins: Delete all records (full control)
+        if ($isAdmin) {
+            $del = $pdo->prepare("DELETE FROM countermeasures WHERE user_cin = ?");
+            $del->execute([$user_cin]);
+        } else {
+            // Delete only records created within the last 1 hour
+            $del = $pdo->prepare("DELETE FROM countermeasures WHERE user_cin = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)");
+            $del->execute([$user_cin]);
+        }
 
-        // 2. Insert all new
+        // Insert all new records
         $ins = $pdo->prepare("INSERT INTO countermeasures (user_cin, category, issue, action_plan, responsible, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
         foreach ($input['data'] as $row) {
             $ins->execute([
                 $user_cin,
-                $row['category'] ?? 'S', // Default to Safety if missing
+                $row['category'] ?? 'S',
                 $row['issue'],
-                $row['action_plan'], // JS uses 'action_plan' now
-                $row['responsible'], // JS uses 'responsible' now
-                $row['due_date'],    // JS uses 'due_date' now
+                $row['action_plan'],
+                $row['responsible'],
+                $row['due_date'],
                 $row['status']
             ]);
         }
