@@ -310,7 +310,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             <a href="index.php" class="active">📊 لوحة</a>
             <a href="guide.php">📖 دليل</a>
             <a href="my_team.php">👥 فريق</a>
-            <?php if (isset($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'manager'])): ?>
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <a href="admin_issues.php">🛠️ مشاكل</a>
             <?php endif; ?>
             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>

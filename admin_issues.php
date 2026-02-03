@@ -2,8 +2,8 @@
 session_start();
 require 'db.php';
 
-// Admin/Manager Only
-if (!isset($_SESSION['user_cin']) || !in_array($_SESSION['role'], ['admin', 'manager'])) {
+// Admin Only
+if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
     header("Location: index.php");
     exit;
 }
@@ -570,11 +570,11 @@ foreach ($issues as $issue) {
                                 <form method="POST" class="action-form" style="display: flex; gap: 5px;">
                                     <input type="hidden" name="issue_id" value="<?php echo $issue['id']; ?>">
                                     <select name="new_status">
-                                        <option value="Open" <?php echo $issue['status'] === 'Open' ? 'selected' : ''; ?>
-                                            >Open</option>
+                                        <option value="Open" <?php echo $issue['status'] === 'Open' ? 'selected' : ''; ?>>Open
+                                        </option>
                                         <option value="In Progress" <?php echo $issue['status'] === 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
-                                        <option value="Done" <?php echo $issue['status'] === 'Done' ? 'selected' : ''; ?>
-                                            >Done</option>
+                                        <option value="Done" <?php echo $issue['status'] === 'Done' ? 'selected' : ''; ?>>Done
+                                        </option>
                                     </select>
                                     <button type="submit" name="update_status">💾</button>
                                 </form>
