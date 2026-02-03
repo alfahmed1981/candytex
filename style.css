@@ -507,3 +507,202 @@ td select {
 .hidden {
     display: none !important;
 }
+
+/* Honeypot for Anti-Bot (Hidden from humans) */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+
+    /* --- PRINT STYLES (ISO COMPLIANT) --- */
+    @media print {
+        @page {
+            size: A4 landscape;
+            /* Landscape usually better for wide tables */
+            margin: 10mm;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: white;
+            font-family: 'Times New Roman', serif;
+            /* Standard for docs */
+            font-size: 10pt;
+        }
+
+        /* HIDE UI ELEMENTS */
+        .top-nav,
+        .sidebar,
+        .controls,
+        .nav-links,
+        .add-btn,
+        .logout,
+        button,
+        form#filterRow {
+            display: none !important;
+        }
+
+        /* Utility to hide specific elements */
+        .no-print {
+            display: none !important;
+        }
+
+        /* CONTAINER RESET */
+        .container,
+        .main-content {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            box-shadow: none;
+            border: none;
+        }
+
+        /* PRINT HEADER */
+        .print-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid black;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .print-logo {
+            font-weight: bold;
+            font-size: 16pt;
+        }
+
+        .doc-info {
+            text-align: right;
+            font-size: 8pt;
+            border: 1px solid black;
+            padding: 5px;
+        }
+
+        /* TABLE STYLES */
+        .data-table {
+            border: 2px solid black;
+            width: 100%;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid black;
+            color: black !important;
+            padding: 5px;
+            font-size: 9pt;
+        }
+
+        .data-table th {
+            background: #f0f0f0 !important;
+            -webkit-print-color-adjust: exact;
+        }
+
+        /* STAT CARDS - SIMPLIFY FOR PRINT */
+        .stats-container {
+            display: flex;
+            justify-content: space-between;
+            border: 1px solid black;
+            padding: 10px;
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+
+        .stat-card {
+            border: none;
+            box-shadow: none;
+            border-left: none !important;
+            /* Remove colored borders */
+            padding: 5px !important;
+        }
+
+        .stat-card h3 {
+            font-size: 10pt;
+            text-decoration: underline;
+        }
+
+        /* LEGEND BOX */
+        .print-legend {
+            display: block;
+            margin-top: 10px;
+            border: 1px solid black;
+            padding: 5px;
+            page-break-inside: avoid;
+        }
+
+        .legend-item {
+            display: inline-block;
+            margin-right: 15px;
+            font-size: 8pt;
+        }
+
+        .legend-color {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 1px solid black;
+            margin-right: 3px;
+        }
+
+        /* FOOTER */
+        .print-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            border-top: 1px solid black;
+            padding-top: 5px;
+            font-size: 8pt;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Ensure colors print if desired, or fallback */
+        .bg-green {
+            background-color: #eee !important;
+            color: black;
+            font-weight: bold;
+        }
+
+        /* B&W optimized */
+        .bg-red {
+            text-decoration: underline;
+        }
+
+        /* Force colors if user checks 'Background Graphics' */
+        .bg-green {
+            background-color: #28a745 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .bg-orange {
+            background-color: #fd7e14 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .bg-red {
+            background-color: #dc3545 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .bg-blue {
+            background-color: #17a2b8 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+        }
+    }
+
+    /* Hide Print Elements on Screen */
+    .print-header,
+    .print-footer,
+    .print-legend {
+        display: none;
+    }
