@@ -8,8 +8,29 @@ if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 
+
 $user_role = $_SESSION['role'];
 $user_cin = $_SESSION['user_cin'];
+
+// =========================================================================
+// CRITICAL: Ensure 'deleted_at' column exists BEFORE any operations
+// =========================================================================
+$column_exists = false;
+$check_cols = $pdo->query("SHOW COLUMNS FROM countermeasures LIKE 'deleted_at'");
+if ($check_cols->rowCount() > 0) {
+    $column_exists = true;
+}
+
+if (!$column_exists) {
+    try {
+        $pdo->exec("ALTER TABLE countermeasures ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
+    } catch (PDOException $e) {
+        // Log error but continue - maybe column was just added by another request
+        error_log("Failed to add deleted_at column: " . $e->getMessage());
+    }
+}
+// =========================================================================
+
 
 // Handle Status Update / Delete / Restore
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
