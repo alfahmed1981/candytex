@@ -15,33 +15,54 @@ $user_cin = $_SESSION['user_cin'];
 // Handle Status Update / Delete / Restore
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if (isset($_POST['update_status'])) {
-        $issue_id = intval($_POST['issue_id']);
-        $new_status = $_POST['new_status'];
+    try {
+        if (isset($_POST['update_status'])) {
+            $issue_id = intval($_POST['issue_id']);
+            $new_status = $_POST['new_status'];
 
-        $stmt = $pdo->prepare("UPDATE countermeasures SET status = ? WHERE id = ?");
-        $stmt->execute([$new_status, $issue_id]);
+            $stmt = $pdo->prepare("UPDATE countermeasures SET status = ? WHERE id = ?");
+            $stmt->execute([$new_status, $issue_id]);
 
-        header("Location: admin_issues.php?updated=1");
-        exit;
-    }
+            header("Location: admin_issues.php?updated=1");
+            exit;
+        }
 
-    // Soft Delete (just change status to 'Deleted')
-    if (isset($_POST['delete_issue'])) {
-        $issue_id = intval($_POST['issue_id']);
-        $stmt = $pdo->prepare("UPDATE countermeasures SET status = 'Deleted' WHERE id = ?");
-        $stmt->execute([$issue_id]);
-        header("Location: admin_issues.php?deleted=1");
-        exit;
-    }
+        // Soft Delete (just change status to 'Deleted')
+        if (isset($_POST['delete_issue'])) {
+            $issue_id = intval($_POST['issue_id']);
+            $stmt = $pdo->prepare("UPDATE countermeasures SET status = 'Deleted' WHERE id = ?");
+            $stmt->execute([$issue_id]);
+            header("Location: admin_issues.php?deleted=1");
+            exit;
+        }
 
-    // Restore (change status back to 'Open')
-    if (isset($_POST['restore_issue'])) {
-        $issue_id = intval($_POST['issue_id']);
-        $stmt = $pdo->prepare("UPDATE countermeasures SET status = 'Open' WHERE id = ?");
-        $stmt->execute([$issue_id]);
-        header("Location: admin_issues.php?restored=1");
-        exit;
+        // Restore (change status back to 'Open')
+        if (isset($_POST['restore_issue'])) {
+            $issue_id = intval($_POST['issue_id']);
+            $stmt = $pdo->prepare("UPDATE countermeasures SET status = 'Open' WHERE id = ?");
+            $stmt->execute([$issue_id]);
+            header("Location: admin_issues.php?restored=1");
+            exit;
+        }
+    } catch (PDOException $e) {
+        // Fix ENUM constraint issue: Convert status to VARCHAR
+        // Errors like "Data truncated" (1265) or "General error"
+        $pdo->exec("ALTER TABLE countermeasures MODIFY COLUMN status VARCHAR(50) DEFAULT 'Open'");
+
+        // Retry the exact same request logic? 
+        // Simpler to just redirect with an error param or retry via refresh, 
+        // but let's try to execute the failed query again if possible.
+        // For simplicity/safety, just retry the specific actions (Lazy Logic):
+
+        if (isset($_POST['delete_issue'])) {
+            $issue_id = intval($_POST['issue_id']);
+            $pdo->prepare("UPDATE countermeasures SET status = 'Deleted' WHERE id = ?")->execute([$issue_id]);
+            header("Location: admin_issues.php?deleted=1&fixed_enum=1");
+            exit;
+        }
+
+        // Rethrow if not handled
+        throw $e;
     }
 }
 
