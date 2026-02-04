@@ -62,6 +62,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// -------------------------------------------------------------------------
+// ENSURE 'deleted_at' column exists before ANY query
+// -------------------------------------------------------------------------
+try {
+    // Test if column exists by trying to select it
+    $pdo->query("SELECT deleted_at FROM countermeasures LIMIT 1");
+} catch (PDOException $e) {
+    // Column doesn't exist, add it
+    if (strpos($e->getMessage(), "Unknown column") !== false) {
+        $pdo->exec("ALTER TABLE countermeasures ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
+    }
+}
+
 // Fetch all countermeasures with user info
 $sql = "SELECT c.*, u.name as user_name, u.department, u.location 
         FROM countermeasures c 
