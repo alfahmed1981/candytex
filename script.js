@@ -57,10 +57,46 @@ function openDate(category, dateKey, currentStatus) {
 }
 
 // --- MODAL LOGIC FOR DAY SELECTION ---
+// --- GLOBAL VARIABLES ---
 let currentDay = null;
 let currentCategory = null;
+let targetYear = null;
+let targetMonth = null;
+let pendingRedUpdate = null; // Stores {date, category} if Red status is pending issue save
+
+// --- MASTER LOGIC MESSAGES ---
+const statusMessages = {
+    green: {
+        'S': "أؤكد أن اليوم مر **بدون أي حوادث** (Zero Accidents)، وأن جميع العمال التزموا بمعدات الوقاية.",
+        'Q': "أؤكد أن الإنتاج اليوم كان **مطابقاً للمواصفات 100%** ولا توجد عيوب تذكر.",
+        'D': "أؤكد أننا **حققنا هدف الإنتاج** اليومي (Target Hit) في الوقت المحدد.",
+        '5S': "أؤكد أن مكان العمل **نظيف ومرتب** تماماً وفق معايير 5S عند نهاية الدوام.",
+        'C': "أؤكد عدم وجود أي **هدر للمواد** أو توقفات مكلفة اليوم."
+    },
+    orange: {
+        'S': "أنت تسجل حالة **خطر وشيك** (Near Miss). يُنصح بشدة إضافة التفاصيل في سجل المشاكل لمنع الحوادث.",
+        'Q': "يوجد **عيوب بسيطة** تتطلب إعادة العمل (Rework). يفضل تسجيل المشكلة لمتابعة الجودة.",
+        'D': "لم يتم تحقيق الهدف بالكامل (تأخير بسيط). هل تريد **تسجيل السبب** لتفاديه غداً؟",
+        '5S': "المكان يحتاج إلى تنظيم. يرجى **كتابة ما يجب فعله** في خانة المشاكل.",
+        'C': "يوجد هدر بسيط في الموارد. هل قمت بتحديد السبب؟"
+    },
+    red: {
+        'S': "⚠️ **تنبيه حاد:** حادث شغل! **يجب إلزامياً تسجيل تفاصيل الحادث** الآن لفتح تحقيق.",
+        'Q': "⚠️ **توقف:** فشل جودة حرج (Non-Conformity). **النظام يتطلب منك توثيق العيب** قبل المتابعة.",
+        'D': "⚠️ **توقف:** توقف الخط أو فشل التسليم. **يجب ذكر سبب التوقف** (Root Cause) إجبارياً.",
+        '5S': "⚠️ **تنبيه:** فشل تدقيق 5S (فوضى). **لا يمكن إغلاق اليوم دون تسجيل المخالفات**.",
+        'C': "⚠️ **خسارة مادية:** **يجب توثيق قيمة وسبب الخسارة** (مثل كسر آلة) حالاً."
+    },
+    blue: "هل تؤكد أن المصنع/الخط كان **متوقفاً تماماً** عن العمل اليوم (عطلة رسمية أو توقف مبرمج)؟"
+};
 
 function openModal(type, day, currentYear, currentMonth) {
+    // Save context globally
+    currentDay = day;
+    currentCategory = type;
+    targetYear = currentYear;
+    targetMonth = currentMonth;
+
     // --- DATE VALIDATION LOGIC ---
     const now = new Date();
     const today = new Date();
@@ -107,9 +143,6 @@ function openModal(type, day, currentYear, currentMonth) {
         return;
     }
 
-    currentDay = day;
-    currentCategory = type;
-
     // Update Modal Title (Trilingual)
     const catNames = {
         'S': 'Safety / السلامة',
@@ -131,33 +164,109 @@ function closeModal() {
 }
 
 function selectStatus(status) {
+    const dateStr = `${targetYear}-${targetMonth}-${currentDay}`;
+    const category = currentCategory;
+    const msg = statusMessages[status] && statusMessages[status][category]
+        ? statusMessages[status][category]
+        : statusMessages[status] || "Confirm?"; // Fallback
+
     closeModal();
 
-    const year = document.getElementById('currentYear')?.value || new Date().getFullYear();
-    const month = document.getElementById('currentMonth')?.value || (new Date().getMonth() + 1);
-    const dateStr = `${year}-${month}-${currentDay}`;
+    // --- GREEN & BLUE (Direct Save) ---
+    if (status === 'green' || status === 'blue') {
+        Swal.fire({
+            title: 'تأكيد / Confirm',
+            html: msg,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '✅ تأكيد وحفظ',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performStatusUpdate(category, dateStr, status);
+            }
+        });
+    }
+    // --- ORANGE (Soft Nudge) ---
+    else if (status === 'orange') {
+        Swal.fire({
+            title: '⚠️ انتباه / Warning',
+            html: msg,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '⚠️ سأضيف الملاحظة',
+            cancelButtonText: 'حفظ بدون ملاحظة'
+        }).then((result) => {
+            // Save status regardless
+            performStatusUpdate(category, dateStr, status).then(() => {
+                if (result.isConfirmed) {
+                    addCounterMeasure(dateStr, category); // Prompt to add issue
+                }
+            });
+        });
+    }
+    // --- RED (Hard Stop) ---
+    else if (status === 'red') {
+        Swal.fire({
+            title: '🚨 توقف / STOP',
+            html: msg,
+            icon: 'error',
+            allowOutsideClick: false,
+            confirmButtonColor: '#d33',
+            confirmButtonText: '🚨 تسجيل المشكلة (إجباري)'
+        }).then(() => {
+            // DO NOT SAVE STATUS YET.
+            // Open Add Issue Modal (or scroll to form)
+            addCounterMeasure(dateStr, category);
 
-    fetch('api.php', {
+            // Set flag: When this issue is saved, we update the day status to RED.
+            pendingRedUpdate = {
+                category: category,
+                date: dateStr,
+                status: 'red'
+            };
+
+            Swal.fire({
+                position: 'top-end',
+                icon: 'info',
+                title: 'Pending Red Status',
+                text: 'Status will be saved RED only after you Store the issue.',
+                showConfirmButton: false,
+                timer: 2500
+            });
+        });
+    }
+    // --- GRAY (Clear) ---
+    else if (status === 'gray') {
+        performStatusUpdate(category, dateStr, status);
+    }
+}
+
+function performStatusUpdate(kpi, date, status) {
+    return fetch('api.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             action: 'update_day',
-            kpi: currentCategory,
-            date: dateStr,
+            kpi: kpi,
+            date: date,
             status: status
         })
     })
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                location.reload();
+                // Optional: Show partial success toast?
+                // For now, Green/Blue/Orange reloads page on this chain end usually.
+                // But we might want to delay reload if we are adding an issue (Orange).
+                if (status !== 'orange') {
+                    location.reload();
+                }
             } else {
-                Swal.fire('Error', data.message || 'Could not save', 'error');
+                Swal.fire('Error', data.message || 'Could not save status', 'error');
             }
         })
-        .catch(err => {
-            Swal.fire('Error', 'Network error', 'error');
-        });
+        .catch(err => Swal.fire('Error', 'Network error', 'error'));
 }
 
 // --- COUNTERMEASURES LOGIC ---
@@ -396,11 +505,16 @@ function updateCategory(index, newCategory) {
     // Manual Save Required
 }
 
-function addCounterMeasure() {
-    // Default to Today's date for "Observation Day" / Deadline
-    const today = new Date().toISOString().split('T')[0];
-    cmData.push({ category: 'S', issue: '', action_plan: '', responsible: '', due_date: today, status: 'Open' });
+function addCounterMeasure(targetDate = null, targetCategory = 'S') {
+    // Default to Today's date if not provided
+    const due = targetDate || new Date().toISOString().split('T')[0];
+    const cat = targetCategory;
+
+    cmData.push({ category: cat, issue: '', action_plan: '', responsible: '', due_date: due, status: 'Open' });
     renderTable(cmData);
+
+    // Scroll to table
+    document.getElementById('cm-table')?.scrollIntoView({ behavior: 'smooth' });
     // Manual Save Required
 }
 
@@ -446,7 +560,16 @@ function saveCM() {
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                Swal.fire('Saved!', 'Data has been stored.', 'success').then(() => location.reload());
+                // Check if we have a pending RED status update
+                if (pendingRedUpdate) {
+                    performStatusUpdate(pendingRedUpdate.category, pendingRedUpdate.date, 'red')
+                        .then(() => {
+                            pendingRedUpdate = null;
+                            Swal.fire('Saved!', 'Issue and Red Status stored.', 'success').then(() => location.reload());
+                        });
+                } else {
+                    Swal.fire('Saved!', 'Data has been stored.', 'success').then(() => location.reload());
+                }
             } else {
                 Swal.fire('Error', 'Failed to save.', 'error');
             }
