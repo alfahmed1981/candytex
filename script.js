@@ -438,14 +438,23 @@ function renderTable(data) {
 
         // Check if row is saved (has ID) -> Read Only Mode
         if (row.id) {
+            let rowStyle = "background:#f8f9fa; color:#666;";
+            let statusBadge = row.status;
+
+            // Special styling for Soft Deleted items
+            if (row.status === 'Deleted') {
+                rowStyle = "background:#ffebee; color:#c62828; text-decoration: line-through;";
+                statusBadge = "🗑️ Deleted (Recycle Bin)";
+            }
+
             tr.innerHTML = `
-                <td style="background:#f8f9fa; color:#666; font-weight:bold;">${category}</td>
-                <td style="background:#f8f9fa; color:#666;">${row.issue}</td>
-                <td style="background:#f8f9fa; color:#666;">${row.action_plan}</td>
-                <td style="background:#f8f9fa; color:#666;">${row.responsible}</td>
-                <td style="background:#f8f9fa; color:#666;">${row.due_date}</td>
-                <td style="background:#f8f9fa; font-weight:bold;">${row.status}</td>
-                <td style="background:#f8f9fa; text-align:center;">🔒</td>
+                <td style="${rowStyle} font-weight:bold;">${category}</td>
+                <td style="${rowStyle}">${row.issue}</td>
+                <td style="${rowStyle}">${row.action_plan}</td>
+                <td style="${rowStyle}">${row.responsible}</td>
+                <td style="${rowStyle}">${row.due_date}</td>
+                <td style="${rowStyle} font-weight:bold;">${statusBadge}</td>
+                <td style="background:#f8f9fa; text-align:center;">${row.status === 'Deleted' ? '🚫' : '🔒'}</td>
             `;
         } else {
             // New Row -> Editable Mode
@@ -589,6 +598,69 @@ function saveCM() {
             }
         });
 }
+
+// --- WELCOME MESSAGES / GAMIFICATION ---
+function checkWelcomeMessage() {
+    // Only show if page just loaded
+    if (sessionStorage.getItem('welcomeShown')) return;
+
+    if (missingAssignments.length > 0) {
+        // 🚨 SCENARIO 1: RED ALERT (Missing Data)
+        let missingList = missingAssignments.map(m => `<li>🔴 <b>${m.category}</b>: ${m.date}</li>`).join('');
+
+        Swal.fire({
+            title: '⚠️ تنبيه إداري: بيانات ناقصة!<br>Admin Alert: Missing Data!',
+            html: `
+                <div style="text-align:left; direction:ltr;">
+                    <p>Hello <b>${userName}</b>,</p>
+                    <p>We noticed missing updates for the past days. <b>Data accuracy is your responsibility.</b></p>
+                    <p>🛑 <b>Please fix these pending items immediately:</b></p>
+                    <ul style="list-style:none; padding:10px; background:#fff3cd; border:1px solid #ffeeba;">${missingList}</ul>
+                    <p>You cannot proceed comfortably before closing these gaps.</p>
+                </div>
+                <div style="text-align:right; direction:rtl; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                    <p>مرحباً <b>${userName}</b>،</p>
+                    <p>لاحظنا وجود بيانات ناقصة للأيام الماضية. <b>دقة البيانات مسؤوليتك.</b></p>
+                    <p>🛑 <b>يرجى تسوية الوضعية فوراً لهذه التواريخ:</b></p>
+                </div>
+            `,
+            icon: 'warning',
+            confirmButtonText: '👈 الذهاب لتسوية المتأخرات (Fix Now)',
+            confirmButtonColor: '#d33',
+            allowOutsideClick: false
+        });
+
+    } else {
+        // 🌟 SCENARIO 2: GREEN/GOLD (Discipline & Engagement)
+        Swal.fire({
+            title: '🌟 شكراً لالتزامك واحترافيتك!<br>Thank you for your commitment!',
+            html: `
+                <div style="text-align:center;">
+                    <p style="font-size:1.1em;"> أهلاً بك مجدداً <b>${userName}</b> 👋</p>
+                    <p>نود أن نشكرك على انضباطك ومواظبتك؛ سجلاتك <b>محدثة تماماً</b> ولا يوجد لديك أي دين سابق. 👏</p>
+                    <p><b>هذا هو مستوى القيادة الذي نفتخر به في Candytex!</b> 🏅</p>
+                    <hr>
+                    <p style="color:#28a745; font-weight:bold;">🎯 مهمتك اليوم:</p>
+                    <p>لنمنح هذا اليوم التقييم الذي يستحقه بكل شفافية ومصداقية.</p>
+                </div>
+            `,
+            icon: 'success',
+            confirmButtonText: '✨ ابدأ تقييم اليوم (Start Today)',
+            confirmButtonColor: '#28a745',
+            backdrop: `
+                rgba(0,0,123,0.4)
+                url("https://media.giphy.com/media/l0MYt5jPR6tTSTPYQ/giphy.gif")
+                left top
+                no-repeat
+            `
+        });
+    }
+
+    sessionStorage.setItem('welcomeShown', 'true');
+}
+
+// Run Welcome Check
+setTimeout(checkWelcomeMessage, 500);
 
 // --- MOBILE SIDEBAR TOGGLE ---
 function toggleSidebar() {

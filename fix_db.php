@@ -54,6 +54,25 @@ try {
         echo "✅ 'department' column exists.<br>";
     }
 
+    // 5. Check 'deleted_at' in 'countermeasures'
+    $cm_cols = [];
+    $stmt = $pdo->query("SHOW COLUMNS FROM countermeasures");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $cm_cols[] = $row['Field'];
+    }
+
+    if (!in_array('deleted_at', $cm_cols)) {
+        echo "⚠️ 'deleted_at' column in 'countermeasures' MISSING. Attempting to add...<br>";
+        try {
+            $pdo->exec("ALTER TABLE countermeasures ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
+            echo "✅ 'deleted_at' column ADDED successfully.<br>";
+        } catch (Exception $e) {
+            echo "❌ Failed to add 'deleted_at': " . $e->getMessage() . "<br>";
+        }
+    } else {
+        echo "✅ 'deleted_at' column exists.<br>";
+    }
+
     // 5. Check for 'location'
     if (!in_array('location', $columns)) {
         echo "⚠️ 'location' column MISSING. Attempting to add...<br>";

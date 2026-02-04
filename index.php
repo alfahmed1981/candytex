@@ -287,6 +287,39 @@ foreach ($rows as $r) {
     $sqdc_data['days'][$r['category']][$r['day_date']] = $r['status'];
 }
 
+// --- GAMIFICATION: CHECK MISSING DATA (Past 7 Days) ---
+$missing_data = [];
+$today_str = date('Y-m-d');
+$check_start_date = date('Y-m-d', strtotime('-7 days'));
+$check_end_date = date('Y-m-d', strtotime('-1 day')); // Exclude today
+
+// 1. Get all filled entries for the last 7 days
+$filled_stmt = $pdo->prepare("SELECT day_date, category FROM sqdc_daily WHERE user_cin = ? AND day_date BETWEEN ? AND ?");
+$filled_stmt->execute([$user_cin, $check_start_date, $check_end_date]);
+$filled_entries = $filled_stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN); // ['2023-10-01' => ['S', 'Q'], ...]
+
+// 2. Scan to find gaps
+$period = new DatePeriod(
+    new DateTime($check_start_date),
+    new DateInterval('P1D'),
+    new DateTime($today_str) // Excludes end date (today)
+);
+
+foreach ($period as $dt) {
+    $d = $dt->format('Y-m-d');
+    $filled_cats = $filled_entries[$d] ?? [];
+
+    foreach (['S', 'Q', 'D', '5S', 'C'] as $cat) {
+        if (!in_array($cat, $filled_cats)) {
+            $missing_data[] = [
+                'date' => $d,
+                'category' => $cat
+            ];
+        }
+    }
+}
+// -----------------------------------------------------
+
 // Load Countermeasures from DB (Filtered by Month/Year)
 $cm_sql = "SELECT * FROM countermeasures 
            WHERE user_cin = ? 
@@ -451,6 +484,8 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
     <!-- Pass PHP data to JS -->
     <script>
         const initialCM = <?php echo json_encode($sqdc_data['countermeasures'] ?? []); ?>;
+        const missingAssignments = <?php echo json_encode($missing_data ?? []); ?>;
+        const userName = <?php echo json_encode($_SESSION['user_name'] ?? 'User'); ?>;
     </script>
     <script src="script.js?v=<?php echo time(); ?>"></script>
 

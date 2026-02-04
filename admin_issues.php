@@ -11,16 +11,43 @@ if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
 $user_role = $_SESSION['role'];
 $user_cin = $_SESSION['user_cin'];
 
-// Handle Status Update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
-    $issue_id = intval($_POST['issue_id']);
-    $new_status = $_POST['new_status'];
+// Handle Status Update / Delete / Restore
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $stmt = $pdo->prepare("UPDATE countermeasures SET status = ? WHERE id = ?");
-    $stmt->execute([$new_status, $issue_id]);
+    // 1. Auto-Purge Old Deleted Records (Older than 30 days)
+    $pdo->exec("DELETE FROM countermeasures WHERE deleted_at < NOW() - INTERVAL 30 DAY");
 
-    header("Location: admin_issues.php?updated=1");
-    exit;
+    if (isset($_POST['update_status'])) {
+        $issue_id = intval($_POST['issue_id']);
+        $new_status = $_POST['new_status'];
+
+        // Prevent status update if item is deleted (unless restoring)
+        $stmt = $pdo->prepare("UPDATE countermeasures SET status = ? WHERE id = ? AND deleted_at IS NULL");
+        $stmt->execute([$new_status, $issue_id]);
+
+        header("Location: admin_issues.php?updated=1");
+        exit;
+    }
+
+    // 2. Soft Delete
+    if (isset($_POST['delete_issue'])) {
+        $issue_id = intval($_POST['issue_id']);
+        // Set deleted_at AND change status to 'Deleted' for visibility
+        $stmt = $pdo->prepare("UPDATE countermeasures SET deleted_at = NOW(), status = 'Deleted' WHERE id = ?");
+        $stmt->execute([$issue_id]);
+        header("Location: admin_issues.php?deleted=1");
+        exit;
+    }
+
+    // 3. Restore
+    if (isset($_POST['restore_issue'])) {
+        $issue_id = intval($_POST['issue_id']);
+        // Remove deleted_at AND reset status to 'Open' (or keep previous if we tracked it, but Open is safer)
+        $stmt = $pdo->prepare("UPDATE countermeasures SET deleted_at = NULL, status = 'Open' WHERE id = ?");
+        $stmt->execute([$issue_id]);
+        header("Location: admin_issues.php?restored=1");
+        exit;
+    }
 }
 
 // Fetch all countermeasures with user info
@@ -569,14 +596,19 @@ foreach ($issues as $issue) {
                             <td>
                                 <form method="POST" class="action-form" style="display: flex; gap: 5px;">
                                     <input type="hidden" name="issue_id" value="<?php echo $issue['id']; ?>">
-                                    <select name="new_status">
-                                        <option value="Open" <?php echo $issue['status'] === 'Open' ? 'selected' : ''; ?>>Open
-                                        </option>
-                                        <option value="In Progress" <?php echo $issue['status'] === 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
-                                        <option value="Done" <?php echo $issue['status'] === 'Done' ? 'selected' : ''; ?>>Done
-                                        </option>
-                                    </select>
-                                    <button type="submit" name="update_status">💾</button>
+                                    
+                                    <?php if ($issue['status'] === 'Deleted'): ?>
+                                        <button type="submit" name="restore_issue" style="background:#28a745;" title="استعادة / Restore">♻️</button>
+                                        <span style="color:red; font-size:0.8em; align-self:center;">Deleted</span>
+                                    <?php else: ?>
+                                        <select name="new_status">
+                                            <option value="Open" <?php echo $issue['status'] === 'Open' ? 'selected' : ''; ?>>Open</option>
+                                            <option value="In Progress" <?php echo $issue['status'] === 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
+                                            <option value="Done" <?php echo $issue['status'] === 'Done' ? 'selected' : ''; ?>>Done</option>
+                                        </select>
+                                        <button type="submit" name="update_status" title="حفظ الحالة / Save Status">💾</button>
+                                        <button type="submit" name="delete_issue" style="background:#dc3545;" title="حذف (سلة المهملات) / Bin" onclick="return confirm('To Recycle Bin? / إلى سلة المحذوفات؟');">🗑️</button>
+                                    <?php endif; ?>
                                 </form>
                             </td>
                         </tr>
