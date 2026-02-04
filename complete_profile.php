@@ -27,6 +27,23 @@ if (!empty($user['department']) && !empty($user['location']) && !empty($user['bi
     exit;
 }
 
+// Fetch Dynamic Options
+try {
+    $locs = $pdo->query("SELECT name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+    $depts = $pdo->query("SELECT name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {
+    // Fallback if tables don't exist yet
+    $locs = [];
+    $depts = [];
+}
+
+// Fallback Defaults (if DB is empty)
+if (empty($locs))
+    $locs = ['Candy 1', 'Candy 2', 'Flora 1'];
+if (empty($depts))
+    $depts = ['Sewing', 'Cutting', 'Finishing', 'Packing', 'Warehouse', 'Maintenance', 'Quality', 'HR', 'Logistics'];
+
+
 // Start buffering for any potential header redirects or output
 ob_start();
 ?>
@@ -135,21 +152,11 @@ ob_start();
                 <label>Department / القسم *</label>
                 <select name="department" required>
                     <option value="">-- Select / اختر --</option>
-                    <option value="Sewing" <?= $user['department'] == 'Sewing' ? 'selected' : '' ?>>Sewing / الخياطة
-                    </option>
-                    <option value="Cutting" <?= $user['department'] == 'Cutting' ? 'selected' : '' ?>>Cutting / الفصالة
-                    </option>
-                    <option value="Finishing" <?= $user['department'] == 'Finishing' ? 'selected' : '' ?>>Finishing /
-                        الفينيسيون</option>
-                    <option value="Printing" <?= $user['department'] == 'Printing' ? 'selected' : '' ?>>Printing / الطباعة
-                    </option>
-                    <option value="Warehouse" <?= $user['department'] == 'Warehouse' ? 'selected' : '' ?>>Warehouse /
-                        المخزن</option>
-                    <option value="Quality" <?= $user['department'] == 'Quality' ? 'selected' : '' ?>>Quality / الجودة
-                    </option>
-                    <option value="Maintenance" <?= $user['department'] == 'Maintenance' ? 'selected' : '' ?>>Maintenance /
-                        الصيانة</option>
-                    <option value="HR" <?= $user['department'] == 'HR' ? 'selected' : '' ?>>HR / الموارد البشرية</option>
+                    <?php foreach ($depts as $d): ?>
+                        <option value="<?= htmlspecialchars($d) ?>" <?= $user['department'] == $d ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($d) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
             </div>
 
@@ -158,9 +165,11 @@ ob_start();
                 <label>Location / الموقع *</label>
                 <select name="location" required>
                     <option value="">-- Select / اختر --</option>
-                    <option value="Candy 1" <?= $user['location'] == 'Candy 1' ? 'selected' : '' ?>>Candy 1</option>
-                    <option value="Candy 2" <?= $user['location'] == 'Candy 2' ? 'selected' : '' ?>>Candy 2</option>
-                    <option value="Flora 1" <?= $user['location'] == 'Flora 1' ? 'selected' : '' ?>>Flora 1</option>
+                    <?php foreach ($locs as $l): ?>
+                        <option value="<?= htmlspecialchars($l) ?>" <?= $user['location'] == $l ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($l) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
             </div>
 

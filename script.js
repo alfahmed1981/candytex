@@ -379,24 +379,45 @@ function updateCategory(index, newCategory) {
     cmData[index].action_plan = ''; // Reset when category changes
     cmData[index].responsible = ''; // Reset when category changes
     renderTable(cmData);
-    saveCM();
+    // Manual Save Required
 }
 
 function addCounterMeasure() {
-    cmData.push({ category: 'S', issue: '', action_plan: '', responsible: '', due_date: '', status: 'Open' });
+    // Default to Today's date for "Observation Day" / Deadline
+    const today = new Date().toISOString().split('T')[0];
+    cmData.push({ category: 'S', issue: '', action_plan: '', responsible: '', due_date: today, status: 'Open' });
     renderTable(cmData);
-    saveCM();
+    // Manual Save Required
 }
 
 function updateRow(index, field, value) {
     cmData[index][field] = value;
-    saveCM();
+    // Manual Save Required
 }
 
 function deleteRow(index) {
     cmData.splice(index, 1);
     renderTable(cmData);
-    saveCM();
+    // Manual Save Required
+}
+
+function confirmSaveCM() {
+    Swal.fire({
+        title: '⚠️ Store Data? / تخزين ؟',
+        html: `Are you sure? Once saved, this data <b>CANNOT be deleted or modified</b>.<br><br>
+               هل أنت متأكد؟ بمجرد التخزين، <b>لا يمكن حذف أو تعديل</b> هذه البيانات.<br><br>
+               <span style='color:red; font-weight:bold;'>Action is Irreversible!</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, Store it! / نعم، تخزين',
+        cancelButtonText: 'Cancel / إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            saveCM();
+        }
+    });
 }
 
 function saveCM() {
@@ -407,7 +428,15 @@ function saveCM() {
             action: 'save_countermeasures',
             data: cmData
         })
-    });
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire('Saved!', 'Data has been stored.', 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Error', 'Failed to save.', 'error');
+            }
+        });
 }
 
 // --- MOBILE SIDEBAR TOGGLE ---

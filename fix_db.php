@@ -41,6 +41,45 @@ try {
         echo "✅ 'password' column exists.<br>";
     }
 
+    // 4. Check for 'department'
+    if (!in_array('department', $columns)) {
+        echo "⚠️ 'department' column MISSING. Attempting to add...<br>";
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN department VARCHAR(100) NULL");
+            echo "✅ 'department' column ADDED successfully.<br>";
+        } catch (Exception $e) {
+            echo "❌ Failed to add 'department': " . $e->getMessage() . "<br>";
+        }
+    } else {
+        echo "✅ 'department' column exists.<br>";
+    }
+
+    // 5. Check for 'location'
+    if (!in_array('location', $columns)) {
+        echo "⚠️ 'location' column MISSING. Attempting to add...<br>";
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN location VARCHAR(100) NULL");
+            echo "✅ 'location' column ADDED successfully.<br>";
+        } catch (Exception $e) {
+            echo "❌ Failed to add 'location': " . $e->getMessage() . "<br>";
+        }
+    } else {
+        echo "✅ 'location' column exists.<br>";
+    }
+
+    // 6. Check for 'birth_date'
+    if (!in_array('birth_date', $columns)) {
+        echo "⚠️ 'birth_date' column MISSING. Attempting to add...<br>";
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN birth_date DATE NULL");
+            echo "✅ 'birth_date' column ADDED successfully.<br>";
+        } catch (Exception $e) {
+            echo "❌ Failed to add 'birth_date': " . $e->getMessage() . "<br>";
+        }
+    } else {
+        echo "✅ 'birth_date' column exists.<br>";
+    }
+
     echo "<hr>";
     echo "<h3>Diagnostic Complete.</h3>";
     echo "<p>If you saw green checks (✅), the database is fixed.</p>";

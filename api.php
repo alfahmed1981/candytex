@@ -77,10 +77,21 @@ if (isset($input['action'])) {
             $del->execute([$user_cin]);
         }
 
-        // Insert all new records
+        // Insert new or updated records (only if they don't already exist)
         $ins = $pdo->prepare("INSERT INTO countermeasures (user_cin, category, issue, action_plan, responsible, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
+        // Check existence query
+        $check = $pdo->prepare("SELECT COUNT(*) FROM countermeasures WHERE id = ?");
+
         foreach ($input['data'] as $row) {
+            // If it has an ID, check if it still exists (i.e., wasn't deleted by the logic above)
+            if (!empty($row['id'])) {
+                $check->execute([$row['id']]);
+                if ($check->fetchColumn() > 0) {
+                    continue; // Skip existing (locked) records
+                }
+            }
+
             $ins->execute([
                 $user_cin,
                 $row['category'] ?? 'S',

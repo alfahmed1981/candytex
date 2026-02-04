@@ -417,6 +417,9 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             <h3>🛠️ Counter Measures<br><span style="font-size:0.6em">الإجراءات المضادة / Contre-mesures</span></h3>
             <button onclick="addCounterMeasure()" class="add-btn">+ Add Issue<br><small>إضافة مشكلة /
                     Ajouter</small></button>
+            <button onclick="confirmSaveCM()" class="add-btn"
+                style="background: linear-gradient(135deg, #dc3545, #c82333); margin-left: 10px;">💾 Store
+                Issue<br><small>تخزين المشكلة / Sauvegarder</small></button>
             <table id="cm-table">
                 <thead>
                     <tr>
