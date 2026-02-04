@@ -52,12 +52,11 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
             font-size: 1.1em;
         }
 
-        .section {
-            margin-bottom: 30px;
-            padding: 25px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            border-right: 5px solid #007bff;
+        margin-bottom: 30px;
+        padding: 25px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border-right: 5px solid #007bff;
         }
 
         .section h2 {
@@ -368,6 +367,44 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                     <?php echo htmlspecialchars($user_name); ?>
                 </p>
             <?php endif; ?>
+        </div>
+
+        <!-- VERSION 2.0 UPDATES -->
+        <div class="section" style="border-right-color: #6610f2; background: #e2d9f3;">
+            <h2><span class="emoji">🚀</span> تحديثات النظام الجديد (Version 2.0)</h2>
+            <p>تم إطلاق مجموعة من التحسينات لتعزيز الانضباط والدقة في العمل:</p>
+
+            <div class="step-box" style="border-right-color: #6610f2;">
+                <h3>1. منطق العمليات الصارم (Master Logic)</h3>
+                <ul>
+                    <li>🟢 <b>الأخضر (Green):</b> تأكيد النتائج الإيجابية وحفظ مباشر.</li>
+                    <li>🟠 <b>البرتقالي (Orange):</b> تحذير من وجود خلل، يتطلب الانتباه.</li>
+                    <li>🔴 <b>الأحمر (Red):</b> توقف حرج! <b>لا يتم حفظ الحالة</b> إلا بعد تسجيل المشكلة إجبارياً.</li>
+                </ul>
+            </div>
+
+            <div class="step-box" style="border-right-color: #dc3545;">
+                <h3>2. عدم قابلية التعديل (Immutability)</h3>
+                <p>⚠️ <b>انتبه:</b> بمجرد الضغط على زر "تخزين" (Save)، تصبح البيانات <b>غير قابلة للتعديل أو الحذف</b>
+                    من طرفك.<br>
+                    يظهر لك رمز القفل 🔒 لتأكيد أن السجل قد تم تأمينه.</p>
+            </div>
+
+            <div class="step-box" style="border-right-color: #ffc107;">
+                <h3>3. نظام الانضباط والتحفيز (Gamification)</h3>
+                <ul>
+                    <li>🔴 <b>تنبيه إداري:</b> إذا كانت لديك بيانات ناقصة لأيام سابقة (في الشهر الحالي)، ستظهر لك رسالة
+                        تحذيرية مستمرة أعلى الصفحة.</li>
+                    <li>🌟 <b>شكر وتقدير:</b> إذا كانت سجلاتك نظيفة، ستظهر لك رسالة شكر مرة واحدة عند تسجيل الدخول
+                        لتحفيزك.</li>
+                </ul>
+            </div>
+
+            <div class="step-box" style="border-right-color: #17a2b8;">
+                <h3>4. سلة المحذوفات (للمشرفين)</h3>
+                <p>إذا قمت بإدخال خاطئ وتم حذف المشكلة من قبل المشرف، ستظهر لك في الجدول بخط مشطوب (Strikethrough) مع
+                    علامة 🗑️ لبيان أنها حذفت.</p>
+            </div>
         </div>
 
         <!-- Quick Links -->
