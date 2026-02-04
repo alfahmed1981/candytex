@@ -645,6 +645,9 @@ function checkWelcomeMessage() {
 
     } else {
         // 🌟 SCENARIO 2: GREEN/GOLD (Discipline & Engagement)
+        // SHOW ONCE PER SESSION ONLY
+
+        if (sessionStorage.getItem('motivationShown')) return;
 
         // 1. Inject Green Banner
         const banner = document.createElement('div');
@@ -676,6 +679,8 @@ function checkWelcomeMessage() {
                 no-repeat
             `
         });
+
+        sessionStorage.setItem('motivationShown', 'true');
     }
 }
 
