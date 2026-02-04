@@ -513,8 +513,22 @@ function addCounterMeasure(targetDate = null, targetCategory = 'S') {
     cmData.push({ category: cat, issue: '', action_plan: '', responsible: '', due_date: due, status: 'Open' });
     renderTable(cmData);
 
-    // Scroll to table
-    document.getElementById('cm-table')?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll to the newly added row (bottom of table)
+    setTimeout(() => {
+        const table = document.getElementById('cm-table');
+        if (table) {
+            const rows = table.querySelectorAll('tbody tr');
+            const lastRow = rows[rows.length - 1];
+            if (lastRow) {
+                lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Optional: Highlight the row
+                lastRow.style.backgroundColor = '#fff3cd';
+                setTimeout(() => lastRow.style.backgroundColor = '', 2000);
+            } else {
+                table.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    }, 100); // Small delay to allow DOM render
     // Manual Save Required
 }
 
