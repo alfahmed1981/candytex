@@ -282,10 +282,14 @@ foreach ($rows as $r) {
     $sqdc_data['days'][$r['category']][$r['day_date']] = $r['status'];
 }
 
-// Load Countermeasures from DB
-$cm_sql = "SELECT * FROM countermeasures WHERE user_cin = ? ORDER BY created_at DESC";
+// Load Countermeasures from DB (Filtered by Month/Year)
+$cm_sql = "SELECT * FROM countermeasures 
+           WHERE user_cin = ? 
+           AND MONTH(created_at) = ? 
+           AND YEAR(created_at) = ? 
+           ORDER BY created_at DESC";
 $cm_stmt = $pdo->prepare($cm_sql);
-$cm_stmt->execute([$user_cin]);
+$cm_stmt->execute([$user_cin, $month, $year]);
 $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
 ?>
 <!DOCTYPE html>

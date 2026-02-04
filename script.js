@@ -327,47 +327,61 @@ function renderTable(data) {
         const tr = document.createElement('tr');
         const category = row.category || 'S';
 
-        // Category Select
-        const catOptions = ['S', 'Q', 'D', '5S', 'C'].map(c =>
-            `<option value="${c}" ${category === c ? 'selected' : ''}>${c}</option>`
-        ).join('');
+        // Check if row is saved (has ID) -> Read Only Mode
+        if (row.id) {
+            tr.innerHTML = `
+                <td style="background:#f8f9fa; color:#666; font-weight:bold;">${category}</td>
+                <td style="background:#f8f9fa; color:#666;">${row.issue}</td>
+                <td style="background:#f8f9fa; color:#666;">${row.action_plan}</td>
+                <td style="background:#f8f9fa; color:#666;">${row.responsible}</td>
+                <td style="background:#f8f9fa; color:#666;">${row.due_date}</td>
+                <td style="background:#f8f9fa; font-weight:bold;">${row.status}</td>
+                <td style="background:#f8f9fa; text-align:center;">🔒</td>
+            `;
+        } else {
+            // New Row -> Editable Mode
+            // Category Select
+            const catOptions = ['S', 'Q', 'D', '5S', 'C'].map(c =>
+                `<option value="${c}" ${category === c ? 'selected' : ''}>${c}</option>`
+            ).join('');
 
-        // Dynamic Dropdowns based on category
-        const issueOptions = getIssueOptions(category, row.issue);
-        const actionOptions = getActionOptions(category, row.action_plan);
-        const responsibleOptions = getResponsibleOptions(category, row.responsible);
+            // Dynamic Dropdowns based on category
+            const issueOptions = getIssueOptions(category, row.issue);
+            const actionOptions = getActionOptions(category, row.action_plan);
+            const responsibleOptions = getResponsibleOptions(category, row.responsible);
 
-        tr.innerHTML = `
-            <td>
-                <select onchange="updateCategory(${index}, this.value)" style="font-weight:bold; min-width:60px;">
-                    ${catOptions}
-                </select>
-            </td>
-            <td>
-                <select onchange="updateRow(${index}, 'issue', this.value)" style="min-width:180px; font-size:11px;">
-                    ${issueOptions}
-                </select>
-            </td>
-            <td>
-                <select onchange="updateRow(${index}, 'action_plan', this.value)" style="min-width:160px; font-size:11px;">
-                    ${actionOptions}
-                </select>
-            </td>
-            <td>
-                <select onchange="updateRow(${index}, 'responsible', this.value)" style="min-width:140px; font-size:11px;">
-                    ${responsibleOptions}
-                </select>
-            </td>
-            <td><input type="date" value="${row.due_date || ''}" onchange="updateRow(${index}, 'due_date', this.value)"></td>
-            <td>
-                <select onchange="updateRow(${index}, 'status', this.value)">
-                    <option value="Open" ${row.status === 'Open' ? 'selected' : ''}>Open</option>
-                    <option value="In Progress" ${row.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                    <option value="Done" ${row.status === 'Done' ? 'selected' : ''}>Done</option>
-                </select>
-            </td>
-            <td><button style="background:red; padding:5px; color:white; border:none; cursor:pointer;" onclick="deleteRow(${index})">X</button></td>
-        `;
+            tr.innerHTML = `
+                <td>
+                    <select onchange="updateCategory(${index}, this.value)" style="font-weight:bold; min-width:60px;">
+                        ${catOptions}
+                    </select>
+                </td>
+                <td>
+                    <select onchange="updateRow(${index}, 'issue', this.value)" style="min-width:180px; font-size:11px;">
+                        ${issueOptions}
+                    </select>
+                </td>
+                <td>
+                    <select onchange="updateRow(${index}, 'action_plan', this.value)" style="min-width:160px; font-size:11px;">
+                        ${actionOptions}
+                    </select>
+                </td>
+                <td>
+                    <select onchange="updateRow(${index}, 'responsible', this.value)" style="min-width:140px; font-size:11px;">
+                        ${responsibleOptions}
+                    </select>
+                </td>
+                <td><input type="date" value="${row.due_date || ''}" onchange="updateRow(${index}, 'due_date', this.value)"></td>
+                <td>
+                    <select onchange="updateRow(${index}, 'status', this.value)">
+                        <option value="Open" ${row.status === 'Open' ? 'selected' : ''}>Open</option>
+                        <option value="In Progress" ${row.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="Done" ${row.status === 'Done' ? 'selected' : ''}>Done</option>
+                    </select>
+                </td>
+                <td><button style="background:red; padding:5px; color:white; border:none; cursor:pointer;" onclick="deleteRow(${index})">X</button></td>
+            `;
+        }
         tbody.appendChild(tr);
     });
 }
