@@ -287,10 +287,12 @@ foreach ($rows as $r) {
     $sqdc_data['days'][$r['category']][$r['day_date']] = $r['status'];
 }
 
-// --- GAMIFICATION: CHECK MISSING DATA (Past 7 Days) ---
+// --- GAMIFICATION: CHECK MISSING DATA (Past 7 Days, Current Month Only) ---
 $missing_data = [];
 $today_str = date('Y-m-d');
-$check_start_date = date('Y-m-d', strtotime('-7 days'));
+$first_day_current_month = date('Y-m-01');
+// Ensure we don't check dates from the previous month
+$check_start_date = max(date('Y-m-d', strtotime('-7 days')), $first_day_current_month);
 $check_end_date = date('Y-m-d', strtotime('-1 day')); // Exclude today
 
 // 1. Get all filled entries for the last 7 days
@@ -410,7 +412,8 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
                         style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:5px;">
                         <option value="<?php echo date('m'); ?>" selected><?php echo date('m') . ' (Current)'; ?></option>
                         <option value="<?php echo date('m', strtotime('first day of last month')); ?>">
-                            <?php echo date('m', strtotime('first day of last month')) . ' (Previous)'; ?></option>
+                            <?php echo date('m', strtotime('first day of last month')) . ' (Previous)'; ?>
+                        </option>
                     </select>
                 <?php endif; ?>
                 <button type="submit">Filter / تصفية</button>
