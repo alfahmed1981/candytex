@@ -14,8 +14,20 @@ $user_cin = $_SESSION['user_cin'];
 // Handle Status Update / Delete / Restore
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // 1. Auto-Purge Old Deleted Records (Older than 30 days)
-    $pdo->exec("DELETE FROM countermeasures WHERE deleted_at < NOW() - INTERVAL 30 DAY");
+    // -------------------------------------------------------------------------
+    // SELF-HEALING DATABASE: Ensure 'deleted_at' exists
+    // -------------------------------------------------------------------------
+    try {
+        // 1. Auto-Purge Old Deleted Records (Older than 30 days)
+        $pdo->exec("DELETE FROM countermeasures WHERE deleted_at < NOW() - INTERVAL 30 DAY");
+    } catch (PDOException $e) {
+        // If error is "Unknown column 'deleted_at'", add it and retry
+        if (strpos($e->getMessage(), "Unknown column") !== false) {
+            $pdo->exec("ALTER TABLE countermeasures ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
+            // Retry Purge
+            $pdo->exec("DELETE FROM countermeasures WHERE deleted_at < NOW() - INTERVAL 30 DAY");
+        }
+    }
 
     if (isset($_POST['update_status'])) {
         $issue_id = intval($_POST['issue_id']);
@@ -596,18 +608,23 @@ foreach ($issues as $issue) {
                             <td>
                                 <form method="POST" class="action-form" style="display: flex; gap: 5px;">
                                     <input type="hidden" name="issue_id" value="<?php echo $issue['id']; ?>">
-                                    
+
                                     <?php if ($issue['status'] === 'Deleted'): ?>
-                                        <button type="submit" name="restore_issue" style="background:#28a745;" title="استعادة / Restore">♻️</button>
+                                        <button type="submit" name="restore_issue" style="background:#28a745;"
+                                            title="استعادة / Restore">♻️</button>
                                         <span style="color:red; font-size:0.8em; align-self:center;">Deleted</span>
                                     <?php else: ?>
                                         <select name="new_status">
-                                            <option value="Open" <?php echo $issue['status'] === 'Open' ? 'selected' : ''; ?>>Open</option>
+                                            <option value="Open" <?php echo $issue['status'] === 'Open' ? 'selected' : ''; ?>>Open
+                                            </option>
                                             <option value="In Progress" <?php echo $issue['status'] === 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
-                                            <option value="Done" <?php echo $issue['status'] === 'Done' ? 'selected' : ''; ?>>Done</option>
+                                            <option value="Done" <?php echo $issue['status'] === 'Done' ? 'selected' : ''; ?>>Done
+                                            </option>
                                         </select>
                                         <button type="submit" name="update_status" title="حفظ الحالة / Save Status">💾</button>
-                                        <button type="submit" name="delete_issue" style="background:#dc3545;" title="حذف (سلة المهملات) / Bin" onclick="return confirm('To Recycle Bin? / إلى سلة المحذوفات؟');">🗑️</button>
+                                        <button type="submit" name="delete_issue" style="background:#dc3545;"
+                                            title="حذف (سلة المهملات) / Bin"
+                                            onclick="return confirm('To Recycle Bin? / إلى سلة المحذوفات؟');">🗑️</button>
                                     <?php endif; ?>
                                 </form>
                             </td>
