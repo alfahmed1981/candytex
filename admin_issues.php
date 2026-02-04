@@ -67,11 +67,15 @@ $stats = [
     'Open' => 0,
     'In Progress' => 0,
     'Done' => 0,
+    'Deleted' => 0,
     'by_category' => ['S' => 0, 'Q' => 0, 'D' => 0, '5S' => 0, 'C' => 0]
 ];
 
 foreach ($issues as $issue) {
-    $stats[$issue['status']]++;
+    $status = $issue['status'] ?? 'Open';
+    if (isset($stats[$status])) {
+        $stats[$status]++;
+    }
     $cat = $issue['category'] ?? 'S';
     if (isset($stats['by_category'][$cat])) {
         $stats['by_category'][$cat]++;
