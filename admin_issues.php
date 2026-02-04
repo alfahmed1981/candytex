@@ -12,95 +12,52 @@ if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
 $user_role = $_SESSION['role'];
 $user_cin = $_SESSION['user_cin'];
 
-// =========================================================================
-// CRITICAL: Ensure 'deleted_at' column exists BEFORE any operations
-// =========================================================================
-$column_exists = false;
-$check_cols = $pdo->query("SHOW COLUMNS FROM countermeasures LIKE 'deleted_at'");
-if ($check_cols->rowCount() > 0) {
-    $column_exists = true;
-}
-
-if (!$column_exists) {
-    try {
-        $pdo->exec("ALTER TABLE countermeasures ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
-    } catch (PDOException $e) {
-        // Log error but continue - maybe column was just added by another request
-        error_log("Failed to add deleted_at column: " . $e->getMessage());
-    }
-}
-// =========================================================================
-
-
 // Handle Status Update / Delete / Restore
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // -------------------------------------------------------------------------
-    // SELF-HEALING DATABASE: Ensure 'deleted_at' exists
-    // -------------------------------------------------------------------------
-    try {
-        // 1. Auto-Purge Old Deleted Records (Older than 30 days)
-        $pdo->exec("DELETE FROM countermeasures WHERE deleted_at < NOW() - INTERVAL 30 DAY");
-    } catch (PDOException $e) {
-        // If error is "Unknown column 'deleted_at'", add it and retry
-        if (strpos($e->getMessage(), "Unknown column") !== false) {
-            $pdo->exec("ALTER TABLE countermeasures ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
-            // Retry Purge
-            $pdo->exec("DELETE FROM countermeasures WHERE deleted_at < NOW() - INTERVAL 30 DAY");
-        }
-    }
 
     if (isset($_POST['update_status'])) {
         $issue_id = intval($_POST['issue_id']);
         $new_status = $_POST['new_status'];
 
-        // Prevent status update if item is deleted (unless restoring)
-        $stmt = $pdo->prepare("UPDATE countermeasures SET status = ? WHERE id = ? AND deleted_at IS NULL");
+        $stmt = $pdo->prepare("UPDATE countermeasures SET status = ? WHERE id = ?");
         $stmt->execute([$new_status, $issue_id]);
 
         header("Location: admin_issues.php?updated=1");
         exit;
     }
 
-    // 2. Soft Delete
+    // Soft Delete (just change status to 'Deleted')
     if (isset($_POST['delete_issue'])) {
         $issue_id = intval($_POST['issue_id']);
-        // Set deleted_at AND change status to 'Deleted' for visibility
-        $stmt = $pdo->prepare("UPDATE countermeasures SET deleted_at = NOW(), status = 'Deleted' WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE countermeasures SET status = 'Deleted' WHERE id = ?");
         $stmt->execute([$issue_id]);
         header("Location: admin_issues.php?deleted=1");
         exit;
     }
 
-    // 3. Restore
+    // Restore (change status back to 'Open')
     if (isset($_POST['restore_issue'])) {
         $issue_id = intval($_POST['issue_id']);
-        // Remove deleted_at AND reset status to 'Open' (or keep previous if we tracked it, but Open is safer)
-        $stmt = $pdo->prepare("UPDATE countermeasures SET deleted_at = NULL, status = 'Open' WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE countermeasures SET status = 'Open' WHERE id = ?");
         $stmt->execute([$issue_id]);
         header("Location: admin_issues.php?restored=1");
         exit;
     }
 }
 
-// -------------------------------------------------------------------------
-// ENSURE 'deleted_at' column exists before ANY query
-// -------------------------------------------------------------------------
-try {
-    // Test if column exists by trying to select it
-    $pdo->query("SELECT deleted_at FROM countermeasures LIMIT 1");
-} catch (PDOException $e) {
-    // Column doesn't exist, add it
-    if (strpos($e->getMessage(), "Unknown column") !== false) {
-        $pdo->exec("ALTER TABLE countermeasures ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
-    }
-}
+// Fetch all countermeasures with user info (exclude deleted by default)
+$show_deleted = isset($_GET['show_deleted']) ? true : false;
 
-// Fetch all countermeasures with user info
 $sql = "SELECT c.*, u.name as user_name, u.department, u.location 
         FROM countermeasures c 
-        LEFT JOIN users u ON c.user_cin = u.cin 
-        ORDER BY c.created_at DESC";
+        LEFT JOIN users u ON c.user_cin = u.cin ";
+
+if (!$show_deleted) {
+    $sql .= "WHERE c.status != 'Deleted' ";
+}
+
+$sql .= "ORDER BY c.created_at DESC";
+
 $stmt = $pdo->query($sql);
 $issues = $stmt->fetchAll();
 
