@@ -360,8 +360,30 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             <a href="?logout=1" class="logout">🚪 خروج</a>
         </div>
         <form method="GET" class="date-filter">
-            <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
-            <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <!-- ADMIN: Full Access -->
+                <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
+                <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
+            <?php else: ?>
+                <!-- USER: Restricted (Current Year Only) -->
+                <input type="number" name="year" value="<?php echo date('Y'); ?>" readonly
+                    style="background:#e9ecef; cursor:not-allowed;" title="العام الحالي فقط">
+                <select name="month">
+                    <?php
+                    $cur_m = date('n');
+                    $prev_m = $cur_m - 1;
+                    if ($prev_m < 1)
+                        $prev_m = 12; // Logic for label, but filtering is strictly by Year input
+                    // Actually, if we stick to 'Current Year' only, then we shouldn't show 'Dec' in 'Jan' if it implies last year.
+                    // But usually operations need 'Previous Month' regardless. 
+                    // Let's show both options. The user can filter.
+                    ?>
+                    <option value="<?php echo date('m'); ?>" selected><?php echo date('m') . ' (Current)'; ?></option>
+                    <option value="<?php echo date('m', strtotime('first day of last month')); ?>">
+                        <?php echo date('m', strtotime('first day of last month')) . ' (Previous)'; ?>
+                    </option>
+                </select>
+            <?php endif; ?>
             <button type="submit">🔍 عرض</button>
         </form>
     </div>
@@ -376,9 +398,21 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         <div class="filters">
             <form method="GET">
                 <label>Year / سنة</label>
-                <input type="number" name="year" value="<?php echo $year; ?>">
-                <label>Month / شهر</label>
-                <input type="number" name="month" value="<?php echo $month; ?>">
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                    <input type="number" name="year" value="<?php echo $year; ?>">
+                    <label>Month / شهر</label>
+                    <input type="number" name="month" value="<?php echo $month; ?>">
+                <?php else: ?>
+                    <input type="number" name="year" value="<?php echo date('Y'); ?>" readonly
+                        style="background:#e9ecef; cursor:not-allowed;" title="العام الحالي فقط">
+                    <label>Month / شهر</label>
+                    <select name="month"
+                        style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:5px;">
+                        <option value="<?php echo date('m'); ?>" selected><?php echo date('m') . ' (Current)'; ?></option>
+                        <option value="<?php echo date('m', strtotime('first day of last month')); ?>">
+                            <?php echo date('m', strtotime('first day of last month')) . ' (Previous)'; ?></option>
+                    </select>
+                <?php endif; ?>
                 <button type="submit">Filter / تصفية</button>
             </form>
         </div>

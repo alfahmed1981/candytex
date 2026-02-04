@@ -601,11 +601,24 @@ function saveCM() {
 
 // --- WELCOME MESSAGES / GAMIFICATION ---
 function checkWelcomeMessage() {
-    // Only show if page just loaded
-    if (sessionStorage.getItem('welcomeShown')) return;
+    // REMOVED sessionStorage check to make it persistent on every load
+
+    // Clear existing banner if any
+    const bannerId = 'status-banner';
+    const existingBanner = document.getElementById(bannerId);
+    if (existingBanner) existingBanner.remove();
 
     if (missingAssignments.length > 0) {
         // 🚨 SCENARIO 1: RED ALERT (Missing Data)
+
+        // 1. Inject Red Banner
+        const banner = document.createElement('div');
+        banner.id = bannerId;
+        banner.style.cssText = "background: #dc3545; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 1.1em; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2);";
+        banner.innerHTML = "⚠️ تحذير إداري: لديك بيانات ناقصة! يرجى التسوية فوراً. <br> <span style='font-size:0.8em; font-weight:normal;'>Admin Warning: You have missing data! Please fix immediately.</span>";
+        document.body.prepend(banner);
+
+        // 2. Show Modal
         let missingList = missingAssignments.map(m => `<li>🔴 <b>${m.category}</b>: ${m.date}</li>`).join('');
 
         Swal.fire({
@@ -632,6 +645,15 @@ function checkWelcomeMessage() {
 
     } else {
         // 🌟 SCENARIO 2: GREEN/GOLD (Discipline & Engagement)
+
+        // 1. Inject Green Banner
+        const banner = document.createElement('div');
+        banner.id = bannerId;
+        banner.style.cssText = "background: #28a745; color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 1em; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.1);";
+        banner.innerHTML = "🌟 شكراً لالتزامك! سجلاتك محدثة تماماً. <br> <span style='font-size:0.8em; font-weight:normal;'>Thank you for your commitment! Your records are up to date.</span>";
+        document.body.prepend(banner);
+
+        // 2. Show Modal
         Swal.fire({
             title: '🌟 شكراً لالتزامك واحترافيتك!<br>Thank you for your commitment!',
             html: `
@@ -655,8 +677,6 @@ function checkWelcomeMessage() {
             `
         });
     }
-
-    sessionStorage.setItem('welcomeShown', 'true');
 }
 
 // Run Welcome Check
