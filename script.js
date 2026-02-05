@@ -3,276 +3,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof initialCM !== 'undefined') {
         renderTable(initialCM);
     }
-    // Create modal dynamically if it doesn't exist
+    // Create status modal dynamically
     createStatusModal();
+    // Create issue modal dynamically
+    createIssueModal();
 });
 
-// --- CREATE STATUS MODAL DYNAMICALLY ---
-function createStatusModal() {
-    if (document.getElementById('statusModal')) return;
-
-    const modal = document.createElement('div');
-    modal.id = 'statusModal';
-    modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;';
-
-    modal.innerHTML = `
-        <div style="background:white; padding:30px; border-radius:15px; text-align:center; max-width:400px; width:90%;">
-            <h3 id="modalTitle" style="margin-bottom:20px;">Update Status</h3>
-            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;">
-                <button onclick="selectStatus('green')" style="background:#28a745; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
-                    ✓ موافق<br><small>Met / Conforme</small>
-                </button>
-                <button onclick="selectStatus('orange')" style="background:#fd7e14; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
-                    ⚠️ إجراء<br><small>Action Required</small>
-                </button>
-                <button onclick="selectStatus('red')" style="background:#dc3545; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
-                    ✗ خطر<br><small>Missed / Accident</small>
-                </button>
-                <button onclick="selectStatus('blue')" style="background:#007bff; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
-                    📅 عطلة<br><small>Holiday / N.A.</small>
-                </button>
-            </div>
-            <button onclick="selectStatus('gray')" style="background:#6c757d; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; margin-bottom:15px;">
-                ○ مسح<br><small>Clear</small>
-            </button>
-            <br>
-            <button onclick="closeModal()" style="background:#eee; color:#333; padding:10px 30px; border:none; border-radius:8px; cursor:pointer;">
-                إلغاء / Cancel
-            </button>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-}
-
-// --- GLOBAL FUNCTION CALLED BY INDEX.PHP ---
-function openDate(category, dateKey, currentStatus) {
-    // Parse the date from the dateKey (format: YYYY-M-D)
-    const parts = dateKey.split('-');
-    const year = parseInt(parts[0]);
-    const month = parseInt(parts[1]);
-    const day = parseInt(parts[2]);
-
-    openModal(category, day, year, month);
-}
-
-// --- MODAL LOGIC FOR DAY SELECTION ---
 // --- GLOBAL VARIABLES ---
 let currentDay = null;
 let currentCategory = null;
 let targetYear = null;
 let targetMonth = null;
-let pendingRedUpdate = null; // Stores {date, category} if Red status is pending issue save
-
-// --- MASTER LOGIC MESSAGES ---
-const statusMessages = {
-    green: {
-        'S': "أؤكد أن اليوم مر **بدون أي حوادث** (Zero Accidents)، وأن جميع العمال التزموا بمعدات الوقاية.",
-        'Q': "أؤكد أن الإنتاج اليوم كان **مطابقاً للمواصفات 100%** ولا توجد عيوب تذكر.",
-        'D': "أؤكد أننا **حققنا هدف الإنتاج** اليومي (Target Hit) في الوقت المحدد.",
-        '5S': "أؤكد أن مكان العمل **نظيف ومرتب** تماماً وفق معايير 5S عند نهاية الدوام.",
-        'C': "أؤكد عدم وجود أي **هدر للمواد** أو توقفات مكلفة اليوم."
-    },
-    orange: {
-        'S': "أنت تسجل حالة **خطر وشيك** (Near Miss). يُنصح بشدة إضافة التفاصيل في سجل المشاكل لمنع الحوادث.",
-        'Q': "يوجد **عيوب بسيطة** تتطلب إعادة العمل (Rework). يفضل تسجيل المشكلة لمتابعة الجودة.",
-        'D': "لم يتم تحقيق الهدف بالكامل (تأخير بسيط). هل تريد **تسجيل السبب** لتفاديه غداً؟",
-        '5S': "المكان يحتاج إلى تنظيم. يرجى **كتابة ما يجب فعله** في خانة المشاكل.",
-        'C': "يوجد هدر بسيط في الموارد. هل قمت بتحديد السبب؟"
-    },
-    red: {
-        'S': "⚠️ **تنبيه حاد:** حادث شغل! **يجب إلزامياً تسجيل تفاصيل الحادث** الآن لفتح تحقيق.",
-        'Q': "⚠️ **توقف:** فشل جودة حرج (Non-Conformity). **النظام يتطلب منك توثيق العيب** قبل المتابعة.",
-        'D': "⚠️ **توقف:** توقف الخط أو فشل التسليم. **يجب ذكر سبب التوقف** (Root Cause) إجبارياً.",
-        '5S': "⚠️ **تنبيه:** فشل تدقيق 5S (فوضى). **لا يمكن إغلاق اليوم دون تسجيل المخالفات**.",
-        'C': "⚠️ **خسارة مادية:** **يجب توثيق قيمة وسبب الخسارة** (مثل كسر آلة) حالاً."
-    },
-    blue: "هل تؤكد أن المصنع/الخط كان **متوقفاً تماماً** عن العمل اليوم (عطلة رسمية أو توقف مبرمج)؟"
-};
-
-function openModal(type, day, currentYear, currentMonth) {
-    // Save context globally
-    currentDay = day;
-    currentCategory = type;
-    targetYear = currentYear;
-    targetMonth = currentMonth;
-
-    // --- DATE VALIDATION LOGIC ---
-    const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-
-    const selectedDate = new Date(currentYear, currentMonth - 1, day);
-
-    // 1. Prevent Future Days
-    if (selectedDate > today) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Future Date / تاريخ مستقبلي',
-            text: 'You cannot fill reporting for future days. / لا يمكنك ملء التقارير للأيام المستقبلية.'
-        });
-        return;
-    }
-
-    // 2. Prevent filling TODAY before 7 PM GMT (19:00)
-    const isSameDay = selectedDate.getTime() === today.getTime();
-    if (isSameDay) {
-        const gmtHour = now.getUTCHours();
-        if (gmtHour < 19) {
-            Swal.fire({
-                icon: 'warning',
-                title: '⏰ مبكر جداً / Too Early',
-                html: `لا يمكن ملء بيانات اليوم إلا بعد <strong>الساعة 7 مساءً</strong> (توقيت غرينيتش).<br><br>
-                       You can only fill today's data after <strong>7:00 PM GMT</strong>.<br><br>
-                       <small>الوقت الحالي GMT: ${now.getUTCHours()}:${String(now.getUTCMinutes()).padStart(2, '0')}</small>`
-            });
-            return;
-        }
-    }
-
-    // 3. Prevent Old Days (> 7 days)
-    const diffTime = Math.abs(today - selectedDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays > 7) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Locked / مقفل',
-            text: 'You can only edit data for the last 7 days. / يمكنك فقط تعديل البيانات للأيام السبعة الماضية.'
-        });
-        return;
-    }
-
-    // Update Modal Title (Trilingual)
-    const catNames = {
-        'S': 'Safety / السلامة',
-        'Q': 'Quality / الجودة',
-        'D': 'Delivery / التسليم',
-        '5S': '5S / التحسين',
-        'C': 'Cost / التكلفة'
-    };
-
-    const dateStr = `${currentYear}-${currentMonth}-${day}`;
-    document.getElementById('modalTitle').innerHTML = `Update <strong>${catNames[type] || type}</strong> <br> <small>${dateStr}</small>`;
-
-    // Show Modal
-    document.getElementById('statusModal').style.display = 'flex';
-}
-
-function closeModal() {
-    document.getElementById('statusModal').style.display = 'none';
-}
-
-function selectStatus(status) {
-    const dateStr = `${targetYear}-${targetMonth}-${currentDay}`;
-    const category = currentCategory;
-    const msg = statusMessages[status] && statusMessages[status][category]
-        ? statusMessages[status][category]
-        : statusMessages[status] || "Confirm?"; // Fallback
-
-    closeModal();
-
-    // --- GREEN & BLUE (Direct Save) ---
-    if (status === 'green' || status === 'blue') {
-        Swal.fire({
-            title: 'تأكيد / Confirm',
-            html: msg,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: '✅ تأكيد وحفظ',
-            cancelButtonText: 'إلغاء'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                performStatusUpdate(category, dateStr, status);
-            }
-        });
-    }
-    // --- ORANGE (Soft Nudge) ---
-    else if (status === 'orange') {
-        Swal.fire({
-            title: '⚠️ انتباه / Warning',
-            html: msg,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: '⚠️ سأضيف الملاحظة',
-            cancelButtonText: 'حفظ بدون ملاحظة'
-        }).then((result) => {
-            // Save status regardless
-            performStatusUpdate(category, dateStr, status).then(() => {
-                if (result.isConfirmed) {
-                    addCounterMeasure(dateStr, category); // Prompt to add issue
-                }
-            });
-        });
-    }
-    // --- RED (Hard Stop) ---
-    else if (status === 'red') {
-        Swal.fire({
-            title: '🚨 توقف / STOP',
-            html: msg,
-            icon: 'error',
-            allowOutsideClick: false,
-            confirmButtonColor: '#d33',
-            confirmButtonText: '🚨 تسجيل المشكلة (إجباري)'
-        }).then(() => {
-            // DO NOT SAVE STATUS YET.
-            // Open Add Issue Modal (or scroll to form)
-            addCounterMeasure(dateStr, category);
-
-            // Set flag: When this issue is saved, we update the day status to RED.
-            pendingRedUpdate = {
-                category: category,
-                date: dateStr,
-                status: 'red'
-            };
-
-            Swal.fire({
-                position: 'top-end',
-                icon: 'info',
-                title: 'Pending Red Status',
-                text: 'Status will be saved RED only after you Store the issue.',
-                showConfirmButton: false,
-                timer: 2500
-            });
-        });
-    }
-    // --- GRAY (Clear) ---
-    else if (status === 'gray') {
-        performStatusUpdate(category, dateStr, status);
-    }
-}
-
-function performStatusUpdate(kpi, date, status) {
-    return fetch('api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'update_day',
-            kpi: kpi,
-            date: date,
-            status: status
-        })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // Optional: Show partial success toast?
-                // For now, Green/Blue/Orange reloads page on this chain end usually.
-                // But we might want to delay reload if we are adding an issue (Orange).
-                if (status !== 'orange') {
-                    location.reload();
-                }
-            } else {
-                Swal.fire('Error', data.message || 'Could not save status', 'error');
-            }
-        })
-        .catch(err => Swal.fire('Error', 'Network error', 'error'));
-}
-
-// --- COUNTERMEASURES LOGIC ---
+let pendingRedUpdate = null;
 let cmData = typeof initialCM !== 'undefined' ? initialCM : [];
 
-// Predefined Issues for each category (Dynamic Dropdown)
+// --- CONSTANTS & DICTIONARIES ---
+const catNames = { 'S': 'Safety / السلامة', 'Q': 'Quality / الجودة', 'D': 'Delivery / التسليم', '5S': '5S / التحسين', 'C': 'Cost / التكلفة' };
+
 const predefinedIssues = {
     'S': [
         { value: 'ppe_damaged', label: '🦺 عطل في معدات الوقاية (PPE Damaged)' },
@@ -316,7 +63,6 @@ const predefinedIssues = {
     ]
 };
 
-// Predefined Actions for each category (Cascading Dropdown)
 const predefinedActions = {
     'S': [
         { label: '🦺 استبدال معدات الوقاية (Replace PPE)' },
@@ -361,352 +107,425 @@ const predefinedActions = {
     ]
 };
 
-// Predefined Responsible Roles for each category
 const predefinedResponsible = {
-    'S': [
-        { label: '👷 رئيس الفريق (Team Leader)' },
-        { label: '🦺 مسؤول السلامة (HSE Officer)' },
-        { label: '🔧 عامل الصيانة (Maintenance Tech)' },
-        { label: '🧹 عامل النظافة (Cleaner)' },
-        { label: '👔 مشرف الإنتاج (Supervisor)' }
-    ],
-    'Q': [
-        { label: '🔍 مراقب الجودة (Quality Controller)' },
-        { label: '👷 رئيس الفريق (Team Leader)' },
-        { label: '⚙️ المكتب التقني (Technical/Methods)' },
-        { label: '👔 مشرف الإنتاج (Supervisor)' }
-    ],
-    'D': [
-        { label: '🔧 عامل الصيانة (Maintenance Tech)' },
-        { label: '📦 مسؤول المخزن (Storekeeper)' },
-        { label: '👷 رئيس الفريق (Team Leader)' },
-        { label: '👔 مشرف الإنتاج (Supervisor)' },
-        { label: '👥 إعادة توزيع (HR/Planning)' }
-    ],
-    '5S': [
-        { label: '👷 رئيس الفريق (Team Leader)' },
-        { label: '🧹 عامل النظافة (Cleaner)' },
-        { label: '📦 مسؤول المخزن (Storekeeper)' },
-        { label: '⚙️ المكتب التقني (Technical/Methods)' }
-    ],
-    'C': [
-        { label: '👔 مشرف الإنتاج (Supervisor)' },
-        { label: '👷 رئيس الفريق (Team Leader)' },
-        { label: '🔧 عامل الصيانة (Maintenance Tech)' },
-        { label: '📊 المحاسبة/الإدارة (Admin/Finance)' }
-    ]
+    'S': ['👷 رئيس الفريق (Team Leader)', '🦺 مسؤول السلامة (HSE Officer)', '🔧 عامل الصيانة (Maintenance Tech)', '🧹 عامل النظافة (Cleaner)', '👔 مشرف الإنتاج (Supervisor)'],
+    'Q': ['🔍 مراقب الجودة (Quality Controller)', '👷 رئيس الفريق (Team Leader)', '⚙️ المكتب التقني (Technical/Methods)', '👔 مشرف الإنتاج (Supervisor)'],
+    'D': ['🔧 عامل الصيانة (Maintenance Tech)', '📦 مسؤول المخزن (Storekeeper)', '👷 رئيس الفريق (Team Leader)', '👔 مشرف الإنتاج (Supervisor)', '👥 إعادة توزيع (HR/Planning)'],
+    '5S': ['👷 رئيس الفريق (Team Leader)', '🧹 عامل النظافة (Cleaner)', '📦 مسؤول المخزن (Storekeeper)', '⚙️ المكتب التقني (Technical/Methods)'],
+    'C': ['👔 مشرف الإنتاج (Supervisor)', '👷 رئيس الفريق (Team Leader)', '🔧 عامل الصيانة (Maintenance Tech)', '📊 المحاسبة/الإدارة (Admin/Finance)']
 };
 
-function getOptions(list, selectedValue, placeholder) {
-    let options = `<option value="">${placeholder}</option>`;
+const statusMessages = {
+    green: {
+        'S': "أؤكد أن اليوم مر **بدون أي حوادث** (Zero Accidents)، وأن جميع العمال التزموا بمعدات الوقاية.",
+        'Q': "أؤكد أن الإنتاج اليوم كان **مطابقاً للمواصفات 100%** ولا توجد عيوب تذكر.",
+        'D': "أؤكد أننا **حققنا هدف الإنتاج** اليومي (Target Hit) في الوقت المحدد.",
+        '5S': "أؤكد أن مكان العمل **نظيف ومرتب** تماماً وفق معايير 5S عند نهاية الدوام.",
+        'C': "أؤكد عدم وجود أي **هدر للمواد** أو توقفات مكلفة اليوم."
+    },
+    orange: {
+        'S': "أنت تسجل حالة **خطر وشيك** (Near Miss). يُنصح بشدة إضافة التفاصيل في سجل المشاكل لمنع الحوادث.",
+        'Q': "يوجد **عيوب بسيطة** تتطلب إعادة العمل (Rework). يفضل تسجيل المشكلة لمتابعة الجودة.",
+        'D': "لم يتم تحقيق الهدف بالكامل (تأخير بسيط). هل تريد **تسجيل السبب** لتفاديه غداً؟",
+        '5S': "المكان يحتاج إلى تنظيم. يرجى **كتابة ما يجب فعله** في خانة المشاكل.",
+        'C': "يوجد هدر بسيط في الموارد. هل قمت بتحديد السبب؟"
+    },
+    red: {
+        'S': "⚠️ **تنبيه حاد:** حادث شغل! **يجب إلزامياً تسجيل تفاصيل الحادث** الآن لفتح تحقيق.",
+        'Q': "⚠️ **توقف:** فشل جودة حرج (Non-Conformity). **النظام يتطلب منك توثيق العيب** قبل المتابعة.",
+        'D': "⚠️ **توقف:** توقف الخط أو فشل التسليم. **يجب ذكر سبب التوقف** (Root Cause) إجبارياً.",
+        '5S': "⚠️ **تنبيه:** فشل تدقيق 5S (فوضى). **لا يمكن إغلاق اليوم دون تسجيل المخالفات**.",
+        'C': "⚠️ **خسارة مادية:** **يجب توثيق قيمة وسبب الخسارة** (مثل كسر آلة) حالاً."
+    },
+    blue: "هل تؤكد أن المصنع/الخط كان **متوقفاً تماماً** عن العمل اليوم (عطلة رسمية أو توقف مبرمج)؟"
+};
 
-    list.forEach(item => {
-        const selected = selectedValue === item.label ? 'selected' : '';
-        options += `<option value="${item.label}" ${selected}>${item.label}</option>`;
-    });
 
-    // Check if current value is custom (not in predefined list)
-    if (selectedValue && !list.some(i => i.label === selectedValue)) {
-        options += `<option value="${selectedValue}" selected>📝 ${selectedValue}</option>`;
+// --- ISSUE MODAL (UI) ---
+function createIssueModal() {
+    if (document.getElementById('issueModal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'issueModal';
+    // Mobile-friendly styling: Full screen on small devices, centered card on large
+    modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1100; padding:10px; overflow-y:auto;';
+
+    modal.innerHTML = `
+        <div style="background:white; border-radius:12px; width:100%; max-width:600px; box-shadow:0 4px 15px rgba(0,0,0,0.3); overflow:hidden;">
+            <div style="background:#007bff; padding:15px; color:white; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">🛠️ Add New Issue / إضافة مشكلة</h3>
+                <button onclick="closeIssueModal()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            
+            <div style="padding:20px; max-height:80vh; overflow-y:auto;">
+                
+                <!-- Category Select -->
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">Category / الفئة</label>
+                    <select id="modal_cat" onchange="updateModalOptions()" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                        <option value="S">Safety / السلامة</option>
+                        <option value="Q">Quality / الجودة</option>
+                        <option value="D">Delivery / التسليم</option>
+                        <option value="5S">5S / التحسين</option>
+                        <option value="C">Cost / التكلفة</option>
+                    </select>
+                </div>
+
+                <!-- Issue Select -->
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">Issue / المشكلة</label>
+                    <select id="modal_issue" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                        <!-- Populated dynamic -->
+                    </select>
+                </div>
+
+                <!-- Action Select -->
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">Action / الإجراء</label>
+                    <select id="modal_action" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                         <!-- Populated dynamic -->
+                    </select>
+                </div>
+
+                <!-- Responsible Select -->
+                <div style="margin-bottom:15px;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px;">Who / المسؤول</label>
+                    <select id="modal_who" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                         <!-- Populated dynamic -->
+                    </select>
+                </div>
+
+                <!-- Due Date & Status (Hidden for new) -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px;">Due Date / الموعد</label>
+                        <input type="date" id="modal_date" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                    </div>
+                     <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px;">Status / الحالة</label>
+                         <input type="text" value="Open" readonly style="width:100%; padding:12px; background:#f0f0f0; border:1px solid #ccc; border-radius:6px; font-size:16px; color:#666;">
+                    </div>
+                </div>
+
+                <div style="margin-top:20px; display:flex; gap:10px;">
+                    <button onclick="submitIssueFromModal()" style="flex:1; background:#28a745; color:white; padding:15px; border:none; border-radius:8px; font-size:18px; font-weight:bold; cursor:pointer;">💾 ADD / إضافة</button>
+                    <button onclick="closeIssueModal()" style="flex:0; background:#6c757d; color:white; padding:15px 25px; border:none; border-radius:8px; font-size:16px; cursor:pointer;">Cancel</button>
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+// Open the Modal
+function openIssueModal(presetCategory = null, presetDate = null) {
+    const modal = document.getElementById('issueModal');
+    if (!modal) return;
+
+    // Reset Fields
+    document.getElementById('modal_cat').value = presetCategory || 'S';
+    
+    // Date Logic
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('modal_date');
+    dateInput.value = presetDate || today;
+    dateInput.max = today; // Prevent future dates
+
+    // Trigger update for dropdowns
+    updateModalOptions();
+
+    modal.style.display = 'flex';
+}
+
+function closeIssueModal() {
+    document.getElementById('issueModal').style.display = 'none';
+}
+
+function updateModalOptions() {
+    const cat = document.getElementById('modal_cat').value;
+    
+    // Helper to generic options
+    const populate = (id, list, placeholder) => {
+        let opts = `<option value="">${placeholder}</option>`;
+        list.forEach(i => opts += `<option value="${i.label || i.value}">${i.label || i.value}</option>`); // Handle mixed objects
+        // Specialized handling for issues (value vs label)
+        if (id === 'modal_issue') {
+             opts = `<option value="">${placeholder}</option>`;
+             list.forEach(i => opts += `<option value="${i.label}">${i.label}</option>`);
+        }
+         // Specialized handling for simple arrays
+        if (typeof list[0] === 'string') {
+             opts = `<option value="">${placeholder}</option>`;
+             list.forEach(i => opts += `<option value="${i}">${i}</option>`);
+        }
+        document.getElementById(id).innerHTML = opts;
+    };
+
+    populate('modal_issue', predefinedIssues[cat] || [], '-- Select / اختر --');
+    populate('modal_action', predefinedActions[cat] || [], '-- Select / اختر --');
+    
+    const respList = predefinedResponsible[cat] || [];
+    let respOpts = `<option value="">-- Select / اختر --</option>`;
+    respList.forEach(r => respOpts += `<option value="${r}">${r}</option>`);
+    document.getElementById('modal_who').innerHTML = respOpts;
+}
+
+function submitIssueFromModal() {
+    const cat = document.getElementById('modal_cat').value;
+    const issue = document.getElementById('modal_issue').value;
+    const action = document.getElementById('modal_action').value;
+    const who = document.getElementById('modal_who').value;
+    const date = document.getElementById('modal_date').value;
+
+    if (!cat || !issue || !action || !who || !date) {
+        Swal.fire('Error', 'Please fill all fields / يرجى ملء جميع الخانات', 'warning');
+        return;
     }
 
-    return options;
+    // Add to Local Data
+    const newRow = {
+        category: cat,
+        issue: issue,
+        action_plan: action,
+        responsible: who,
+        due_date: date,
+        status: 'Open' // Default
+    };
+
+    cmData.push(newRow);
+    renderTable(cmData);
+    closeIssueModal();
+
+    // Scroll to bottom
+     setTimeout(() => {
+        const table = document.getElementById('cm-table');
+        const rows = table.querySelectorAll('tbody tr');
+        const lastRow = rows[rows.length - 1];
+        if (lastRow) {
+            lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            lastRow.style.backgroundColor = '#d4edda';
+            setTimeout(() => lastRow.style.backgroundColor = '', 2000);
+        }
+    }, 100);
 }
 
-function getIssueOptions(category, selectedValue) {
-    return getOptions(predefinedIssues[category] || [], selectedValue, '-- اختر المشكلة --');
+
+// --- STATUS MODAL (Existing Logic, slightly cleaned) ---
+function createStatusModal() {
+    if (document.getElementById('statusModal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'statusModal';
+    modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;';
+    modal.innerHTML = `
+        <div style="background:white; padding:30px; border-radius:15px; text-align:center; max-width:400px; width:90%;">
+            <h3 id="modalTitle" style="margin-bottom:20px;">Update Status</h3>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;">
+                <button onclick="selectStatus('green')" style="background:#28a745; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">✓ موافق<br><small>Met</small></button>
+                <button onclick="selectStatus('orange')" style="background:#fd7e14; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">⚠️ إجراء<br><small>Action</small></button>
+                <button onclick="selectStatus('red')" style="background:#dc3545; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">✗ خطر<br><small>Missed</small></button>
+                <button onclick="selectStatus('blue')" style="background:#007bff; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">📅 عطلة<br><small>Holiday</small></button>
+            </div>
+            <button onclick="selectStatus('gray')" style="background:#6c757d; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; margin-bottom:15px;">○ مسح<br><small>Clear</small></button>
+            <br>
+            <button onclick="closeModal()" style="background:#eee; color:#333; padding:10px 30px; border:none; border-radius:8px; cursor:pointer;">إلغاء / Cancel</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
 }
 
-function getActionOptions(category, selectedValue) {
-    return getOptions(predefinedActions[category] || [], selectedValue, '-- اختر الإجراء --');
+function openDate(category, dateKey, currentStatus) {
+    const parts = dateKey.split('-');
+    openModal(category, parseInt(parts[2]), parseInt(parts[0]), parseInt(parts[1]));
 }
 
-function getResponsibleOptions(category, selectedValue) {
-    return getOptions(predefinedResponsible[category] || [], selectedValue, '-- اختر المسؤول --');
+function openModal(type, day, currentYear, currentMonth) {
+    currentDay = day;
+    currentCategory = type;
+    targetYear = currentYear;
+    targetMonth = currentMonth;
+
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(currentYear, currentMonth - 1, day);
+
+    if (selectedDate > today) {
+        Swal.fire({ icon: 'warning', title: 'Future Date', text: 'Cannot fill future dates.' });
+        return;
+    }
+    if (selectedDate.getTime() === today.getTime()) {
+        if (now.getUTCHours() < 19) {
+            Swal.fire({ icon: 'warning', title: 'Start 19:00', text: 'Reporting starts at 19:00 GMT.' });
+            return;
+        }
+    }
+    const diffDays = Math.ceil(Math.abs(today - selectedDate) / (1000 * 60 * 60 * 24));
+    if (diffDays > 7) {
+        Swal.fire({ icon: 'error', title: 'Locked', text: 'Editing locked for dates older than 7 days.' });
+        return;
+    }
+
+    const dateStr = `${currentYear}-${currentMonth}-${day}`;
+    document.getElementById('modalTitle').innerHTML = `Update <strong>${catNames[type]}</strong><br><small>${dateStr}</small>`;
+    document.getElementById('statusModal').style.display = 'flex';
 }
 
+function closeModal() { document.getElementById('statusModal').style.display = 'none'; }
+
+function selectStatus(status) {
+    const dateStr = `${targetYear}-${targetMonth}-${currentDay}`;
+    const category = currentCategory;
+    const msg = statusMessages[status] && statusMessages[status][category] ? statusMessages[status][category] : "Confirm?";
+    closeModal();
+
+    if (status === 'green' || status === 'blue') {
+        Swal.fire({ title: 'Confirm', html: msg, icon: 'question', showCancelButton: true, confirmButtonText: '✅ Confirm' }).then((r) => {
+            if (r.isConfirmed) performStatusUpdate(category, dateStr, status);
+        });
+    } else if (status === 'orange') {
+        Swal.fire({ title: 'Warning', html: msg, icon: 'warning', showCancelButton: true, confirmButtonText: '⚠️ Add Issue', cancelButtonText: 'Save Only' }).then((r) => {
+            if (r.isConfirmed) openIssueModal(category, dateStr);
+            performStatusUpdate(category, dateStr, status);
+        });
+    } else if (status === 'red') {
+        Swal.fire({ title: 'STOP', html: msg, icon: 'error', confirmButtonColor: '#d33', confirmButtonText: '🚨 Register Issue' }).then(() => {
+            openIssueModal(category, dateStr);
+            pendingRedUpdate = { category, date: dateStr, status: 'red' };
+        });
+    } else if (status === 'gray') {
+        performStatusUpdate(category, dateStr, status);
+    }
+}
+
+function performStatusUpdate(kpi, date, status) {
+    return fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_day', kpi, date, status })
+    }).then(r => r.json()).then(d => {
+        if (d.success) location.reload();
+        else Swal.fire('Error', 'Update failed', 'error');
+    });
+}
+
+// --- TABLE RENDER LOGIC (READ ONLY + ACTIONS) ---
 function renderTable(data) {
     cmData = data;
     const tbody = document.querySelector('#cm-table tbody');
     if (!tbody) return;
-
     tbody.innerHTML = '';
 
     cmData.forEach((row, index) => {
         const tr = document.createElement('tr');
-        const category = row.category || 'S';
+        
+        const isSaved = !!row.id; // Assuming ID comes from DB
+        const isDeleted = row.status === 'Deleted';
+        const catLabel = catNames[row.category] || row.category;
+        
+        tr.innerHTML = `
+            <td style="font-weight:bold;">${catLabel}</td>
+            <td style="font-size:0.9em;">${row.issue}</td>
+            <td style="font-size:0.9em;">${row.action_plan}</td>
+            <td style="font-size:0.85em;">${row.responsible}</td>
+            <td>${row.due_date}</td>
+            <td><span class="badge ${row.status}">${row.status}</span></td>
+            <td style="white-space:nowrap;">
+                ${isDeleted ? '🚫' : `
+                    <button class="btn-action btn-save" onclick="saveRow(${index})">💾</button>
+                    <button class="btn-action btn-del" onclick="deleteRow(${index})">🗑️</button>
+                `}
+            </td>
+        `;
 
-        // Check if row is saved (has ID) -> Read Only Mode
-        if (row.id) {
-            let rowStyle = "background:#f8f9fa; color:#666;";
-            let statusBadge = row.status;
+        if (isDeleted) tr.style.cssText = "background:#ffebee; text-decoration:line-through; opacity:0.7;";
+        else if (!isSaved) tr.style.cssText = "background:#fffde7; border-left: 3px solid #ffc107;"; // Highlight unsaved
 
-            // Special styling for Soft Deleted items
-            if (row.status === 'Deleted') {
-                rowStyle = "background:#ffebee; color:#c62828; text-decoration: line-through;";
-                statusBadge = "🗑️ Deleted (Recycle Bin)";
-            }
-
-            tr.innerHTML = `
-                <td style="${rowStyle} font-weight:bold;">${category}</td>
-                <td style="${rowStyle}">${row.issue}</td>
-                <td style="${rowStyle}">${row.action_plan}</td>
-                <td style="${rowStyle}">${row.responsible}</td>
-                <td style="${rowStyle}">${row.due_date}</td>
-                <td style="${rowStyle} font-weight:bold;">${statusBadge}</td>
-                <td style="background:#f8f9fa; text-align:center;">${row.status === 'Deleted' ? '🚫' : '🔒'}</td>
-            `;
-        } else {
-            // New Row -> Editable Mode
-            // Category Select
-            const catOptions = ['S', 'Q', 'D', '5S', 'C'].map(c =>
-                `<option value="${c}" ${category === c ? 'selected' : ''}>${c}</option>`
-            ).join('');
-
-            // Dynamic Dropdowns based on category
-            const issueOptions = getIssueOptions(category, row.issue);
-            const actionOptions = getActionOptions(category, row.action_plan);
-            const responsibleOptions = getResponsibleOptions(category, row.responsible);
-
-            tr.innerHTML = `
-                <td>
-                    <select onchange="updateCategory(${index}, this.value)" style="font-weight:bold; min-width:60px;">
-                        ${catOptions}
-                    </select>
-                </td>
-                <td>
-                    <select onchange="updateRow(${index}, 'issue', this.value)" style="min-width:180px; font-size:11px;">
-                        ${issueOptions}
-                    </select>
-                </td>
-                <td>
-                    <select onchange="updateRow(${index}, 'action_plan', this.value)" style="min-width:160px; font-size:11px;">
-                        ${actionOptions}
-                    </select>
-                </td>
-                <td>
-                    <select onchange="updateRow(${index}, 'responsible', this.value)" style="min-width:140px; font-size:11px;">
-                        ${responsibleOptions}
-                    </select>
-                </td>
-                <td><input type="date" value="${row.due_date || ''}" onchange="updateRow(${index}, 'due_date', this.value)"></td>
-                <td>
-                    <select onchange="updateRow(${index}, 'status', this.value)">
-                        <option value="Open" ${row.status === 'Open' ? 'selected' : ''}>Open</option>
-                        <option value="In Progress" ${row.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="Done" ${row.status === 'Done' ? 'selected' : ''}>Done</option>
-                    </select>
-                </td>
-                <td><button style="background:red; padding:5px; color:white; border:none; cursor:pointer;" onclick="deleteRow(${index})">X</button></td>
-            `;
-        }
         tbody.appendChild(tr);
     });
 }
 
-// Update category and refresh all cascading dropdowns
-function updateCategory(index, newCategory) {
-    cmData[index].category = newCategory;
-    cmData[index].issue = ''; // Reset when category changes
-    cmData[index].action_plan = ''; // Reset when category changes
-    cmData[index].responsible = ''; // Reset when category changes
-    renderTable(cmData);
-    // Manual Save Required
+function addCounterMeasure(date = null, cat = 'S') {
+    openIssueModal(cat, date);
 }
 
-function addCounterMeasure(targetDate = null, targetCategory = 'S') {
-    // Default to Today's date if not provided
-    const due = targetDate || new Date().toISOString().split('T')[0];
-    const cat = targetCategory;
-
-    cmData.push({ category: cat, issue: '', action_plan: '', responsible: '', due_date: due, status: 'Open' });
-    renderTable(cmData);
-
-    // Scroll to the newly added row (bottom of table)
-    setTimeout(() => {
-        const table = document.getElementById('cm-table');
-        if (table) {
-            const rows = table.querySelectorAll('tbody tr');
-            const lastRow = rows[rows.length - 1];
-            if (lastRow) {
-                lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Optional: Highlight the row
-                lastRow.style.backgroundColor = '#fff3cd';
-                setTimeout(() => lastRow.style.backgroundColor = '', 2000);
-            } else {
-                table.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-    }, 100); // Small delay to allow DOM render
-    // Manual Save Required
-}
-
-function updateRow(index, field, value) {
-    cmData[index][field] = value;
-    // Manual Save Required
-}
-
-function deleteRow(index) {
-    cmData.splice(index, 1);
-    renderTable(cmData);
-    // Manual Save Required
-}
-
-function confirmSaveCM() {
+// --- SAVE ROW ACTION ---
+function saveRow(index) {
+    const row = cmData[index];
+    if (row.id) return; 
+    
     Swal.fire({
-        title: '⚠️ Store Data? / تخزين ؟',
-        html: `Are you sure? Once saved, this data <b>CANNOT be deleted or modified</b>.<br><br>
-               هل أنت متأكد؟ بمجرد التخزين، <b>لا يمكن حذف أو تعديل</b> هذه البيانات.<br><br>
-               <span style='color:red; font-weight:bold;'>Action is Irreversible!</span>`,
-        icon: 'warning',
+        title: 'Confirm Save?',
+        text: 'Save this issue permanently?',
+        icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, Store it! / نعم، تخزين',
-        cancelButtonText: 'Cancel / إلغاء'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            saveCM();
+        confirmButtonText: 'Yes, Save 💾'
+    }).then((r) => {
+        if (r.isConfirmed) {
+            // Call API
+            fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save_countermeasures',
+                    data: [row] // Send single row as array
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Saved', 'Issue saved successfully', 'success').then(() => {
+                         if (pendingRedUpdate) {
+                             performStatusUpdate(pendingRedUpdate.category, pendingRedUpdate.date, 'red');
+                         } else {
+                             location.reload();
+                         }
+                    });
+                } else {
+                    Swal.fire('Error', data.message || 'Save failed', 'error');
+                }
+            });
         }
     });
 }
 
-function saveCM() {
-    fetch('api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'save_countermeasures',
-            data: cmData
-        })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // Check if we have a pending RED status update
-                if (pendingRedUpdate) {
-                    performStatusUpdate(pendingRedUpdate.category, pendingRedUpdate.date, 'red')
-                        .then(() => {
-                            pendingRedUpdate = null;
-                            Swal.fire('Saved!', 'Issue and Red Status stored.', 'success').then(() => location.reload());
-                        });
-                } else {
-                    Swal.fire('Saved!', 'Data has been stored.', 'success').then(() => location.reload());
-                }
-            } else {
-                Swal.fire('Error', 'Failed to save.', 'error');
-            }
-        });
+// --- DELETE ROW ACTION ---
+function deleteRow(index) {
+    Swal.fire({
+        title: 'Delete Issue?',
+        text: 'Are you sure you want to remove this item?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Yes, Delete 🗑️'
+    }).then((r) => {
+        if (r.isConfirmed) {
+            cmData.splice(index, 1);
+            renderTable(cmData);
+        }
+    });
 }
 
-// --- WELCOME MESSAGES / GAMIFICATION ---
-function checkWelcomeMessage() {
-    // REMOVED sessionStorage check to make it persistent on every load
+// --- CSS INJECTION FOR STYLES ---
+const style = document.createElement('style');
+style.textContent = `
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em; }
+    .badge.Open { background: #e0e0e0; color: #333; }
+    .badge.Done { background: #d4edda; color: #155724; }
+    .btn-action { border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 1.1em; transition: transform 0.1s; }
+    .btn-action:hover { transform: scale(1.1); }
+    .btn-save { background: #28a745; color: white; margin-right: 5px; }
+    .btn-del { background: #dc3545; color: white; }
+`;
+document.head.appendChild(style);
 
-    // Clear existing banner if any
-    const bannerId = 'status-banner';
-    const existingBanner = document.getElementById(bannerId);
-    if (existingBanner) existingBanner.remove();
 
-    if (missingAssignments.length > 0) {
-        // 🚨 SCENARIO 1: RED ALERT (Missing Data)
-
-        // 1. Inject Red Banner
-        const banner = document.createElement('div');
-        banner.id = bannerId;
-        banner.style.cssText = "background: #dc3545; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 1.1em; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2);";
-        banner.innerHTML = "⚠️ تحذير إداري: لديك بيانات ناقصة! يرجى التسوية فوراً. <br> <span style='font-size:0.8em; font-weight:normal;'>Admin Warning: You have missing data! Please fix immediately.</span>";
-        document.body.prepend(banner);
-
-        // 2. Show Modal
-        let missingList = missingAssignments.map(m => `<li>🔴 <b>${m.category}</b>: ${m.date}</li>`).join('');
-
-        Swal.fire({
-            title: '⚠️ تنبيه إداري: بيانات ناقصة!<br>Admin Alert: Missing Data!',
-            html: `
-                <div style="text-align:left; direction:ltr;">
-                    <p>Hello <b>${userName}</b>,</p>
-                    <p>We noticed missing updates for the past days. <b>Data accuracy is your responsibility.</b></p>
-                    <p>🛑 <b>Please fix these pending items immediately:</b></p>
-                    <ul style="list-style:none; padding:10px; background:#fff3cd; border:1px solid #ffeeba;">${missingList}</ul>
-                    <p>You cannot proceed comfortably before closing these gaps.</p>
-                </div>
-                <div style="text-align:right; direction:rtl; margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                    <p>مرحباً <b>${userName}</b>،</p>
-                    <p>لاحظنا وجود بيانات ناقصة للأيام الماضية. <b>دقة البيانات مسؤوليتك.</b></p>
-                    <p>🛑 <b>يرجى تسوية الوضعية فوراً لهذه التواريخ:</b></p>
-                </div>
-            `,
-            icon: 'warning',
-            confirmButtonText: '👈 الذهاب لتسوية المتأخرات (Fix Now)',
-            confirmButtonColor: '#d33',
-            allowOutsideClick: false
-        });
-
-    } else {
-        // 🌟 SCENARIO 2: GREEN/GOLD (Discipline & Engagement)
-        // SHOW ONCE PER SESSION ONLY
-
-        if (sessionStorage.getItem('motivationShown')) return;
-
-        // 1. Inject Green Banner
-        const banner = document.createElement('div');
-        banner.id = bannerId;
-        banner.style.cssText = "background: #28a745; color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 1em; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.1);";
-        banner.innerHTML = "🌟 شكراً لالتزامك! سجلاتك محدثة تماماً. <br> <span style='font-size:0.8em; font-weight:normal;'>Thank you for your commitment! Your records are up to date.</span>";
-        document.body.prepend(banner);
-
-        // 2. Show Modal
-        Swal.fire({
-            title: '🌟 شكراً لالتزامك واحترافيتك!<br>Thank you for your commitment!',
-            html: `
-                <div style="text-align:center;">
-                    <p style="font-size:1.1em;"> أهلاً بك مجدداً <b>${userName}</b> 👋</p>
-                    <p>نود أن نشكرك على انضباطك ومواظبتك؛ سجلاتك <b>محدثة تماماً</b> ولا يوجد لديك أي دين سابق. 👏</p>
-                    <p><b>هذا هو مستوى القيادة الذي نفتخر به في Candytex!</b> 🏅</p>
-                    <hr>
-                    <p style="color:#28a745; font-weight:bold;">🎯 مهمتك اليوم:</p>
-                    <p>لنمنح هذا اليوم التقييم الذي يستحقه بكل شفافية ومصداقية.</p>
-                </div>
-            `,
-            icon: 'success',
-            confirmButtonText: '✨ ابدأ تقييم اليوم (Start Today)',
-            confirmButtonColor: '#28a745',
-            backdrop: `
-                rgba(0,0,123,0.4)
-                url("https://media.giphy.com/media/l0MYt5jPR6tTSTPYQ/giphy.gif")
-                left top
-                no-repeat
-            `
-        });
-
-        sessionStorage.setItem('motivationShown', 'true');
-    }
-}
-
-// Run Welcome Check
-setTimeout(checkWelcomeMessage, 500);
-
-// --- MOBILE SIDEBAR TOGGLE ---
+// --- MOBILE SIDEBAR ---
 function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
-    document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    document.getElementById('sidebar').classList.toggle('open');
+    document.querySelector('.sidebar-overlay').classList.toggle('active');
 }
-
 function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    sidebar.classList.remove('open');
-    overlay.classList.remove('active');
-    document.body.style.overflow = '';
+    toggleSidebar();
 }
-
-// Close sidebar on window resize (if desktop)
-window.addEventListener('resize', function () {
-    if (window.innerWidth > 768) {
-        closeSidebar();
-    }
-});
