@@ -77,21 +77,10 @@ if (isset($input['action'])) {
             $del->execute([$user_cin]);
         }
 
-        // Insert new or updated records (only if they don't already exist)
+        // Insert all new records
         $ins = $pdo->prepare("INSERT INTO countermeasures (user_cin, category, issue, action_plan, responsible, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
-        // Check existence query
-        $check = $pdo->prepare("SELECT COUNT(*) FROM countermeasures WHERE id = ?");
-
         foreach ($input['data'] as $row) {
-            // If it has an ID, check if it still exists (i.e., wasn't deleted by the logic above)
-            if (!empty($row['id'])) {
-                $check->execute([$row['id']]);
-                if ($check->fetchColumn() > 0) {
-                    continue; // Skip existing (locked) records
-                }
-            }
-
             $ins->execute([
                 $user_cin,
                 $row['category'] ?? 'S',
@@ -119,6 +108,30 @@ if (isset($input['action'])) {
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => 'DB Error']);
+        }
+    } elseif ($input['action'] === 'update_own_profile') {
+        // --- UPDATE OWN PROFILE (User Self-Edit) ---
+        $name = strtoupper(trim($input['name'])); // Uppercase for consistency
+        $phone = trim($input['phone']);
+        $dept = $input['department'];
+        $loc = $input['location'];
+        $bdate = $input['birth_date'];
+
+        // Validate required fields
+        if (empty($name) || empty($phone) || empty($dept) || empty($loc) || empty($bdate)) {
+            echo json_encode(['success' => false, 'message' => 'All fields are required']);
+            exit;
+        }
+
+        $sql = "UPDATE users SET name = ?, phone = ?, department = ?, location = ?, birth_date = ? WHERE cin = ?";
+        $stmt = $pdo->prepare($sql);
+
+        if ($stmt->execute([$name, $phone, $dept, $loc, $bdate, $_SESSION['user_cin']])) {
+            // Update session name if changed
+            $_SESSION['user_name'] = $name;
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Database Error']);
         }
     }
 }

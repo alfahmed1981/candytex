@@ -2,11 +2,6 @@
 session_start();
 require 'db.php'; // DB Connection
 
-// --- DISABLE CACHE ---
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
-header("Pragma: no-cache");
-
 // Handle Logout
 if (isset($_GET['logout'])) {
     session_destroy();
@@ -287,49 +282,10 @@ foreach ($rows as $r) {
     $sqdc_data['days'][$r['category']][$r['day_date']] = $r['status'];
 }
 
-// --- GAMIFICATION: CHECK MISSING DATA (Past 7 Days, Current Month Only) ---
-$missing_data = [];
-$today_str = date('Y-m-d');
-$first_day_current_month = date('Y-m-01');
-// Ensure we don't check dates from the previous month
-$check_start_date = max(date('Y-m-d', strtotime('-7 days')), $first_day_current_month);
-$check_end_date = date('Y-m-d', strtotime('-1 day')); // Exclude today
-
-// 1. Get all filled entries for the last 7 days
-$filled_stmt = $pdo->prepare("SELECT day_date, category FROM sqdc_daily WHERE user_cin = ? AND day_date BETWEEN ? AND ?");
-$filled_stmt->execute([$user_cin, $check_start_date, $check_end_date]);
-$filled_entries = $filled_stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN); // ['2023-10-01' => ['S', 'Q'], ...]
-
-// 2. Scan to find gaps
-$period = new DatePeriod(
-    new DateTime($check_start_date),
-    new DateInterval('P1D'),
-    new DateTime($today_str) // Excludes end date (today)
-);
-
-foreach ($period as $dt) {
-    $d = $dt->format('Y-m-d');
-    $filled_cats = $filled_entries[$d] ?? [];
-
-    foreach (['S', 'Q', 'D', '5S', 'C'] as $cat) {
-        if (!in_array($cat, $filled_cats)) {
-            $missing_data[] = [
-                'date' => $d,
-                'category' => $cat
-            ];
-        }
-    }
-}
-// -----------------------------------------------------
-
-// Load Countermeasures from DB (Filtered by Month/Year)
-$cm_sql = "SELECT * FROM countermeasures 
-           WHERE user_cin = ? 
-           AND MONTH(created_at) = ? 
-           AND YEAR(created_at) = ? 
-           ORDER BY created_at DESC";
+// Load Countermeasures from DB
+$cm_sql = "SELECT * FROM countermeasures WHERE user_cin = ? ORDER BY created_at DESC";
 $cm_stmt = $pdo->prepare($cm_sql);
-$cm_stmt->execute([$user_cin, $month, $year]);
+$cm_stmt->execute([$user_cin]);
 $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -352,6 +308,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         </div>
         <div class="nav-links">
             <a href="index.php" class="active">📊 لوحة</a>
+            <a href="edit_profile.php">⚙️ ملفي</a>
             <a href="guide.php">📖 دليل</a>
             <a href="my_team.php">👥 فريقي</a>
             <a href="global.php">🏭 المصنع</a>
@@ -362,30 +319,8 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             <a href="?logout=1" class="logout">🚪 خروج</a>
         </div>
         <form method="GET" class="date-filter">
-            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                <!-- ADMIN: Full Access -->
-                <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
-                <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
-            <?php else: ?>
-                <!-- USER: Restricted (Current Year Only) -->
-                <input type="number" name="year" value="<?php echo date('Y'); ?>" readonly
-                    style="background:#e9ecef; cursor:not-allowed;" title="العام الحالي فقط">
-                <select name="month">
-                    <?php
-                    $cur_m = date('n');
-                    $prev_m = $cur_m - 1;
-                    if ($prev_m < 1)
-                        $prev_m = 12; // Logic for label, but filtering is strictly by Year input
-                    // Actually, if we stick to 'Current Year' only, then we shouldn't show 'Dec' in 'Jan' if it implies last year.
-                    // But usually operations need 'Previous Month' regardless. 
-                    // Let's show both options. The user can filter.
-                    ?>
-                    <option value="<?php echo date('m'); ?>" selected><?php echo date('m') . ' (Current)'; ?></option>
-                    <option value="<?php echo date('m', strtotime('first day of last month')); ?>">
-                        <?php echo date('m', strtotime('first day of last month')) . ' (Previous)'; ?>
-                    </option>
-                </select>
-            <?php endif; ?>
+            <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
+            <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
             <button type="submit">🔍 عرض</button>
         </form>
     </div>
@@ -400,25 +335,13 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         <div class="filters">
             <form method="GET">
                 <label>Year / سنة</label>
-                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                    <input type="number" name="year" value="<?php echo $year; ?>">
-                    <label>Month / شهر</label>
-                    <input type="number" name="month" value="<?php echo $month; ?>">
-                <?php else: ?>
-                    <input type="number" name="year" value="<?php echo date('Y'); ?>" readonly
-                        style="background:#e9ecef; cursor:not-allowed;" title="العام الحالي فقط">
-                    <label>Month / شهر</label>
-                    <select name="month"
-                        style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:5px;">
-                        <option value="<?php echo date('m'); ?>" selected><?php echo date('m') . ' (Current)'; ?></option>
-                        <option value="<?php echo date('m', strtotime('first day of last month')); ?>">
-                            <?php echo date('m', strtotime('first day of last month')) . ' (Previous)'; ?>
-                        </option>
-                    </select>
-                <?php endif; ?>
+                <input type="number" name="year" value="<?php echo $year; ?>">
+                <label>Month / شهر</label>
+                <input type="number" name="month" value="<?php echo $month; ?>">
                 <button type="submit">Filter / تصفية</button>
             </form>
         </div>
+        <a href="edit_profile.php" class="logout-btn" style="background:#667eea;">⚙️ ملفي الشخصي</a>
         <a href="guide.php" class="logout-btn" style="background:#28a745;">📖 دليل الاستخدام</a>
         <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
         <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
@@ -496,9 +419,6 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
             <h3>🛠️ Counter Measures<br><span style="font-size:0.6em">الإجراءات المضادة / Contre-mesures</span></h3>
             <button onclick="addCounterMeasure()" class="add-btn">+ Add Issue<br><small>إضافة مشكلة /
                     Ajouter</small></button>
-            <button onclick="confirmSaveCM()" class="add-btn"
-                style="background: linear-gradient(135deg, #dc3545, #c82333); margin-left: 10px;">💾 Store
-                Issue<br><small>تخزين المشكلة / Sauvegarder</small></button>
             <table id="cm-table">
                 <thead>
                     <tr>
@@ -521,8 +441,6 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
     <!-- Pass PHP data to JS -->
     <script>
         const initialCM = <?php echo json_encode($sqdc_data['countermeasures'] ?? []); ?>;
-        const missingAssignments = <?php echo json_encode($missing_data ?? []); ?>;
-        const userName = <?php echo json_encode($_SESSION['user_name'] ?? 'User'); ?>;
     </script>
     <script src="script.js?v=<?php echo time(); ?>"></script>
 
