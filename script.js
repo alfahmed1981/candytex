@@ -226,7 +226,7 @@ function openIssueModal(presetCategory = null, presetDate = null) {
 
     // Reset Fields
     document.getElementById('modal_cat').value = presetCategory || 'S';
-    
+
     // Date Logic
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('modal_date');
@@ -245,27 +245,27 @@ function closeIssueModal() {
 
 function updateModalOptions() {
     const cat = document.getElementById('modal_cat').value;
-    
+
     // Helper to generic options
     const populate = (id, list, placeholder) => {
         let opts = `<option value="">${placeholder}</option>`;
         list.forEach(i => opts += `<option value="${i.label || i.value}">${i.label || i.value}</option>`); // Handle mixed objects
         // Specialized handling for issues (value vs label)
         if (id === 'modal_issue') {
-             opts = `<option value="">${placeholder}</option>`;
-             list.forEach(i => opts += `<option value="${i.label}">${i.label}</option>`);
+            opts = `<option value="">${placeholder}</option>`;
+            list.forEach(i => opts += `<option value="${i.label}">${i.label}</option>`);
         }
-         // Specialized handling for simple arrays
+        // Specialized handling for simple arrays
         if (typeof list[0] === 'string') {
-             opts = `<option value="">${placeholder}</option>`;
-             list.forEach(i => opts += `<option value="${i}">${i}</option>`);
+            opts = `<option value="">${placeholder}</option>`;
+            list.forEach(i => opts += `<option value="${i}">${i}</option>`);
         }
         document.getElementById(id).innerHTML = opts;
     };
 
     populate('modal_issue', predefinedIssues[cat] || [], '-- Select / اختر --');
     populate('modal_action', predefinedActions[cat] || [], '-- Select / اختر --');
-    
+
     const respList = predefinedResponsible[cat] || [];
     let respOpts = `<option value="">-- Select / اختر --</option>`;
     respList.forEach(r => respOpts += `<option value="${r}">${r}</option>`);
@@ -299,7 +299,7 @@ function submitIssueFromModal() {
     closeIssueModal();
 
     // Scroll to bottom
-     setTimeout(() => {
+    setTimeout(() => {
         const table = document.getElementById('cm-table');
         const rows = table.querySelectorAll('tbody tr');
         const lastRow = rows[rows.length - 1];
@@ -386,8 +386,8 @@ function selectStatus(status) {
         });
     } else if (status === 'orange') {
         Swal.fire({ title: 'Warning', html: msg, icon: 'warning', showCancelButton: true, confirmButtonText: '⚠️ Add Issue', cancelButtonText: 'Save Only' }).then((r) => {
+            performStatusUpdate(category, dateStr, status, r.isConfirmed);
             if (r.isConfirmed) openIssueModal(category, dateStr);
-            performStatusUpdate(category, dateStr, status);
         });
     } else if (status === 'red') {
         Swal.fire({ title: 'STOP', html: msg, icon: 'error', confirmButtonColor: '#d33', confirmButtonText: '🚨 Register Issue' }).then(() => {
@@ -399,14 +399,14 @@ function selectStatus(status) {
     }
 }
 
-function performStatusUpdate(kpi, date, status) {
+function performStatusUpdate(kpi, date, status, skipReload = false) {
     return fetch('api.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update_day', kpi, date, status })
     }).then(r => r.json()).then(d => {
-        if (d.success) location.reload();
-        else Swal.fire('Error', 'Update failed', 'error');
+        if (d.success && !skipReload) location.reload();
+        else if (!d.success) Swal.fire('Error', 'Update failed', 'error');
     });
 }
 
@@ -419,11 +419,11 @@ function renderTable(data) {
 
     cmData.forEach((row, index) => {
         const tr = document.createElement('tr');
-        
+
         const isSaved = !!row.id; // Assuming ID comes from DB
         const isDeleted = row.status === 'Deleted';
         const catLabel = catNames[row.category] || row.category;
-        
+
         tr.innerHTML = `
             <td style="font-weight:bold;">${catLabel}</td>
             <td style="font-size:0.9em;">${row.issue}</td>
@@ -453,8 +453,8 @@ function addCounterMeasure(date = null, cat = 'S') {
 // --- SAVE ROW ACTION ---
 function saveRow(index) {
     const row = cmData[index];
-    if (row.id) return; 
-    
+    if (row.id) return;
+
     Swal.fire({
         title: 'Confirm Save?',
         text: 'Save this issue permanently?',
@@ -472,20 +472,20 @@ function saveRow(index) {
                     data: [row] // Send single row as array
                 })
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire('Saved', 'Issue saved successfully', 'success').then(() => {
-                         if (pendingRedUpdate) {
-                             performStatusUpdate(pendingRedUpdate.category, pendingRedUpdate.date, 'red');
-                         } else {
-                             location.reload();
-                         }
-                    });
-                } else {
-                    Swal.fire('Error', data.message || 'Save failed', 'error');
-                }
-            });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Saved', 'Issue saved successfully', 'success').then(() => {
+                            if (pendingRedUpdate) {
+                                performStatusUpdate(pendingRedUpdate.category, pendingRedUpdate.date, 'red');
+                            } else {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        Swal.fire('Error', data.message || 'Save failed', 'error');
+                    }
+                });
         }
     });
 }
