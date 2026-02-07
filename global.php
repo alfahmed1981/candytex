@@ -164,7 +164,7 @@ $columns = [
                 echo "<div class='days-container'>";
 
                 for ($d = 1; $d <= 31; $d++) {
-                    $date_key = "$year-$month-$d";
+                    $date_key = sprintf("%04d-%02d-%02d", $year, $month, $d);
                     $status = $factory_data[$key][$date_key] ?? 'gray';
 
                     // Formatting date for check
