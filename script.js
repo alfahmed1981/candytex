@@ -280,7 +280,26 @@ function submitIssueFromModal() {
     const date = document.getElementById('modal_date').value;
 
     if (!cat || !issue || !action || !who || !date) {
-        Swal.fire('Error', 'Please fill all fields / يرجى ملء جميع الخانات', 'warning');
+        // Highlight empty fields
+        const fields = [
+            { id: 'modal_issue', val: issue, name: 'المشكلة / Issue' },
+            { id: 'modal_action', val: action, name: 'الإجراء / Action' },
+            { id: 'modal_who', val: who, name: 'المسؤول / Who' },
+            { id: 'modal_date', val: date, name: 'الموعد / Due Date' }
+        ];
+        const missing = [];
+        fields.forEach(f => {
+            const el = document.getElementById(f.id);
+            if (!f.val) {
+                el.style.border = '2px solid #dc3545';
+                el.style.boxShadow = '0 0 5px rgba(220,53,69,0.4)';
+                missing.push(f.name);
+            } else {
+                el.style.border = '1px solid #ccc';
+                el.style.boxShadow = 'none';
+            }
+        });
+        Swal.fire('⚠️ حقول ناقصة', missing.join('<br>'), 'warning');
         return;
     }
 
