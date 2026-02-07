@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require 'includes/auth.php';
 
 // Access Control: Realistically, this should be for Admins only.
 // For now, we allow any logged-in user to see the "Factory Status".

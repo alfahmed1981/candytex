@@ -3,7 +3,10 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+session_start();
 require 'db.php';
+require 'includes/auth.php';
+require_admin();
 
 echo "<h2>🛠️ Database Diagnostic Tool</h2>";
 

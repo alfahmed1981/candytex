@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require 'includes/auth.php';
 
 // Admin Only
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {

@@ -1,58 +1,58 @@
 <?php
 session_start();
 require 'db.php';
+require 'includes/auth.php';
 
 // Security Check: ONLY Admins
-if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
-    die("Access Denied. Admins Only.");
+require_admin();
+
+// --- Handle Stop Impersonation (GET - safe, read-only session restore) ---
+if (isset($_GET['action']) && $_GET['action'] === 'stop_impersonation') {
+    stop_impersonation();
+    header("Location: admin.php");
+    exit;
 }
 
-// Handle Actions
-if (isset($_GET['action'])) {
+// --- Handle POST Actions (with CSRF) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    require_csrf();
 
-    // --- IMPERSONATION (The "Login As" Feature) ---
-    if ($_GET['action'] === 'login_as' && isset($_GET['cin'])) {
-        $target_cin = $_GET['cin'];
-
-        // Fetch target user details
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE cin = ?");
-        $stmt->execute([$target_cin]);
-        $target = $stmt->fetch();
-
-        if ($target) {
-            // Switch Session to Target User
-            $_SESSION['user_cin'] = $target['cin'];
-            $_SESSION['user_name'] = $target['name'];
-            $_SESSION['role'] = $target['role'];
-
-            // Optional: Set a flag to remember we are impersonating
-            $_SESSION['is_impersonating'] = true;
-
+    // --- IMPERSONATION ---
+    if ($_POST['action'] === 'login_as' && isset($_POST['cin'])) {
+        $target_cin = $_POST['cin'];
+        audit_log($pdo, 'impersonate', "Admin logged in as: $target_cin");
+        if (start_impersonation($pdo, $target_cin)) {
             header("Location: index.php");
             exit;
         }
     }
 
     // --- DELETE USER ---
-    if ($_GET['action'] === 'delete' && isset($_GET['id'])) {
+    if ($_POST['action'] === 'delete' && isset($_POST['id'])) {
+        $id = intval($_POST['id']);
+        audit_log($pdo, 'delete_user', "Deleted user ID: $id");
         $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-        $stmt->execute([$_GET['id']]);
+        $stmt->execute([$id]);
         header("Location: admin.php?msg=deleted");
         exit;
     }
 
     // --- APPROVE USER ---
-    if ($_GET['action'] === 'approve' && isset($_GET['id'])) {
+    if ($_POST['action'] === 'approve' && isset($_POST['id'])) {
+        $id = intval($_POST['id']);
+        audit_log($pdo, 'approve_user', "Approved user ID: $id");
         $stmt = $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?");
-        $stmt->execute([$_GET['id']]);
+        $stmt->execute([$id]);
         header("Location: admin.php?msg=Approved");
         exit;
     }
 
     // --- REJECT USER ---
-    if ($_GET['action'] === 'reject' && isset($_GET['id'])) {
+    if ($_POST['action'] === 'reject' && isset($_POST['id'])) {
+        $id = intval($_POST['id']);
+        audit_log($pdo, 'reject_user', "Rejected user ID: $id");
         $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-        $stmt->execute([$_GET['id']]);
+        $stmt->execute([$id]);
         header("Location: admin.php?msg=Rejected");
         exit;
     }
@@ -60,6 +60,8 @@ if (isset($_GET['action'])) {
 
 // --- ADD USER ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
+    require_csrf();
+    audit_log($pdo, 'add_user', "Adding user: " . trim($_POST['cin']));
     $cin = strtoupper(str_replace(' ', '', trim($_POST['cin'])));
     $name = strtoupper(trim($_POST['name']));
     $phone = $_POST['phone'];
@@ -250,12 +252,21 @@ $users = $stmt->fetchAll();
                                     (<?= htmlspecialchars($pu['cin']) ?>)<br>
                                     <small>Role: <?= htmlspecialchars($pu['role']) ?></small>
                                 </td>
-                                <td style="text-align:right; padding:10px;">
-                                    <a href="?action=approve&id=<?= $pu['id'] ?>" class="btn btn-green"
-                                        style="padding:5px 10px; font-size:12px;">✅ Approve</a>
-                                    <a href="?action=reject&id=<?= $pu['id'] ?>" class="btn btn-red"
-                                        style="padding:5px 10px; font-size:12px;"
-                                        onclick="return confirm('Reject this user?')">❌ Reject</a>
+                                <td style="text-align:right; padding:10px; display:flex; gap:5px; justify-content:flex-end;">
+                                    <form method="POST" style="display:inline;">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="action" value="approve">
+                                        <input type="hidden" name="id" value="<?= $pu['id'] ?>">
+                                        <button type="submit" class="btn btn-green" style="padding:5px 10px; font-size:12px;">✅
+                                            Approve</button>
+                                    </form>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Reject this user?')">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="action" value="reject">
+                                        <input type="hidden" name="id" value="<?= $pu['id'] ?>">
+                                        <button type="submit" class="btn btn-red" style="padding:5px 10px; font-size:12px;">❌
+                                            Reject</button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -283,6 +294,7 @@ $users = $stmt->fetchAll();
             <div style="background:#f1f1f1; padding:20px; border-radius:8px; margin-bottom:20px;">
                 <h3>+ Add New User / إضافة مستخدم</h3>
                 <form method="POST" style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <?= csrf_field() ?>
                     <input type="text" name="cin" placeholder="CIN (Login ID)" required
                         style="width:120px; text-transform:uppercase;">
                     <input type="text" name="name" placeholder="Full Name / الاسم" required>
@@ -359,13 +371,21 @@ $users = $stmt->fetchAll();
                             </small>
                         <?php endif; ?>
                     </div>
-                    <div>
-                        <a href="?action=login_as&cin=<?php echo urlencode($u['cin']); ?>" class="btn btn-blue"
-                            onclick="return confirm('Login as <?php echo htmlspecialchars($u['name']); ?>?');">🕵️ Login
-                            As</a>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <form method="POST" style="display:inline;"
+                            onsubmit="return confirm('Login as <?php echo htmlspecialchars($u['name']); ?>?');">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="login_as">
+                            <input type="hidden" name="cin" value="<?php echo htmlspecialchars($u['cin']); ?>">
+                            <button type="submit" class="btn btn-blue">🕵️ Login As</button>
+                        </form>
                         <?php if ($u['cin'] !== 'admin'): ?>
-                            <a href="?action=delete&id=<?php echo $u['id']; ?>" class="btn btn-red"
-                                onclick="return confirm('Delete this user?');">🗑️ Delete</a>
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this user?');">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo $u['id']; ?>">
+                                <button type="submit" class="btn btn-red">🗑️ Delete</button>
+                            </form>
                         <?php endif; ?>
                     </div>
                 </div>

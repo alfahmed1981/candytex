@@ -1,0 +1,15 @@
+# Environment secrets
+.env
+
+# Uploaded files
+uploads/
+
+# Data files
+users.csv
+
+# Backup archives
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db

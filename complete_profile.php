@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require 'includes/auth.php';
 
 // Security: User must be logged in
 if (!isset($_SESSION['user_cin'])) {

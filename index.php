@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php'; // DB Connection
+require 'includes/auth.php'; // Security
 
 // Handle Logout
 if (isset($_GET['logout'])) {
@@ -49,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $_SESSION['user_cin'] = $user['cin'];
                     $_SESSION['user_name'] = $user['name'];
                     $_SESSION['role'] = $user['role'];
+                    audit_log($pdo, 'login', "User logged in: " . $user['cin']);
 
                     if ($user['role'] === 'admin') {
                         header("Location: admin.php");
@@ -154,6 +156,7 @@ if (!isset($_SESSION['user_cin'])) {
             <div id="login-form">
                 <form method="POST">
                     <input type="hidden" name="action" value="login">
+                    <?= csrf_field() ?>
 
                     <!-- ANTI-BOT TRAPS -->
                     <input type="text" name="website_hp" class="visually-hidden" tabindex="-1" autocomplete="off">
@@ -198,6 +201,7 @@ if (!isset($_SESSION['user_cin'])) {
             <div id="reg-form" style="display:none;">
                 <form method="POST">
                     <input type="hidden" name="action" value="register">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
                         <label>CIN (Unique ID)</label>
@@ -242,7 +246,6 @@ if (!isset($_SESSION['user_cin'])) {
 }
 
 // --- DASHBOARD LOGIC ---
-$user_cin = $_SESSION['user_cin'];
 $user_cin = $_SESSION['user_cin'];
 $user_name = $_SESSION['user_name'];
 

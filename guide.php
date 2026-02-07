@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require 'includes/auth.php';
 
 // Auth is optional for guide viewing, but we'll show personalized info if logged in
 $is_logged_in = isset($_SESSION['user_cin']);

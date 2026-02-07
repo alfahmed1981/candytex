@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require 'includes/auth.php';
 
 if (!isset($_SESSION['user_cin'])) {
     http_response_code(403);
