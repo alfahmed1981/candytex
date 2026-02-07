@@ -110,7 +110,7 @@ if (!isset($_SESSION['user_cin'])) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>SQD+C Login</title>
         <!-- Force CSS Reload -->
-        <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
+        <link rel="stylesheet" href="style.css?v=<?php echo md5_file('style.css'); ?>">
     </head>
 
     <script>
@@ -298,7 +298,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SQD+C Dashboard</title>
-    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="style.css?v=<?php echo md5_file('style.css'); ?>">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
