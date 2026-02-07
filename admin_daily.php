@@ -168,6 +168,39 @@ sort($locations);
             border-radius: 10px;
             font-size: 12px;
         }
+
+        .btn-wa {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .btn-wa:hover {
+            background: #1da851;
+        }
+
+        .btn-wa-bulk {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .btn-wa-bulk:hover {
+            background: #1da851;
+        }
     </style>
 </head>
 
@@ -210,6 +243,17 @@ sort($locations);
             <input type="date" name="date" value="<?= $selected_date ?>" onchange="this.form.submit()"
                 style="padding: 5px;">
             <span style="flex-grow:1;"></span>
+            <?php
+            // Count managers who haven't filled
+            $unfilled_managers = array_filter($managers, function ($m) use ($daily_data) {
+                return empty($daily_data[$m['cin']]);
+            });
+            $unfilled_count = count($unfilled_managers);
+            ?>
+            <?php if ($unfilled_count > 0): ?>
+                <button type="button" onclick="remindAll()" class="btn-wa-bulk no-print">📱 تذكير الكل
+                    (<?= $unfilled_count ?>)</button>
+            <?php endif; ?>
             <button type="button" onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
         </form>
 
@@ -307,6 +351,7 @@ sort($locations);
                     <?php endforeach; ?>
 
                     <th>⚠️ Issues</th>
+                    <th class="no-print">📱 تذكير</th>
                 </tr>
                 <!-- FILTER ROW -->
                 <tr class="no-print" style="background:#f1f1f1;">
@@ -354,6 +399,7 @@ sort($locations);
                             <option value="yes">Has Issues</option>
                         </select>
                     </td>
+                    <td class="no-print" style="padding:5px;"></td>
                 </tr>
             </thead>
             <tbody>
@@ -395,6 +441,24 @@ sort($locations);
                                 <span class="issue-count">
                                     <?= $issues_map[$cin] ?> New
                                 </span>
+                            <?php else: ?>
+                                <small style="color:#ccc;">-</small>
+                            <?php endif; ?>
+                        </td>
+                        <td class="no-print" style="text-align:center;">
+                            <?php
+                            $phone = $m['phone'] ?? '';
+                            $has_data = !empty($row_stats);
+                            if ($phone && !$has_data):
+                                $clean_phone = preg_replace('/[^0-9]/', '', $phone);
+                                if (substr($clean_phone, 0, 1) === '0')
+                                    $clean_phone = '212' . substr($clean_phone, 1);
+                                $wa_msg = urlencode("السلام عليكم 👋\n" . htmlspecialchars_decode($m['name']) . "\n\nتذكير: يرجى ملء لوحة SQD+C اليومية 📊\nالتاريخ: {$selected_date}\n\nرابط المنصة:\nhttps://candytex.ma/dash/\n\nشكراً لتعاونكم 🙏");
+                                ?>
+                                <a href="https://wa.me/<?= $clean_phone ?>?text=<?= $wa_msg ?>" target="_blank" class="btn-wa"
+                                    title="تذكير واتساب">📱</a>
+                            <?php elseif ($has_data): ?>
+                                <small style="color:#28a745;">✅</small>
                             <?php else: ?>
                                 <small style="color:#ccc;">-</small>
                             <?php endif; ?>
@@ -503,6 +567,32 @@ sort($locations);
                 } else {
                     rows[i].style.display = "none";
                 }
+            }
+        }
+
+        // Remind All - opens WhatsApp links for unfilled managers
+        function remindAll() {
+            const waButtons = document.querySelectorAll('.btn-wa');
+            if (waButtons.length === 0) {
+                alert('✅ الكل قام بملء لوحته!');
+                return;
+            }
+            const names = [];
+            waButtons.forEach(btn => {
+                const row = btn.closest('tr');
+                if (row) names.push(row.cells[0].textContent.trim().split('\n')[0]);
+            });
+
+            if (confirm('📱 سيتم فتح واتساب لـ ' + waButtons.length + ' رئيس فريق:\n\n' + names.join('\n') + '\n\nمتابعة؟')) {
+                let i = 0;
+                function openNext() {
+                    if (i < waButtons.length) {
+                        window.open(waButtons[i].href, '_blank');
+                        i++;
+                        setTimeout(openNext, 1500);
+                    }
+                }
+                openNext();
             }
         }
     </script>
