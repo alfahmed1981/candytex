@@ -299,7 +299,7 @@ function submitIssueFromModal() {
                 el.style.boxShadow = 'none';
             }
         });
-        Swal.fire('⚠️ حقول ناقصة', missing.join('<br>'), 'warning');
+        Swal.fire({ title: '⚠️ حقول ناقصة', html: missing.join('<br>'), icon: 'warning', customClass: { container: 'swal-over-modal' } });
         return;
     }
 
@@ -536,6 +536,7 @@ style.textContent = `
     .btn-action:hover { transform: scale(1.1); }
     .btn-save { background: #28a745; color: white; margin-right: 5px; }
     .btn-del { background: #dc3545; color: white; }
+    .swal-over-modal { z-index: 9999 !important; }
 `;
 document.head.appendChild(style);
 
