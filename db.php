@@ -21,8 +21,8 @@ if (file_exists($envFile)) {
 
 $host = getenv('DB_HOST') ?: 'localhost';
 $dbname = getenv('DB_NAME') ?: 'candytex_dash';
-$username = getenv('DB_USER') ?: 'root';
-$password = getenv('DB_PASS') ?: '';
+$username = getenv('DB_USER') ?: 'candytex_user';
+$password = getenv('DB_PASS') ?: 'nU?MZsXZ[*i6LB^]';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
