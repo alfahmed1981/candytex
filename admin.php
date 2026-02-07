@@ -56,6 +56,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header("Location: admin.php?msg=Rejected");
         exit;
     }
+
+    // --- EDIT USER ---
+    if ($_POST['action'] === 'edit_user' && isset($_POST['edit_id'])) {
+        $id = intval($_POST['edit_id']);
+        $name = strtoupper(trim($_POST['edit_name']));
+        $phone = trim($_POST['edit_phone']);
+        $role = $_POST['edit_role'];
+        $dept = trim($_POST['edit_department']);
+        $loc = trim($_POST['edit_location']);
+        audit_log($pdo, 'edit_user', "Edited user ID: $id — Name: $name, Role: $role");
+        $stmt = $pdo->prepare("UPDATE users SET name=?, phone=?, role=?, department=?, location=? WHERE id=?");
+        $stmt->execute([$name, $phone, $role, $dept, $loc, $id]);
+        header("Location: admin.php?msg=Updated");
+        exit;
+    }
 }
 
 // --- ADD USER ---
@@ -169,6 +184,65 @@ $users = $stmt->fetchAll();
             text-decoration: none;
             font-size: 14px;
         }
+
+        /* Edit Modal */
+        .edit-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .edit-overlay.show {
+            display: flex;
+        }
+
+        .edit-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .edit-modal h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+
+        .edit-modal label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .edit-modal input,
+        .edit-modal select {
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 4px;
+        }
+
+        .edit-modal .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .btn-edit {
+            background: #fd7e14;
+        }
+
 
         .btn-green {
             background: #28a745;
@@ -371,7 +445,10 @@ $users = $stmt->fetchAll();
                             </small>
                         <?php endif; ?>
                     </div>
-                    <div style="display:flex; gap:5px; align-items:center;">
+                    <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-edit"
+                            onclick="openEditModal(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['phone']), ENT_QUOTES) ?>', '<?= $u['role'] ?>', '<?= htmlspecialchars(addslashes($u['department'] ?? ''), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['location'] ?? ''), ENT_QUOTES) ?>')">✏️
+                            Edit</button>
                         <form method="POST" style="display:inline;"
                             onsubmit="return confirm('Login as <?php echo htmlspecialchars($u['name']); ?>?');">
                             <?= csrf_field() ?>
@@ -396,6 +473,57 @@ $users = $stmt->fetchAll();
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- Edit Modal -->
+    <div class="edit-overlay" id="editOverlay" onclick="if(event.target===this)closeEditModal()">
+        <div class="edit-modal">
+            <h3>✏️ تعديل المستخدم / Edit User</h3>
+            <form method="POST" id="editForm">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="edit_user">
+                <input type="hidden" name="edit_id" id="edit_id">
+
+                <label>الاسم / Name</label>
+                <input type="text" name="edit_name" id="edit_name" required>
+
+                <label>الهاتف / Phone</label>
+                <input type="text" name="edit_phone" id="edit_phone">
+
+                <label>الدور / Role</label>
+                <select name="edit_role" id="edit_role">
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                </select>
+
+                <label>القسم / Department</label>
+                <input type="text" name="edit_department" id="edit_department">
+
+                <label>الموقع / Location</label>
+                <input type="text" name="edit_location" id="edit_location">
+
+                <div class="modal-actions">
+                    <button type="button" class="btn" style="background:#6c757d;"
+                        onclick="closeEditModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-blue">💾 حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditModal(id, name, phone, role, dept, loc) {
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_phone').value = phone;
+            document.getElementById('edit_role').value = role;
+            document.getElementById('edit_department').value = dept;
+            document.getElementById('edit_location').value = loc;
+            document.getElementById('editOverlay').classList.add('show');
+        }
+        function closeEditModal() {
+            document.getElementById('editOverlay').classList.remove('show');
+        }
+    </script>
 </body>
 
 </html>
