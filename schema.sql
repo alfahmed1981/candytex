@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS `users` (
     `cin` VARCHAR(20) NOT NULL UNIQUE,
     `name` VARCHAR(100) NOT NULL,
     `phone` VARCHAR(20) NOT NULL,
+    `email` VARCHAR(150) DEFAULT NULL,
+    `whatsapp` VARCHAR(20) DEFAULT NULL,
     `role` ENUM('admin', 'manager', 'viewer') DEFAULT 'manager',
     `password` VARCHAR(255) DEFAULT NULL,
     `status` ENUM('active', 'pending') DEFAULT 'active',

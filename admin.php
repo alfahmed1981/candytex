@@ -6,6 +6,18 @@ require 'includes/auth.php';
 // Security Check: ONLY Admins
 require_admin();
 
+// --- Self-healing: ensure email & whatsapp columns exist ---
+try {
+    $pdo->query("SELECT email FROM users LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("ALTER TABLE users ADD COLUMN email VARCHAR(150) DEFAULT NULL AFTER phone");
+}
+try {
+    $pdo->query("SELECT whatsapp FROM users LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("ALTER TABLE users ADD COLUMN whatsapp VARCHAR(20) DEFAULT NULL AFTER email");
+}
+
 // --- Handle Stop Impersonation (GET - safe, read-only session restore) ---
 if (isset($_GET['action']) && $_GET['action'] === 'stop_impersonation') {
     stop_impersonation();
@@ -62,12 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $id = intval($_POST['edit_id']);
         $name = strtoupper(trim($_POST['edit_name']));
         $phone = trim($_POST['edit_phone']);
+        $email = trim($_POST['edit_email'] ?? '');
+        $whatsapp = trim($_POST['edit_whatsapp'] ?? '');
         $role = $_POST['edit_role'];
         $dept = trim($_POST['edit_department']);
         $loc = trim($_POST['edit_location']);
+        $status = $_POST['edit_status'] ?? 'active';
+        $birth = $_POST['edit_birth_date'] ?? null;
+        if ($birth === '') $birth = null;
         audit_log($pdo, 'edit_user', "Edited user ID: $id — Name: $name, Role: $role");
-        $stmt = $pdo->prepare("UPDATE users SET name=?, phone=?, role=?, department=?, location=? WHERE id=?");
-        $stmt->execute([$name, $phone, $role, $dept, $loc, $id]);
+        $stmt = $pdo->prepare("UPDATE users SET name=?, phone=?, email=?, whatsapp=?, role=?, department=?, location=?, status=?, birth_date=? WHERE id=?");
+        $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $role, $dept, $loc, $status, $birth, $id]);
         header("Location: admin.php?msg=Updated");
         exit;
     }
@@ -91,10 +108,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     // New Fields
     $dept = $_POST['department'] ?? null;
     $loc = $_POST['location'] ?? null;
+    $email = trim($_POST['email'] ?? '');
+    $whatsapp = trim($_POST['whatsapp'] ?? '');
 
-    $stmt = $pdo->prepare("INSERT INTO users (cin, name, phone, role, password, department, location) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO users (cin, name, phone, email, whatsapp, role, password, department, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     try {
-        $stmt->execute([$cin, $name, $phone, $role, $password, $dept, $loc]);
+        $stmt->execute([$cin, $name, $phone, $email ?: null, $whatsapp ?: null, $role, $password, $dept, $loc]);
         $msg = "User Added!";
     } catch (Exception $e) {
         $msg = "Error: " . $e->getMessage();
@@ -479,6 +498,8 @@ foreach ($users as $u) {
                         style="width:120px; text-transform:uppercase;">
                     <input type="text" name="name" placeholder="Full Name / الاسم" required>
                     <input type="text" name="phone" placeholder="Phone" required style="width:120px;">
+                    <input type="email" name="email" placeholder="Email" style="width:150px;">
+                    <input type="text" name="whatsapp" placeholder="WhatsApp" style="width:120px;">
 
                     <!-- Dynamic Department -->
                     <select name="department" style="width:130px;">
@@ -541,6 +562,8 @@ foreach ($users as $u) {
                 <label><input type="checkbox" checked onchange="toggleCol('col-role')">Role / الدور</label>
                 <label><input type="checkbox" checked onchange="toggleCol('col-dept')">Department / القسم</label>
                 <label><input type="checkbox" checked onchange="toggleCol('col-loc')">Location / الموقع</label>
+                <label><input type="checkbox" onchange="toggleCol('col-email')">Email / البريد</label>
+                <label><input type="checkbox" onchange="toggleCol('col-whatsapp')">WhatsApp</label>
                 <label><input type="checkbox" onchange="toggleCol('col-birth')">Birth Date / تاريخ الميلاد</label>
                 <label><input type="checkbox" onchange="toggleCol('col-status')">Status / الحالة</label>
                 <label><input type="checkbox" onchange="toggleCol('col-created')">Created / تاريخ التسجيل</label>
@@ -569,6 +592,8 @@ foreach ($users as $u) {
                                     <th class="col-role">Role<br><small>الدور</small></th>
                                     <th class="col-dept">Department<br><small>القسم</small></th>
                                     <th class="col-loc">Location<br><small>الموقع</small></th>
+                                    <th class="col-email" style="display:none;">Email<br><small>البريد</small></th>
+                                    <th class="col-whatsapp" style="display:none;">WhatsApp</th>
                                     <th class="col-birth" style="display:none;">Birth Date<br><small>تاريخ الميلاد</small></th>
                                     <th class="col-status" style="display:none;">Status<br><small>الحالة</small></th>
                                     <th class="col-created" style="display:none;">Created<br><small>تاريخ التسجيل</small></th>
@@ -597,6 +622,8 @@ foreach ($users as $u) {
                                                 style="<?= $roleBadge ?>"><?= $roleLabel ?></span></td>
                                         <td class="col-dept"><?= htmlspecialchars($u['department'] ?? '—') ?></td>
                                         <td class="col-loc"><?= htmlspecialchars($u['location'] ?? '—') ?></td>
+                                        <td class="col-email" style="display:none;"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
+                                        <td class="col-whatsapp" style="display:none;"><?= htmlspecialchars($u['whatsapp'] ?? '—') ?></td>
                                         <td class="col-birth" style="display:none;"><?= $u['birth_date'] ?? '—' ?></td>
                                         <td class="col-status" style="display:none;"><span
                                                 style="color:<?= $u['status'] === 'active' ? '#28a745' : '#fd7e14' ?>;"><?= $u['status'] === 'active' ? '✅ Active' : '⏳ Pending' ?></span>
@@ -607,7 +634,18 @@ foreach ($users as $u) {
                                         <td>
                                             <div class="actions-cell">
                                                 <button type="button" class="btn btn-edit" style="padding:4px 8px; font-size:12px;"
-                                                    onclick="openEditModal(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['phone']), ENT_QUOTES) ?>', '<?= $u['role'] ?>', '<?= htmlspecialchars(addslashes($u['department'] ?? ''), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['location'] ?? ''), ENT_QUOTES) ?>')">✏️</button>
+                                                    onclick='openEditModal(<?= json_encode([
+                                                        "id" => $u["id"],
+                                                        "name" => $u["name"],
+                                                        "phone" => $u["phone"],
+                                                        "email" => $u["email"] ?? "",
+                                                        "whatsapp" => $u["whatsapp"] ?? "",
+                                                        "role" => $u["role"],
+                                                        "department" => $u["department"] ?? "",
+                                                        "location" => $u["location"] ?? "",
+                                                        "status" => $u["status"] ?? "active",
+                                                        "birth_date" => $u["birth_date"] ?? ""
+                                                    ], JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>✏️</button>
                                                 <form method="POST"
                                                     onsubmit="return confirm('Login as <?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>?');">
                                                     <?= csrf_field() ?>
@@ -639,48 +677,81 @@ foreach ($users as $u) {
 
     <!-- Edit Modal -->
     <div class="edit-overlay" id="editOverlay" onclick="if(event.target===this)closeEditModal()">
-        <div class="edit-modal">
-            <h3>✏️ تعديل المستخدم / Edit User</h3>
+        <div class="edit-modal" style="max-width:600px; max-height:90vh; overflow-y:auto;">
+            <h3>✏️ Edit User / تعديل المستخدم</h3>
             <form method="POST" id="editForm">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="edit_user">
                 <input type="hidden" name="edit_id" id="edit_id">
 
-                <label>الاسم / Name</label>
-                <input type="text" name="edit_name" id="edit_name" required>
+                <label>Name / الاسم</label>
+                <input type="text" name="edit_name" id="edit_name" required style="text-transform:uppercase;">
 
-                <label>الهاتف / Phone</label>
+                <label>Phone / الهاتف</label>
                 <input type="text" name="edit_phone" id="edit_phone">
 
-                <label>الدور / Role</label>
+                <label>📧 Email / البريد الإلكتروني</label>
+                <input type="email" name="edit_email" id="edit_email" placeholder="user@example.com">
+
+                <label>📱 WhatsApp / هاتف واتساب</label>
+                <input type="text" name="edit_whatsapp" id="edit_whatsapp" placeholder="06XXXXXXXX">
+
+                <label>Role / الدور</label>
                 <select name="edit_role" id="edit_role">
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
+                    <?php foreach ($role_list as $slug => $r_name): ?>
+                        <option value="<?= htmlspecialchars($slug) ?>"><?= htmlspecialchars($r_name) ?></option>
+                    <?php endforeach; ?>
+                    <?php if (!isset($role_list['viewer'])): ?>
+                        <option value="viewer">Viewer / مشاهد</option>
+                    <?php endif; ?>
                 </select>
 
-                <label>القسم / Department</label>
-                <input type="text" name="edit_department" id="edit_department">
+                <label>Department / القسم</label>
+                <select name="edit_department" id="edit_department">
+                    <option value="">-- Select / اختيار --</option>
+                    <?php foreach ($dept_list as $d): ?>
+                        <option value="<?= htmlspecialchars($d) ?>"><?= htmlspecialchars($d) ?></option>
+                    <?php endforeach; ?>
+                </select>
 
-                <label>الموقع / Location</label>
-                <input type="text" name="edit_location" id="edit_location">
+                <label>Location / الموقع</label>
+                <select name="edit_location" id="edit_location">
+                    <option value="">-- Select / اختيار --</option>
+                    <?php foreach ($loc_list as $l): ?>
+                        <option value="<?= htmlspecialchars($l) ?>"><?= htmlspecialchars($l) ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <label>Status / الحالة</label>
+                <select name="edit_status" id="edit_status">
+                    <option value="active">Active / نشط</option>
+                    <option value="pending">Pending / معلق</option>
+                </select>
+
+                <label>Birth Date / تاريخ الميلاد</label>
+                <input type="date" name="edit_birth_date" id="edit_birth_date">
 
                 <div class="modal-actions">
                     <button type="button" class="btn" style="background:#6c757d;"
-                        onclick="closeEditModal()">إلغاء</button>
-                    <button type="submit" class="btn btn-blue">💾 حفظ</button>
+                        onclick="closeEditModal()">Cancel / إلغاء</button>
+                    <button type="submit" class="btn btn-blue">💾 Save / حفظ</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        function openEditModal(id, name, phone, role, dept, loc) {
-            document.getElementById('edit_id').value = id;
-            document.getElementById('edit_name').value = name;
-            document.getElementById('edit_phone').value = phone;
-            document.getElementById('edit_role').value = role;
-            document.getElementById('edit_department').value = dept;
-            document.getElementById('edit_location').value = loc;
+        function openEditModal(data) {
+            document.getElementById('edit_id').value = data.id;
+            document.getElementById('edit_name').value = data.name;
+            document.getElementById('edit_phone').value = data.phone;
+            document.getElementById('edit_email').value = data.email || '';
+            document.getElementById('edit_whatsapp').value = data.whatsapp || '';
+            document.getElementById('edit_role').value = data.role;
+            document.getElementById('edit_department').value = data.department;
+            document.getElementById('edit_location').value = data.location;
+            document.getElementById('edit_status').value = data.status || 'active';
+            document.getElementById('edit_birth_date').value = data.birth_date || '';
             document.getElementById('editOverlay').classList.add('show');
         }
         function closeEditModal() {
