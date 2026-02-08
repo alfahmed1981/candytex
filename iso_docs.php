@@ -527,6 +527,7 @@ foreach ($docs as $d) {
         }
 
         @media print {
+
             .no-print,
             .top-nav,
             .sidebar,
@@ -565,7 +566,8 @@ foreach ($docs as $d) {
     <?php include 'includes/nav.php'; ?>
     <div class="main-content">
         <div class="header">
-            <h2>📄 التحكم بالوثائق <span style="font-size:.55em;color:#666">Document Control — ISO 9001:2015 §7.5</span></h2>
+            <h2>📄 التحكم بالوثائق <span style="font-size:.55em;color:#666">Document Control — ISO 9001:2015 §7.5</span>
+            </h2>
         </div>
         <?php if ($msg): ?>
             <div
@@ -575,14 +577,16 @@ foreach ($docs as $d) {
         <?php endif; ?>
 
         <?php if (!empty($overdue_docs)): ?>
-        <div style="background:#fff3cd;color:#856404;padding:12px 18px;border-radius:8px;margin-bottom:15px;border-left:4px solid #ffc107">
-            ⚠️ <strong><?= count($overdue_docs) ?> وثائق تجاوزت موعد المراجعة!</strong>
-            <?php foreach ($overdue_docs as $od): ?>
-                <span style="display:inline-block;background:#ffeeba;padding:3px 10px;border-radius:5px;margin:3px;font-size:.85em">
-                    <strong><?= $od['doc_number'] ?></strong> — <?= date('d/m/Y', strtotime($od['next_review_date'])) ?>
-                </span>
-            <?php endforeach; ?>
-        </div>
+            <div
+                style="background:#fff3cd;color:#856404;padding:12px 18px;border-radius:8px;margin-bottom:15px;border-left:4px solid #ffc107">
+                ⚠️ <strong><?= count($overdue_docs) ?> وثائق تجاوزت موعد المراجعة!</strong>
+                <?php foreach ($overdue_docs as $od): ?>
+                    <span
+                        style="display:inline-block;background:#ffeeba;padding:3px 10px;border-radius:5px;margin:3px;font-size:.85em">
+                        <strong><?= $od['doc_number'] ?></strong> — <?= date('d/m/Y', strtotime($od['next_review_date'])) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
 
         <!-- Dashboard Cards -->
@@ -643,7 +647,9 @@ foreach ($docs as $d) {
                 <option>Obsolete</option>
             </select>
             <input type="text" id="f-search" onkeyup="filterDocs()" placeholder="🔍 بحث...">
-            <button onclick="resetFilters()" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer">🔄 إعادة</button>
+            <button onclick="resetFilters()"
+                style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer">🔄
+                إعادة</button>
         </div>
 
         <!-- Print Header -->
@@ -695,8 +701,7 @@ foreach ($docs as $d) {
                             $is_overdue = $d['next_review_date'] && $d['next_review_date'] < $today && $d['status'] !== 'Obsolete';
                             ?>
                             <tr data-category="<?= htmlspecialchars($d['category']) ?>"
-                                data-type="<?= htmlspecialchars($d['doc_type']) ?>"
-                                data-status="<?= $d['status'] ?>">
+                                data-type="<?= htmlspecialchars($d['doc_type']) ?>" data-status="<?= $d['status'] ?>">
                                 <td><?= $i + 1 ?></td>
                                 <td><strong><?= htmlspecialchars($d['doc_number']) ?></strong></td>
                                 <td style="text-align:left;max-width:200px">
@@ -737,15 +742,20 @@ foreach ($docs as $d) {
                                             <small style="color:#999">ملغاة</small>
                                         <?php endif; ?>
                                     </form>
-                                    <button onclick="openRevision(<?= $d['id'] ?>, '<?= htmlspecialchars($d['doc_number']) ?>', '<?= $d['current_revision'] ?>')"
-                                        class="btn-save" style="background:#667eea;margin-left:4px" title="مراجعة جديدة">📝</button>
+                                    <button
+                                        onclick="openRevision(<?= $d['id'] ?>, '<?= htmlspecialchars($d['doc_number']) ?>', '<?= $d['current_revision'] ?>')"
+                                        class="btn-save" style="background:#667eea;margin-left:4px"
+                                        title="مراجعة جديدة">📝</button>
+                                    <a href="iso_doc_print.php?id=<?= $d['id'] ?>" target="_blank" class="btn-save"
+                                        style="background:#2e7d32;margin-left:4px;text-decoration:none;display:inline-block"
+                                        title="طباعة الوثيقة">🖨️</a>
                                     <?php if ($is_admin): ?>
                                         <form method="POST" style="display:inline"
                                             onsubmit="return confirm('حذف هذه الوثيقة نهائياً؟')">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="doc_id" value="<?= $d['id'] ?>">
-                                            <button type="submit" name="delete_doc" class="btn-save"
-                                                style="background:#e74c3c" title="حذف">🗑️</button>
+                                            <button type="submit" name="delete_doc" class="btn-save" style="background:#e74c3c"
+                                                title="حذف">🗑️</button>
                                         </form>
                                     <?php endif; ?>
                                 </td>
@@ -760,7 +770,8 @@ foreach ($docs as $d) {
                                                 <strong>Rev <?= $rv['revision'] ?></strong> —
                                                 <?= htmlspecialchars($rv['change_description'] ?: '-') ?>
                                                 <br><small>✅ <?= htmlspecialchars($rv['approved_by'] ?: '-') ?> |
-                                                    📅 <?= $rv['effective_date'] ? date('d/m/Y', strtotime($rv['effective_date'])) : '-' ?></small>
+                                                    📅
+                                                    <?= $rv['effective_date'] ? date('d/m/Y', strtotime($rv['effective_date'])) : '-' ?></small>
                                             </div>
                                         <?php endforeach; ?>
                                     </td>
@@ -902,7 +913,8 @@ foreach ($docs as $d) {
                     <div class="form-row" style="grid-template-columns:1fr">
                         <div class="form-group">
                             <label>وصف التغيير <small>/ Change Description</small></label>
-                            <textarea name="change_description" rows="2" required placeholder="ما الذي تغير في هذه المراجعة؟"></textarea>
+                            <textarea name="change_description" rows="2" required
+                                placeholder="ما الذي تغير في هذه المراجعة؟"></textarea>
                         </div>
                     </div>
                     <div class="form-row">
