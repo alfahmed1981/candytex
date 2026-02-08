@@ -1850,7 +1850,39 @@ foreach ($ncrs as $ncr) {
                 <div class="form-row">
                     <div class="form-group">
                         <label>المسؤول <small>/ Assigned To</small></label>
-                        <input type="text" name="assigned_to" placeholder="اسم المسؤول">
+                        <select name="assigned_to">
+                            <option value="">-- اختر المسؤول / Select --</option>
+                            <optgroup label="🏭 الإنتاج / Production">
+                                <option value="Line Supervisor | رئيس الفريق">Line Supervisor | رئيس الفريق</option>
+                                <option value="Floor Manager | رئيس الورشة">Floor Manager | رئيس الورشة</option>
+                                <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج
+                                </option>
+                            </optgroup>
+                            <optgroup label="🔍 الجودة والتقنية / Quality & Technical">
+                                <option value="Quality Controller (QC) | مراقب الجودة">Quality Controller (QC) | مراقب
+                                    الجودة</option>
+                                <option value="Quality Manager | مدير الجودة">Quality Manager | مدير الجودة</option>
+                                <option value="Technical Manager | المدير التقني">Technical Manager | المدير التقني
+                                </option>
+                                <option value="Method Agent | مسؤول الطرائق">Method Agent | مسؤول الطرائق</option>
+                            </optgroup>
+                            <optgroup label="🔧 الصيانة / Maintenance">
+                                <option value="Mechanic | ميكانيكي">Mechanic | ميكانيكي</option>
+                                <option value="Maintenance Manager | مدير الصيانة">Maintenance Manager | مدير الصيانة
+                                </option>
+                            </optgroup>
+                            <optgroup label="📦 الإمداد / Supply Chain">
+                                <option value="Warehouse Manager | أمين المخزن">Warehouse Manager | أمين المخزن</option>
+                                <option value="Purchasing Manager | مدير المشتريات">Purchasing Manager | مدير المشتريات
+                                </option>
+                            </optgroup>
+                            <optgroup label="💼 الإدارة / Admin & HR">
+                                <option value="HR Manager | مدير الموارد البشرية">HR Manager | مدير الموارد البشرية
+                                </option>
+                                <option value="HSE Officer | مسؤول السلامة">HSE Officer | مسؤول السلامة</option>
+                                <option value="Factory Director | مدير المصنع">Factory Director | مدير المصنع</option>
+                            </optgroup>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>الموعد النهائي <small>/ Due Date</small></label>
@@ -1968,7 +2000,39 @@ foreach ($ncrs as $ncr) {
                 <div class="form-row">
                     <div class="form-group">
                         <label>المسؤول <small>/ Responsible</small></label>
-                        <input type="text" name="car_responsible" placeholder="اسم المسؤول">
+                        <select name="car_responsible" id="car-responsible-sel">
+                            <option value="">-- اختر المسؤول / Select --</option>
+                            <optgroup label="🏭 الإنتاج / Production">
+                                <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج
+                                </option>
+                                <option value="Floor Manager | رئيس الورشة">Floor Manager | رئيس الورشة</option>
+                                <option value="Line Supervisor | رئيس الفريق">Line Supervisor | رئيس الفريق</option>
+                            </optgroup>
+                            <optgroup label="🔍 الجودة والتقنية / Quality & Technical">
+                                <option value="Quality Manager | مدير الجودة">Quality Manager | مدير الجودة</option>
+                                <option value="Quality Controller (QC) | مراقب الجودة">Quality Controller (QC) | مراقب
+                                    الجودة</option>
+                                <option value="Technical Manager | المدير التقني">Technical Manager | المدير التقني
+                                </option>
+                                <option value="Method Agent | مسؤول الطرائق">Method Agent | مسؤول الطرائق</option>
+                            </optgroup>
+                            <optgroup label="🔧 الصيانة / Maintenance">
+                                <option value="Maintenance Manager | مدير الصيانة">Maintenance Manager | مدير الصيانة
+                                </option>
+                                <option value="Mechanic | ميكانيكي">Mechanic | ميكانيكي</option>
+                            </optgroup>
+                            <optgroup label="📦 الإمداد / Supply Chain">
+                                <option value="Purchasing Manager | مدير المشتريات">Purchasing Manager | مدير المشتريات
+                                </option>
+                                <option value="Warehouse Manager | أمين المخزن">Warehouse Manager | أمين المخزن</option>
+                            </optgroup>
+                            <optgroup label="💼 الإدارة / Admin & HR">
+                                <option value="HR Manager | مدير الموارد البشرية">HR Manager | مدير الموارد البشرية
+                                </option>
+                                <option value="HSE Officer | مسؤول السلامة">HSE Officer | مسؤول السلامة</option>
+                                <option value="Factory Director | مدير المصنع">Factory Director | مدير المصنع</option>
+                            </optgroup>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>الموعد النهائي <small>/ Deadline</small></label>
@@ -2047,39 +2111,48 @@ foreach ($ncrs as $ncr) {
         const carCauseMap = {
             'Operator Lack of Skill / Training': {
                 ca: 'Operator Retraining / Briefing | إعادة تدريب / توجيه العامل',
-                pa: 'Modify Training Matrix | تعديل مصفوفة التدريب'
+                pa: 'Modify Training Matrix | تعديل مصفوفة التدريب',
+                resp: 'Production Manager | مدير الإنتاج'
             },
             'Negligence / Attention Error': {
                 ca: 'Operator Retraining / Briefing | إعادة تدريب / توجيه العامل',
-                pa: 'Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة'
+                pa: 'Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة',
+                resp: 'Production Manager | مدير الإنتاج'
             },
             'Machine Breakdown / Wear': {
                 ca: 'Machine Repair / Parts Replacement | إصلاح الماكينة / استبدال قطع الغيار',
-                pa: 'Update Maintenance Schedule | تعديل جدول الصيانة الوقائية'
+                pa: 'Update Maintenance Schedule | تعديل جدول الصيانة الوقائية',
+                resp: 'Maintenance Manager | مدير الصيانة'
             },
             'Wrong Machine Settings': {
                 ca: 'Calibration / Setting Adjustment | معايرة / ضبط الإعدادات',
-                pa: 'Update SOP / Work Instructions | تحديث إجراءات العمل القياسية'
+                pa: 'Update SOP / Work Instructions | تحديث إجراءات العمل القياسية',
+                resp: 'Maintenance Manager | مدير الصيانة'
             },
             'Defective Raw Material': {
                 ca: 'Supplier Complaint Issued | إصدار شكوى رسمية للمورد',
-                pa: 'Change Supplier / Vendor | تغيير المورد'
+                pa: 'Change Supplier / Vendor | تغيير المورد',
+                resp: 'Purchasing Manager | مدير المشتريات'
             },
             'Wrong Material Supplied': {
                 ca: 'Material Exchange | استبدال المواد المعيبة',
-                pa: 'Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة'
+                pa: 'Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة',
+                resp: 'Warehouse Manager | أمين المخزن'
             },
             'Unclear Tech Pack / Instructions': {
                 ca: 'Update Tech Pack / Pattern | تعديل الملف التقني / الباترون',
-                pa: 'Update SOP / Work Instructions | تحديث إجراءات العمل القياسية'
+                pa: 'Update SOP / Work Instructions | تحديث إجراءات العمل القياسية',
+                resp: 'Technical Manager | المدير التقني'
             },
             'Bad Pattern / Marker Layout': {
                 ca: 'Update Tech Pack / Pattern | تعديل الملف التقني / الباترون',
-                pa: 'Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ'
+                pa: 'Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ',
+                resp: 'Technical Manager | المدير التقني'
             },
             'Lighting / Environment Issue': {
                 ca: 'Process Audit Conducted | إجراء تدقيق فوري للعملية',
-                pa: 'Install Better Lighting / Tools | تحسين الإضاءة / أدوات'
+                pa: 'Install Better Lighting / Tools | تحسين الإضاءة / أدوات',
+                resp: 'HSE Officer | مسؤول السلامة'
             }
         };
 
@@ -2088,6 +2161,7 @@ foreach ($ncrs as $ncr) {
             const rootCustom = document.getElementById('car-root-custom');
             const caSel = document.getElementById('car-corrective');
             const paSel = document.getElementById('car-preventive');
+            const respSel = document.getElementById('car-responsible-sel');
             const caHint = document.getElementById('car-ca-hint');
             const paHint = document.getElementById('car-pa-hint');
 
@@ -2101,7 +2175,7 @@ foreach ($ncrs as $ncr) {
             rootCustom.style.display = 'none';
             rootCustom.value = '';
 
-            // Smart suggestion: auto-select corrective & preventive
+            // Smart suggestion: auto-select corrective, preventive & responsible
             const suggestion = carCauseMap[val];
             if (suggestion) {
                 // Set corrective action
@@ -2121,6 +2195,16 @@ foreach ($ncrs as $ncr) {
                     }
                 }
                 paHint.style.display = 'inline';
+
+                // Set responsible
+                if (suggestion.resp && respSel) {
+                    for (let opt of respSel.options) {
+                        if (opt.value === suggestion.resp) {
+                            respSel.value = suggestion.resp;
+                            break;
+                        }
+                    }
+                }
             } else {
                 caHint.style.display = 'none';
                 paHint.style.display = 'none';
