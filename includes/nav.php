@@ -33,6 +33,8 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <a href="my_team.php" <?= $current_page === 'my_team.php' ? 'class="active"' : '' ?>>👥 فريقي</a>
         <a href="global.php" <?= $current_page === 'global.php' ? 'class="active"' : '' ?>>🏭 المصنع</a>
         <?php if ($nav_is_admin): ?>
+            <a href="iso_ncr.php" <?= $current_page === 'iso_ncr.php' ? 'class="active"' : '' ?>>📝 NCR/CAR</a>
+            <a href="iso_risk.php" <?= $current_page === 'iso_risk.php' ? 'class="active"' : '' ?>>📋 مخاطر</a>
             <a href="admin_issues.php" <?= $current_page === 'admin_issues.php' ? 'class="active"' : '' ?>>🛠️ مشاكل</a>
             <a href="admin.php" <?= $current_page === 'admin.php' ? 'class="active"' : '' ?>>⚙️ إدارة</a>
         <?php endif; ?>
@@ -56,6 +58,8 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
     <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
     <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
     <?php if ($nav_is_admin): ?>
+        <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
+        <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
         <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
         <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
     <?php endif; ?>
