@@ -2,6 +2,7 @@
 session_start();
 require 'db.php';
 require 'includes/auth.php';
+require_once 'includes/smtp_send.php';
 
 if (!isset($_SESSION['user_cin'])) {
     header("Location: index.php");
@@ -51,6 +52,13 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS `risk_reviews` (
     `notes` TEXT DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// Self-healing: add related_ncr column if missing
+try {
+    $pdo->query("SELECT related_ncr FROM risk_register LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("ALTER TABLE risk_register ADD COLUMN related_ncr VARCHAR(30) DEFAULT NULL AFTER status");
+}
 
 // ═══════════════════════════════════════════════════
 // HELPERS
@@ -152,8 +160,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (risk_number, category, source, location, department,
              description_en, description_ar, existing_controls,
              likelihood, severity, risk_score, risk_level,
-             mitigation_action, responsible, deadline, status, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Identified', ?)");
+             mitigation_action, responsible, deadline, status, related_ncr, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Identified', ?, ?)");
+        $responsible_val = trim($_POST['responsible'] ?? '');
+        $related_ncr_val = trim($_POST['related_ncr'] ?? '') ?: null;
         $stmt->execute([
             $risk_num,
             trim($_POST['category'] ?? 'Process'),
@@ -168,12 +178,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $risk_score,
             $risk_level,
             $mitigation_val,
-            trim($_POST['responsible'] ?? ''),
+            $responsible_val,
             $_POST['deadline'] ?: null,
+            $related_ncr_val,
             $user_cin
         ]);
         $msg = "✅ تم تسجيل الخطر: $risk_num (المستوى: $risk_level)";
         audit_log($pdo, 'risk_create', "Created Risk: $risk_num [$risk_level]");
+
+        // Email alert for Critical risks
+        if ($risk_level === 'Critical') {
+            $email_subject = "🚨 [CRITICAL] New Risk: $risk_num";
+            $email_body = "CRITICAL RISK ALERT\n"
+                . "===================\n\n"
+                . "Risk Number: $risk_num\n"
+                . "Category: " . trim($_POST['category'] ?? '') . "\n"
+                . "Description: $desc_en\n"
+                . "الوصف: $desc_ar\n"
+                . "Score: $risk_score ($risk_level)\n"
+                . "Responsible: $responsible_val\n"
+                . "Deadline: " . ($_POST['deadline'] ?: 'N/A') . "\n\n"
+                . "Registered by: $user_name ($user_cin)\n"
+                . "Date: " . date('Y-m-d H:i') . "\n\n"
+                . "Please take immediate action.\n"
+                . "يرجى اتخاذ إجراء فوري.";
+            send_email_to_admins($pdo, $email_subject, $email_body);
+            $msg .= " 📧 تم إرسال تنبيه للإدارة";
+        }
+
+        // WhatsApp notification data
+        if ($responsible_val) {
+            $wa_user = $pdo->prepare("SELECT phone, whatsapp FROM users WHERE name = ? OR cin = ? LIMIT 1");
+            $wa_user->execute([$responsible_val, $responsible_val]);
+            $wa_data = $wa_user->fetch();
+            $wa_phone = $wa_data['whatsapp'] ?? $wa_data['phone'] ?? '';
+            if ($wa_phone) {
+                $clean_phone = preg_replace('/[^0-9]/', '', $wa_phone);
+                if (substr($clean_phone, 0, 1) === '0')
+                    $clean_phone = '212' . substr($clean_phone, 1);
+                $wa_msg_text = urlencode("السلام عليكم 👋\n\nتم إسناد خطر جديد إليك:\n\n📋 رقم: $risk_num\n⚠️ المستوى: $risk_level\n📝 $desc_en\n📅 الموعد: " . ($_POST['deadline'] ?: 'غير محدد') . "\n\nرابط المنصة: https://candytex.ma/dash/iso_risk.php\n\nشكراً 🙏");
+                $wa_link = "https://wa.me/$clean_phone?text=$wa_msg_text";
+            }
+        }
     }
 
     // UPDATE RISK STATUS
@@ -253,6 +299,49 @@ foreach ($risks as $r) {
         $matrix[$key] = ($matrix[$key] ?? 0) + 1;
     }
 }
+
+// Deadline warnings (risks due within 3 days)
+$today = date('Y-m-d');
+$warn_date = date('Y-m-d', strtotime('+3 days'));
+$deadline_warnings = array_filter($risks, function ($r) use ($today, $warn_date) {
+    return $r['deadline'] && $r['deadline'] <= $warn_date && $r['deadline'] >= $today
+        && !in_array($r['status'], ['Closed', 'Mitigated']);
+});
+
+// NCR list for linking dropdown
+try {
+    $ncr_list = $pdo->query("SELECT ncr_number, description_en FROM ncr_reports ORDER BY id DESC")->fetchAll();
+} catch (Exception $e) {
+    $ncr_list = [];
+}
+
+// Monthly trend data for charts (last 6 months)
+$trend_data = [];
+for ($i = 5; $i >= 0; $i--) {
+    $month_start = date('Y-m-01', strtotime("-$i months"));
+    $month_end = date('Y-m-t', strtotime("-$i months"));
+    $month_label = date('M Y', strtotime("-$i months"));
+    $new_count = 0;
+    $closed_count = 0;
+    foreach ($risks as $r) {
+        $created = substr($r['created_at'], 0, 10);
+        if ($created >= $month_start && $created <= $month_end)
+            $new_count++;
+        if ($r['status'] === 'Closed' && $r['updated_at']) {
+            $closed = substr($r['updated_at'], 0, 10);
+            if ($closed >= $month_start && $closed <= $month_end)
+                $closed_count++;
+        }
+    }
+    $trend_data[] = ['label' => $month_label, 'new' => $new_count, 'closed' => $closed_count];
+}
+
+// Category distribution for charts
+$cat_dist = [];
+foreach ($risks as $r) {
+    $cat = $r['category'] ?? 'Other';
+    $cat_dist[$cat] = ($cat_dist[$cat] ?? 0) + 1;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -262,6 +351,7 @@ foreach ($risks as $r) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سجل المخاطر — Risk Register | CANDYTEX ISO 9001</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .risk-cards {
             display: flex;
@@ -802,6 +892,31 @@ foreach ($risks as $r) {
             </div>
         <?php endif; ?>
 
+        <?php if (!empty($wa_link)): ?>
+            <div
+                style="background:#d1ecf1;color:#0c5460;padding:12px 18px;border-radius:8px;margin-bottom:15px;display:flex;align-items:center;gap:15px">
+                <span>📢 هل تريد إخطار المسؤول عبر واتساب؟</span>
+                <a href="<?= $wa_link ?>" target="_blank"
+                    style="background:#25D366;color:white;padding:8px 18px;border-radius:8px;text-decoration:none;font-weight:600">📱
+                    إرسال واتساب</a>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($deadline_warnings)): ?>
+            <div
+                style="background:#fff3cd;color:#856404;padding:12px 18px;border-radius:8px;margin-bottom:15px;border-left:4px solid #ffc107">
+                ⚠️ <strong><?= count($deadline_warnings) ?> مخاطر تقترب مواعيدها!</strong>
+                <?php foreach ($deadline_warnings as $dw): ?>
+                    <span
+                        style="display:inline-block;background:#ffeeba;padding:3px 10px;border-radius:5px;margin:3px;font-size:.85em">
+                        <strong><?= $dw['risk_number'] ?></strong> — <?= date('d/m', strtotime($dw['deadline'])) ?>
+                        <span class="badge b-<?= strtolower($dw['risk_level']) ?>"
+                            style="font-size:.7em"><?= $dw['risk_level'] ?></span>
+                    </span>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Dashboard Cards -->
         <div class="risk-cards">
             <div class="risk-card rc-total">
@@ -866,10 +981,39 @@ foreach ($risks as $r) {
             </div>
         </div>
 
+        <!-- 📊 Analytics Dashboard -->
+        <div
+            style="background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:20px;margin-bottom:25px">
+            <div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center"
+                onclick="document.getElementById('analytics-body').style.display = document.getElementById('analytics-body').style.display==='none'?'block':'none'; this.querySelector('span').textContent = document.getElementById('analytics-body').style.display==='none'?'▶':'▼'">
+                <h3 style="margin:0">📊 لوحة التحليلات <small style="font-weight:400;color:#888">Analytics
+                        Dashboard</small></h3>
+                <span style="font-size:1.2em">▶</span>
+            </div>
+            <div id="analytics-body" style="display:none;margin-top:20px">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px">
+                    <div style="background:#f8f9fa;border-radius:10px;padding:15px">
+                        <h4 style="margin:0 0 10px;text-align:center">🍩 توزيع المستويات</h4>
+                        <canvas id="chart-level" height="220"></canvas>
+                    </div>
+                    <div style="background:#f8f9fa;border-radius:10px;padding:15px">
+                        <h4 style="margin:0 0 10px;text-align:center">📊 المخاطر حسب الفئة</h4>
+                        <canvas id="chart-category" height="220"></canvas>
+                    </div>
+                    <div style="background:#f8f9fa;border-radius:10px;padding:15px">
+                        <h4 style="margin:0 0 10px;text-align:center">📈 الاتجاه الشهري</h4>
+                        <canvas id="chart-trend" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Action Bar -->
         <div
             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px">
             <button class="btn-add" onclick="openModal('risk-modal')">➕ تسجيل خطر جديد</button>
+            <button class="btn-add" style="background:#17a2b8" onclick="openModal('report-modal')">📈 تقرير
+                شهري</button>
             <span id="filter-count" style="font-weight:600;color:#555"></span>
         </div>
 
@@ -949,7 +1093,12 @@ foreach ($risks as $r) {
                                 data-status="<?= $r['status'] ?>"
                                 data-reporter="<?= htmlspecialchars($r['reporter_name'] ?? '') ?>">
                                 <td><?= $i + 1 ?></td>
-                                <td><strong><?= htmlspecialchars($r['risk_number']) ?></strong></td>
+                                <td><strong><?= htmlspecialchars($r['risk_number']) ?></strong>
+                                    <?php if (!empty($r['related_ncr'])): ?>
+                                        <br><a href="iso_ncr.php"
+                                            style="font-size:.7em;background:#1a237e;color:#fff;padding:2px 6px;border-radius:4px;text-decoration:none"><?= $r['related_ncr'] ?></a>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= htmlspecialchars($r['category']) ?></td>
                                 <td style="text-align:left;max-width:200px">
                                     <?= htmlspecialchars($r['description_en'] ?: '-') ?>
@@ -966,7 +1115,8 @@ foreach ($risks as $r) {
                                 <td><span class="badge <?= $lvl_cls ?>"><?= $r['risk_level'] ?></span></td>
                                 <td style="font-size:.75em"><?= htmlspecialchars($r['responsible'] ?: '-') ?></td>
                                 <td style="font-size:.75em">
-                                    <?= htmlspecialchars($r['reporter_name'] ?: ($r['created_by'] ?: '-')) ?></td>
+                                    <?= htmlspecialchars($r['reporter_name'] ?: ($r['created_by'] ?: '-')) ?>
+                                </td>
                                 <td><?= $r['deadline'] ? date('d/m/Y', strtotime($r['deadline'])) : '-' ?></td>
                                 <td><span class="badge <?= $st_cls ?>"><?= $r['status'] ?></span></td>
                                 <td>
@@ -1254,6 +1404,20 @@ foreach ($risks as $r) {
                             <input type="date" name="deadline">
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>🔗 ربط NCR <small>/ Link to NCR (optional)</small></label>
+                            <select name="related_ncr">
+                                <option value="">-- بدون ربط --</option>
+                                <?php foreach ($ncr_list as $ncr): ?>
+                                    <option value="<?= htmlspecialchars($ncr['ncr_number']) ?>">
+                                        <?= htmlspecialchars($ncr['ncr_number']) ?> —
+                                        <?= htmlspecialchars(mb_substr($ncr['description_en'] ?? '', 0, 40)) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
                     <div class="modal-btns">
                         <button type="button" class="btn-cancel" onclick="closeModal('risk-modal')">إلغاء</button>
                         <button type="submit" name="create_risk" class="btn-submit">📋 تسجيل الخطر</button>
@@ -1309,6 +1473,27 @@ foreach ($risks as $r) {
                         <button type="submit" name="add_review" class="btn-submit">🔄 حفظ المراجعة</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- ═══════ MONTHLY REPORT MODAL ═══════ -->
+        <div class="modal-overlay" id="report-modal">
+            <div class="modal-box" style="max-width:700px">
+                <h2>📈 تقرير شهري للمخاطر <small style="font-weight:400">Monthly Risk Report</small></h2>
+                <div style="margin:15px 0">
+                    <label>الشهر:</label>
+                    <input type="month" id="report-month" value="<?= date('Y-m') ?>"
+                        style="padding:6px 12px;border-radius:6px;border:1px solid #ccc">
+                    <button type="button" onclick="printMonthlyReport()" class="btn-submit"
+                        style="margin-right:10px">🖨️ طباعة</button>
+                </div>
+                <div id="report-preview"
+                    style="background:#f8f9fa;padding:15px;border-radius:8px;max-height:400px;overflow-y:auto">
+                    <p style="text-align:center;color:#888">اختر الشهر واضغط طباعة</p>
+                </div>
+                <div class="modal-btns" style="margin-top:15px">
+                    <button type="button" class="btn-cancel" onclick="closeModal('report-modal')">إغلاق</button>
+                </div>
             </div>
         </div>
 
@@ -1541,6 +1726,137 @@ foreach ($risks as $r) {
         `;
                 window.print();
             }
+
+            // ═══════ MONTHLY REPORT PRINT ═══════
+            function printMonthlyReport() {
+                const month = document.getElementById('report-month').value;
+                if (!month) return alert('اختر الشهر');
+                const [year, mon] = month.split('-');
+                const monthName = new Date(year, mon - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                const monthRisks = risksData.filter(r => r.created_at && r.created_at.startsWith(month));
+                const allActive = risksData.filter(r => r.status !== 'Closed');
+                const levelCount = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+                allActive.forEach(r => { if (levelCount[r.risk_level] !== undefined) levelCount[r.risk_level]++; });
+                const catCount = {};
+                allActive.forEach(r => { catCount[r.category] = (catCount[r.category] || 0) + 1; });
+
+                const pa = document.getElementById('print-area');
+                pa.innerHTML = `
+                    <div class="print-header">
+                        <div class="print-logo">🏭 CANDYTEX S.A.R.L<br><small style="font-size:10pt;font-weight:normal">Excellence in Textiles</small></div>
+                        <div style="text-align:center">
+                            <h2 style="margin:0">MONTHLY RISK REPORT</h2>
+                            <p style="margin:5px 0">تقرير المخاطر الشهري</p>
+                            <b>Period: ${monthName}</b>
+                        </div>
+                        <div class="doc-info"><b>Ref:</b> OP-RISK-RPT<br><b>Rev:</b> 1.0 (2026)<br><b>Type:</b> Confidential</div>
+                    </div>
+                    <h3>ملخص عام / Summary</h3>
+                    <table class="iso-table" style="width:100%;margin-bottom:20px">
+                        <tr><th>إجمالي المخاطر</th><td>${risksData.length}</td><th>مخاطر نشطة</th><td>${allActive.length}</td></tr>
+                        <tr><th>جديدة هذا الشهر</th><td>${monthRisks.length}</td><th>مغلقة</th><td>${risksData.filter(r => r.status === 'Closed').length}</td></tr>
+                    </table>
+                    <h3>توزيع المستويات / Level Distribution</h3>
+                    <table class="iso-table" style="width:100%;margin-bottom:20px">
+                        <tr><th>Critical 🔴</th><td>${levelCount.Critical}</td><th>High 🟠</th><td>${levelCount.High}</td></tr>
+                        <tr><th>Medium 🟡</th><td>${levelCount.Medium}</td><th>Low 🟢</th><td>${levelCount.Low}</td></tr>
+                    </table>
+                    <h3>حسب الفئة / By Category</h3>
+                    <table class="iso-table" style="width:100%;margin-bottom:20px">
+                        ${Object.entries(catCount).map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}
+                    </table>
+                    <h3>أعلى 5 مخاطر / Top 5 Risks</h3>
+                    <table class="iso-table" style="width:100%;margin-bottom:20px">
+                        <tr><th>رقم</th><th>الفئة</th><th>الوصف</th><th>Score</th><th>المستوى</th></tr>
+                        ${allActive.sort((a, b) => b.risk_score - a.risk_score).slice(0, 5).map(r => `<tr><td>${r.risk_number}</td><td>${r.category}</td><td>${r.description_en || '-'}</td><td>${r.risk_score}</td><td>${r.risk_level}</td></tr>`).join('')}
+                    </table>
+                    <div class="print-signatures">
+                        <div class="print-sig-box"><h4>Prepared By</h4><div>Name: <?= htmlspecialchars($user_name) ?></div><div class="sig-line"></div><small>Signature</small></div>
+                        <div class="print-sig-box"><h4>Approved By</h4><div>Name: _______________</div><div class="sig-line"></div><small>Signature</small></div>
+                    </div>
+                    <div class="print-footer">CANDYTEX — Quality Management System — ISO 9001:2015 — Confidential</div>
+                `;
+                window.print();
+            }
+
+            // ═══════ CHART.JS INITIALIZATION ═══════
+            document.addEventListener('DOMContentLoaded', function () {
+                // Chart 1: Level Distribution (Doughnut)
+                new Chart(document.getElementById('chart-level'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Critical', 'High', 'Medium', 'Low'],
+                        datasets: [{
+                            data: [<?= $critical ?>, <?= $high ?>, <?= $medium ?>, <?= $low ?>],
+                            backgroundColor: ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71'],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { size: 11 } } }
+                        }
+                    }
+                });
+
+                // Chart 2: Category Distribution (Bar)
+                new Chart(document.getElementById('chart-category'), {
+                    type: 'bar',
+                    data: {
+                        labels: <?= json_encode(array_keys($cat_dist)) ?>,
+                        datasets: [{
+                            label: 'Risks',
+                            data: <?= json_encode(array_values($cat_dist)) ?>,
+                            backgroundColor: '#667eea',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        }
+                    }
+                });
+
+                // Chart 3: Monthly Trend (Line)
+                const trendLabels = <?= json_encode(array_column($trend_data, 'label')) ?>;
+                const trendNew = <?= json_encode(array_column($trend_data, 'new')) ?>;
+                const trendClosed = <?= json_encode(array_column($trend_data, 'closed')) ?>;
+                new Chart(document.getElementById('chart-trend'), {
+                    type: 'line',
+                    data: {
+                        labels: trendLabels,
+                        datasets: [
+                            {
+                                label: 'جديد (New)',
+                                data: trendNew,
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231,76,60,0.1)',
+                                fill: true,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'مغلق (Closed)',
+                                data: trendClosed,
+                                borderColor: '#2ecc71',
+                                backgroundColor: 'rgba(46,204,113,0.1)',
+                                fill: true,
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        }
+                    }
+                });
+            });
         </script>
     </div>
 </body>
