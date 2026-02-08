@@ -102,21 +102,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
 }
 
 // --- FILTERING ---
-// Note: location and department columns may not exist yet
 $filter_role = $_GET['filter_role'] ?? '';
+$filter_location = $_GET['filter_location'] ?? '';
 
-$sql = "SELECT * FROM users WHERE 1=1";
+$sql = "SELECT * FROM users WHERE status = 'active'";
 $params = [];
 
 if ($filter_role) {
     $sql .= " AND role = ?";
     $params[] = $filter_role;
 }
+if ($filter_location) {
+    $sql .= " AND location = ?";
+    $params[] = $filter_location;
+}
 
-$sql .= " ORDER BY role, name";
+$sql .= " ORDER BY COALESCE(location, 'ZZZ'), role, name";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $users = $stmt->fetchAll();
+
+// Group users by location
+$grouped = [];
+foreach ($users as $u) {
+    $loc = $u['location'] ?: '— غير محدد / Non défini';
+    $grouped[$loc][] = $u;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -266,6 +277,101 @@ $users = $stmt->fetchAll();
             align-items: center;
             flex-wrap: wrap;
         }
+
+        /* Column Toggle */
+        .col-toggles {
+            background: #f1f3f5;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .col-toggles label {
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .col-toggles label input {
+            margin: 0;
+        }
+
+        /* Table */
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            background: white;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 10px 12px;
+            text-align: right;
+            border-bottom: 1px solid #e9ecef;
+            white-space: nowrap;
+        }
+
+        .users-table th {
+            background: #343a40;
+            color: white;
+            position: sticky;
+            top: 0;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .users-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .users-table .actions-cell {
+            white-space: nowrap;
+            display: flex;
+            gap: 4px;
+        }
+
+        .users-table .actions-cell form {
+            display: inline;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .location-header {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 15px;
+            border-radius: 8px;
+            margin: 20px 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .location-header:first-of-type {
+            margin-top: 10px;
+        }
+
+        .location-header .count {
+            background: rgba(255, 255, 255, 0.25);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
     </style>
 </head>
 
@@ -403,73 +509,126 @@ $users = $stmt->fetchAll();
 
             <!-- Filters -->
             <div class="filter-bar">
-                <strong>🔍 Filter:</strong>
+                <strong>🔍 تصفية:</strong>
                 <form method="GET" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <select name="filter_role">
-                        <option value="">All Roles / كل الأدوار</option>
-                        <option value="admin" <?php if ($filter_role == 'admin')
-                            echo 'selected'; ?>>Admin</option>
-                        <option value="manager" <?php if ($filter_role == 'manager')
-                            echo 'selected'; ?>>Manager</option>
+                        <option value="">كل الأدوار</option>
+                        <option value="admin" <?= $filter_role == 'admin' ? 'selected' : '' ?>>مدير النظام</option>
+                        <option value="manager" <?= $filter_role == 'manager' ? 'selected' : '' ?>>رئيس فريق</option>
+                        <option value="viewer" <?= $filter_role == 'viewer' ? 'selected' : '' ?>>مستخدم عادي</option>
                     </select>
-                    <button type="submit" class="btn btn-blue">Filter</button>
-                    <a href="admin.php" class="btn" style="background:#6c757d;">Reset</a>
+                    <select name="filter_location">
+                        <option value="">كل المواقع</option>
+                        <?php foreach ($loc_list as $l): ?>
+                            <option value="<?= htmlspecialchars($l) ?>" <?= $filter_location == $l ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($l) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="submit" class="btn btn-blue">تصفية</button>
+                    <a href="admin.php" class="btn" style="background:#6c757d;">إعادة</a>
                 </form>
             </div>
 
-            <!-- List -->
-            <h3>📋 User List (
-                <?php echo count($users); ?>)
-            </h3>
-            <?php foreach ($users as $u):
-                $roleClass = ($u['role'] === 'admin') ? 'admin' : '';
-                $roleBadge = ($u['role'] === 'admin') ? 'role-admin' : '';
-                ?>
-                <div class="user-card <?php echo $roleClass; ?>">
-                    <div>
-                        <strong>
-                            <?php echo htmlspecialchars($u['name']); ?>
-                        </strong>
-                        <span class="role-badge <?php echo $roleBadge; ?>">
-                            <?php echo strtoupper($u['role']); ?>
-                        </span>
-                        <br>
-                        <small>CIN:
-                            <?php echo htmlspecialchars($u['cin']); ?> | Phone:
-                            <?php echo htmlspecialchars($u['phone']); ?>
-                        </small>
-                        <?php if (!empty($u['location'])): ?>
-                            <br><small style="color:#007bff;">📍
-                                <?php echo htmlspecialchars($u['location']); ?> -
-                                <?php echo htmlspecialchars($u['department']); ?>
-                            </small>
-                        <?php endif; ?>
-                    </div>
-                    <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
-                        <button type="button" class="btn btn-edit"
-                            onclick="openEditModal(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['phone']), ENT_QUOTES) ?>', '<?= $u['role'] ?>', '<?= htmlspecialchars(addslashes($u['department'] ?? ''), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['location'] ?? ''), ENT_QUOTES) ?>')">✏️
-                            Edit</button>
-                        <form method="POST" style="display:inline;"
-                            onsubmit="return confirm('Login as <?php echo htmlspecialchars($u['name']); ?>?');">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="login_as">
-                            <input type="hidden" name="cin" value="<?php echo htmlspecialchars($u['cin']); ?>">
-                            <button type="submit" class="btn btn-blue">🕵️ Login As</button>
-                        </form>
-                        <?php if ($u['cin'] !== 'admin'): ?>
-                            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this user?');">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="id" value="<?php echo $u['id']; ?>">
-                                <button type="submit" class="btn btn-red">🗑️ Delete</button>
-                            </form>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+            <!-- Column Toggles -->
+            <div class="col-toggles">
+                <strong style="font-size:13px;">👁️ الأعمدة:</strong>
+                <label><input type="checkbox" checked onchange="toggleCol('col-id')">#</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-cin')">CIN</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-name')">الاسم</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-phone')">الهاتف</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-role')">الدور</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-dept')">القسم</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-loc')">الموقع</label>
+                <label><input type="checkbox" onchange="toggleCol('col-birth')">تاريخ الميلاد</label>
+                <label><input type="checkbox" onchange="toggleCol('col-status')">الحالة</label>
+                <label><input type="checkbox" onchange="toggleCol('col-created')">تاريخ التسجيل</label>
+            </div>
+
+            <!-- User List -->
+            <h3>📋 قائمة المستخدمين (<?= count($users) ?>)</h3>
 
             <?php if (count($users) == 0): ?>
-                <p style="text-align:center; color:#999;">No users found matching the filters.</p>
+                <p style="text-align:center; color:#999; padding:30px;">لا يوجد مستخدمون يطابقون الفلتر.</p>
+            <?php else: ?>
+                <?php foreach ($grouped as $location => $loc_users): ?>
+                    <div class="location-header">
+                        🏭 <?= htmlspecialchars($location) ?>
+                        <span class="count"><?= count($loc_users) ?></span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-id">#</th>
+                                    <th class="col-cin">CIN</th>
+                                    <th class="col-name">الاسم</th>
+                                    <th class="col-phone">الهاتف</th>
+                                    <th class="col-role">الدور</th>
+                                    <th class="col-dept">القسم</th>
+                                    <th class="col-loc">الموقع</th>
+                                    <th class="col-birth" style="display:none;">تاريخ الميلاد</th>
+                                    <th class="col-status" style="display:none;">الحالة</th>
+                                    <th class="col-created" style="display:none;">تاريخ التسجيل</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($loc_users as $u):
+                                    $roleBadge = match ($u['role']) {
+                                        'admin' => 'background:#28a745;',
+                                        'manager' => 'background:#007bff;',
+                                        default => 'background:#6c757d;'
+                                    };
+                                    $roleLabel = match ($u['role']) {
+                                        'admin' => 'مدير',
+                                        'manager' => 'رئيس فريق',
+                                        default => 'مشاهد'
+                                    };
+                                    ?>
+                                    <tr>
+                                        <td class="col-id"><?= $u['id'] ?></td>
+                                        <td class="col-cin" style="font-family:monospace;"><?= htmlspecialchars($u['cin']) ?></td>
+                                        <td class="col-name"><strong><?= htmlspecialchars($u['name']) ?></strong></td>
+                                        <td class="col-phone"><?= htmlspecialchars($u['phone']) ?></td>
+                                        <td class="col-role"><span class="role-badge"
+                                                style="<?= $roleBadge ?>"><?= $roleLabel ?></span></td>
+                                        <td class="col-dept"><?= htmlspecialchars($u['department'] ?? '—') ?></td>
+                                        <td class="col-loc"><?= htmlspecialchars($u['location'] ?? '—') ?></td>
+                                        <td class="col-birth" style="display:none;"><?= $u['birth_date'] ?? '—' ?></td>
+                                        <td class="col-status" style="display:none;"><span
+                                                style="color:<?= $u['status'] === 'active' ? '#28a745' : '#fd7e14' ?>;"><?= $u['status'] === 'active' ? '✅ نشط' : '⏳ معلق' ?></span>
+                                        </td>
+                                        <td class="col-created" style="display:none;">
+                                            <?= isset($u['created_at']) ? date('Y-m-d', strtotime($u['created_at'])) : '—' ?></td>
+                                        <td>
+                                            <div class="actions-cell">
+                                                <button type="button" class="btn btn-edit" style="padding:4px 8px; font-size:12px;"
+                                                    onclick="openEditModal(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['phone']), ENT_QUOTES) ?>', '<?= $u['role'] ?>', '<?= htmlspecialchars(addslashes($u['department'] ?? ''), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['location'] ?? ''), ENT_QUOTES) ?>')">✏️</button>
+                                                <form method="POST"
+                                                    onsubmit="return confirm('الدخول كـ <?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>?');">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="action" value="login_as">
+                                                    <input type="hidden" name="cin" value="<?= htmlspecialchars($u['cin']) ?>">
+                                                    <button type="submit" class="btn btn-blue"
+                                                        style="padding:4px 8px; font-size:12px;">🕵️</button>
+                                                </form>
+                                                <?php if ($u['cin'] !== 'admin'): ?>
+                                                    <form method="POST" onsubmit="return confirm('حذف هذا المستخدم؟');">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="action" value="delete">
+                                                        <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                                        <button type="submit" class="btn btn-red"
+                                                            style="padding:4px 8px; font-size:12px;">🗑️</button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endforeach; ?>
             <?php endif; ?>
         </div>
     </div>
@@ -522,6 +681,11 @@ $users = $stmt->fetchAll();
         }
         function closeEditModal() {
             document.getElementById('editOverlay').classList.remove('show');
+        }
+        function toggleCol(className) {
+            document.querySelectorAll('.' + className).forEach(el => {
+                el.style.display = el.style.display === 'none' ? '' : 'none';
+            });
         }
     </script>
 </body>
