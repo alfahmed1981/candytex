@@ -419,11 +419,47 @@ foreach ($issues as $issue) {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
         }
 
-        .filters-bar select {
+        .filters-bar select,
+        .filters-bar input[type="date"] {
             padding: 10px 15px;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 1em;
+            color: #333;
+            background: white;
+        }
+
+        .filters-bar input[type="date"] {
+            min-width: 140px;
+        }
+
+        .date-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .date-filter-group label {
+            font-size: 0.9em;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .btn-reset-filter {
+            padding: 8px 16px !important;
+            background: #6c757d !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+            font-size: 0.9em !important;
+            width: auto !important;
+            white-space: nowrap;
+        }
+
+        .btn-reset-filter:hover {
+            background: #5a6268 !important;
         }
 
         /* Alert */
@@ -549,6 +585,13 @@ foreach ($issues as $issue) {
                 <option value="5S">التحسين (5S)</option>
                 <option value="C">التكلفة (C)</option>
             </select>
+            <div class="date-filter-group">
+                <label>📅 من:</label>
+                <input type="date" id="filter-date-from" onchange="filterTable()">
+                <label>إلى:</label>
+                <input type="date" id="filter-date-to" onchange="filterTable()">
+            </div>
+            <button type="button" class="btn-reset-filter" onclick="resetFilters()">🔄 إعادة تعيين</button>
         </div>
 
         <!-- Issues Table -->
@@ -577,7 +620,8 @@ foreach ($issues as $issue) {
                         if ($statusClass === 'inprogress')
                             $statusClass = 'progress';
                         ?>
-                        <tr data-status="<?php echo $issue['status']; ?>" data-category="<?php echo $cat; ?>">
+                        <tr data-status="<?php echo $issue['status']; ?>" data-category="<?php echo $cat; ?>"
+                            data-date="<?php echo $issue['created_at'] ? date('Y-m-d', strtotime($issue['created_at'])) : ''; ?>">
                             <td>
                                 <?php echo $i + 1; ?>
                             </td>
@@ -664,18 +708,48 @@ foreach ($issues as $issue) {
         function filterTable() {
             const statusFilter = document.getElementById('filter-status').value;
             const categoryFilter = document.getElementById('filter-category').value;
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
             const rows = document.querySelectorAll('#issues-table tbody tr');
+            let visibleCount = 0;
 
             rows.forEach(row => {
                 const status = row.dataset.status;
                 const category = row.dataset.category;
+                const rowDate = row.dataset.date || '';
 
                 let show = true;
                 if (statusFilter && status !== statusFilter) show = false;
                 if (categoryFilter && category !== categoryFilter) show = false;
+                if (dateFrom && rowDate && rowDate < dateFrom) show = false;
+                if (dateTo && rowDate && rowDate > dateTo) show = false;
 
                 row.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
             });
+
+            // Update count indicator
+            let counter = document.getElementById('filter-count');
+            if (!counter) {
+                counter = document.createElement('span');
+                counter.id = 'filter-count';
+                counter.style.cssText = 'font-size:0.85em; color:#667eea; font-weight:600; margin-right:8px;';
+                document.querySelector('.filters-bar').appendChild(counter);
+            }
+            const total = rows.length;
+            if (statusFilter || categoryFilter || dateFrom || dateTo) {
+                counter.textContent = `📊 ${visibleCount} / ${total}`;
+            } else {
+                counter.textContent = '';
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-category').value = '';
+            document.getElementById('filter-date-from').value = '';
+            document.getElementById('filter-date-to').value = '';
+            filterTable();
         }
     </script>
 </body>
