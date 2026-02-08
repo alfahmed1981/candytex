@@ -120,3 +120,42 @@ CREATE TABLE IF NOT EXISTS `email_settings` (
     `setting_value` TEXT DEFAULT NULL,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. NCR Reports (ISO 9001 — Non-Conformity)
+CREATE TABLE IF NOT EXISTS `ncr_reports` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `ncr_number` VARCHAR(30) NOT NULL UNIQUE,
+    `category` VARCHAR(50) DEFAULT 'Product',
+    `severity` VARCHAR(20) DEFAULT 'Minor',
+    `source` VARCHAR(50) DEFAULT 'Production',
+    `location` VARCHAR(100) DEFAULT NULL,
+    `department` VARCHAR(100) DEFAULT NULL,
+    `description_en` TEXT DEFAULT NULL,
+    `description_ar` TEXT DEFAULT NULL,
+    `immediate_action` TEXT DEFAULT NULL,
+    `disposition` VARCHAR(50) DEFAULT 'Pending',
+    `reported_by` VARCHAR(20) DEFAULT NULL,
+    `assigned_to` VARCHAR(100) DEFAULT NULL,
+    `status` VARCHAR(50) DEFAULT 'Open',
+    `due_date` DATE DEFAULT NULL,
+    `closed_at` DATETIME DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. CAR Reports (ISO 9001 — Corrective Action)
+CREATE TABLE IF NOT EXISTS `car_reports` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `car_number` VARCHAR(30) NOT NULL UNIQUE,
+    `ncr_id` INT NOT NULL,
+    `root_cause` TEXT DEFAULT NULL,
+    `corrective_action` TEXT DEFAULT NULL,
+    `preventive_action` TEXT DEFAULT NULL,
+    `responsible` VARCHAR(100) DEFAULT NULL,
+    `deadline` DATE DEFAULT NULL,
+    `status` VARCHAR(50) DEFAULT 'Open',
+    `effectiveness_ok` TINYINT(1) DEFAULT NULL,
+    `verified_by` VARCHAR(20) DEFAULT NULL,
+    `verified_at` DATETIME DEFAULT NULL,
+    `created_by` VARCHAR(20) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

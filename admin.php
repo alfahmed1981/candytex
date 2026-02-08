@@ -431,6 +431,7 @@ foreach ($users as $u) {
                 <a href="admin_advanced.php" class="btn btn-blue" style="background:#6f42c1;">⚙️ Advanced</a>
                 <a href="admin_email.php" class="btn btn-blue" style="background:#e83e8c;">📧 Email Settings</a>
                 <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 Import CSV</a>
+                <a href="iso_ncr.php" class="btn btn-blue" style="background:#0b3c5d;">🏭 ISO NCR/CAR</a>
             </div>
 
             <?php if (isset($msg))
@@ -626,7 +627,8 @@ foreach ($users as $u) {
                                         <td class="col-loc"><?= htmlspecialchars($u['location'] ?? '—') ?></td>
                                         <td class="col-email" style="display:none;"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
                                         <td class="col-whatsapp" style="display:none;">
-                                            <?= htmlspecialchars($u['whatsapp'] ?? '—') ?></td>
+                                            <?= htmlspecialchars($u['whatsapp'] ?? '—') ?>
+                                        </td>
                                         <td class="col-birth" style="display:none;"><?= $u['birth_date'] ?? '—' ?></td>
                                         <td class="col-status" style="display:none;"><span
                                                 style="color:<?= $u['status'] === 'active' ? '#28a745' : '#fd7e14' ?>;"><?= $u['status'] === 'active' ? '✅ Active' : '⏳ Pending' ?></span>

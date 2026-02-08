@@ -1,0 +1,1335 @@
+<?php
+session_start();
+require 'db.php';
+require 'includes/auth.php';
+
+// Security Check: ONLY Admins & Managers
+if (!isset($_SESSION['user_cin'])) {
+    header("Location: index.php");
+    exit;
+}
+
+$user_role = $_SESSION['role'];
+$user_cin = $_SESSION['user_cin'];
+$user_name = $_SESSION['user_name'] ?? '';
+
+// --- Self-healing: create NCR table ---
+$pdo->exec("CREATE TABLE IF NOT EXISTS `ncr_reports` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `ncr_number` VARCHAR(30) NOT NULL UNIQUE,
+    `category` VARCHAR(50) DEFAULT 'Product',
+    `severity` VARCHAR(20) DEFAULT 'Minor',
+    `source` VARCHAR(50) DEFAULT 'Production',
+    `location` VARCHAR(100) DEFAULT NULL,
+    `department` VARCHAR(100) DEFAULT NULL,
+    `description_en` TEXT DEFAULT NULL,
+    `description_ar` TEXT DEFAULT NULL,
+    `immediate_action` TEXT DEFAULT NULL,
+    `disposition` VARCHAR(50) DEFAULT 'Pending',
+    `reported_by` VARCHAR(20) DEFAULT NULL,
+    `assigned_to` VARCHAR(100) DEFAULT NULL,
+    `status` VARCHAR(50) DEFAULT 'Open',
+    `due_date` DATE DEFAULT NULL,
+    `closed_at` DATETIME DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// --- Self-healing: create CAR table ---
+$pdo->exec("CREATE TABLE IF NOT EXISTS `car_reports` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `car_number` VARCHAR(30) NOT NULL UNIQUE,
+    `ncr_id` INT NOT NULL,
+    `root_cause` TEXT DEFAULT NULL,
+    `corrective_action` TEXT DEFAULT NULL,
+    `preventive_action` TEXT DEFAULT NULL,
+    `responsible` VARCHAR(100) DEFAULT NULL,
+    `deadline` DATE DEFAULT NULL,
+    `status` VARCHAR(50) DEFAULT 'Open',
+    `effectiveness_ok` TINYINT(1) DEFAULT NULL,
+    `verified_by` VARCHAR(20) DEFAULT NULL,
+    `verified_at` DATETIME DEFAULT NULL,
+    `created_by` VARCHAR(20) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// --- Helper: Generate next NCR/CAR number ---
+function next_number($pdo, $prefix, $table, $column)
+{
+    $year = date('Y');
+    $pattern = "$prefix-$year-%";
+    $stmt = $pdo->prepare("SELECT $column FROM $table WHERE $column LIKE ? ORDER BY id DESC LIMIT 1");
+    $stmt->execute([$pattern]);
+    $row = $stmt->fetch();
+    if ($row) {
+        $parts = explode('-', $row[$column]);
+        $seq = intval(end($parts)) + 1;
+    } else {
+        $seq = 1;
+    }
+    return "$prefix-$year-" . str_pad($seq, 3, '0', STR_PAD_LEFT);
+}
+
+// --- Load lookup data ---
+$locations = $pdo->query("SELECT name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+$departments = $pdo->query("SELECT name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+
+$msg = '';
+$error = '';
+
+// --- Handle POST actions ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
+
+    // CREATE NCR
+    if (isset($_POST['create_ncr'])) {
+        $ncr_num = next_number($pdo, 'NCR', 'ncr_reports', 'ncr_number');
+        $stmt = $pdo->prepare("INSERT INTO ncr_reports 
+            (ncr_number, category, severity, source, location, department, description_en, description_ar, 
+             immediate_action, disposition, reported_by, assigned_to, due_date, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open')");
+        $stmt->execute([
+            $ncr_num,
+            $_POST['category'] ?? 'Product',
+            $_POST['severity'] ?? 'Minor',
+            $_POST['source'] ?? 'Production',
+            $_POST['location'] ?? '',
+            $_POST['department'] ?? '',
+            trim($_POST['description_en'] ?? ''),
+            trim($_POST['description_ar'] ?? ''),
+            trim($_POST['immediate_action'] ?? ''),
+            $_POST['disposition'] ?? 'Pending',
+            $user_cin,
+            trim($_POST['assigned_to'] ?? ''),
+            $_POST['due_date'] ?: null
+        ]);
+        $msg = "✅ تم إنشاء تقرير عدم المطابقة: $ncr_num";
+        audit_log($pdo, 'ncr_create', "Created NCR: $ncr_num");
+    }
+
+    // UPDATE NCR STATUS
+    if (isset($_POST['update_ncr_status'])) {
+        $id = intval($_POST['ncr_id']);
+        $new_status = $_POST['new_status'];
+        $closed = ($new_status === 'Closed') ? date('Y-m-d H:i:s') : null;
+        $stmt = $pdo->prepare("UPDATE ncr_reports SET status = ?, closed_at = COALESCE(?, closed_at) WHERE id = ?");
+        $stmt->execute([$new_status, $closed, $id]);
+        $msg = "✅ تم تحديث حالة NCR";
+        audit_log($pdo, 'ncr_update', "NCR #$id status → $new_status");
+    }
+
+    // DELETE NCR
+    if (isset($_POST['delete_ncr'])) {
+        $id = intval($_POST['ncr_id']);
+        // Get NCR number for logging
+        $stmt = $pdo->prepare("SELECT ncr_number FROM ncr_reports WHERE id = ?");
+        $stmt->execute([$id]);
+        $ncr = $stmt->fetch();
+        // Delete associated CARs first
+        $pdo->prepare("DELETE FROM car_reports WHERE ncr_id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM ncr_reports WHERE id = ?")->execute([$id]);
+        $msg = "✅ تم حذف NCR: " . ($ncr['ncr_number'] ?? $id);
+        audit_log($pdo, 'ncr_delete', "Deleted NCR: " . ($ncr['ncr_number'] ?? $id));
+    }
+
+    // CREATE CAR
+    if (isset($_POST['create_car'])) {
+        $ncr_id = intval($_POST['ncr_id']);
+        $car_num = next_number($pdo, 'CAR', 'car_reports', 'car_number');
+        $stmt = $pdo->prepare("INSERT INTO car_reports 
+            (car_number, ncr_id, root_cause, corrective_action, preventive_action, 
+             responsible, deadline, status, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Open', ?)");
+        $stmt->execute([
+            $car_num,
+            $ncr_id,
+            trim($_POST['root_cause'] ?? ''),
+            trim($_POST['corrective_action'] ?? ''),
+            trim($_POST['preventive_action'] ?? ''),
+            trim($_POST['car_responsible'] ?? ''),
+            $_POST['car_deadline'] ?: null,
+            $user_cin
+        ]);
+        // Update NCR status to 'CAR Issued'
+        $pdo->prepare("UPDATE ncr_reports SET status = 'CAR Issued' WHERE id = ? AND status IN ('Open','Under Review')")
+            ->execute([$ncr_id]);
+        $msg = "✅ تم إنشاء إجراء تصحيحي: $car_num";
+        audit_log($pdo, 'car_create', "Created CAR: $car_num for NCR #$ncr_id");
+    }
+
+    // UPDATE CAR STATUS
+    if (isset($_POST['update_car_status'])) {
+        $car_id = intval($_POST['car_id']);
+        $car_status = $_POST['car_status'];
+        $eff = isset($_POST['effectiveness_ok']) ? intval($_POST['effectiveness_ok']) : null;
+        $verified_by = ($car_status === 'Closed') ? $user_cin : null;
+        $verified_at = ($car_status === 'Closed') ? date('Y-m-d H:i:s') : null;
+        $stmt = $pdo->prepare("UPDATE car_reports SET status = ?, effectiveness_ok = ?, verified_by = COALESCE(?, verified_by), verified_at = COALESCE(?, verified_at) WHERE id = ?");
+        $stmt->execute([$car_status, $eff, $verified_by, $verified_at, $car_id]);
+        $msg = "✅ تم تحديث حالة CAR";
+        audit_log($pdo, 'car_update', "CAR #$car_id status → $car_status");
+    }
+}
+
+// --- Fetch all NCRs with reporter info ---
+$sql = "SELECT n.*, u.name as reporter_name 
+        FROM ncr_reports n 
+        LEFT JOIN users u ON n.reported_by = u.cin 
+        ORDER BY n.created_at DESC";
+$ncrs = $pdo->query($sql)->fetchAll();
+
+// --- Fetch all CARs ---
+$cars_all = $pdo->query("SELECT * FROM car_reports ORDER BY created_at DESC")->fetchAll();
+$cars_by_ncr = [];
+foreach ($cars_all as $car) {
+    $cars_by_ncr[$car['ncr_id']][] = $car;
+}
+
+// --- Statistics ---
+$stats = [
+    'total' => count($ncrs),
+    'Open' => 0,
+    'Under Review' => 0,
+    'CAR Issued' => 0,
+    'Closed' => 0,
+    'Critical' => 0,
+    'Major' => 0,
+    'Minor' => 0
+];
+foreach ($ncrs as $ncr) {
+    $s = $ncr['status'] ?? 'Open';
+    if (isset($stats[$s]))
+        $stats[$s]++;
+    $sev = $ncr['severity'] ?? 'Minor';
+    if (isset($stats[$sev]))
+        $stats[$sev]++;
+}
+?>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISO 9001 — NCR / CAR | إدارة عدم المطابقة</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #f5f6fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .page-header {
+            background: linear-gradient(135deg, #0b3c5d, #1a6b8a);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .page-header p {
+            margin: 5px 0 0;
+            opacity: 0.9;
+        }
+
+        .page-header .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            margin-left: 10px;
+            transition: background 0.3s;
+        }
+
+        .page-header .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+
+        .stat-card.open {
+            border-top: 4px solid #dc3545;
+        }
+
+        .stat-card.open .number {
+            color: #dc3545;
+        }
+
+        .stat-card.review {
+            border-top: 4px solid #ffc107;
+        }
+
+        .stat-card.review .number {
+            color: #e6a800;
+        }
+
+        .stat-card.car-issued {
+            border-top: 4px solid #17a2b8;
+        }
+
+        .stat-card.car-issued .number {
+            color: #17a2b8;
+        }
+
+        .stat-card.closed {
+            border-top: 4px solid #28a745;
+        }
+
+        .stat-card.closed .number {
+            color: #28a745;
+        }
+
+        .stat-card.total {
+            border-top: 4px solid #0b3c5d;
+        }
+
+        .stat-card.total .number {
+            color: #0b3c5d;
+        }
+
+        /* Severity bars */
+        .severity-grid {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+
+        .sev-card {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .sev-card.critical {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .sev-card.major {
+            background: linear-gradient(135deg, #fd7e14, #e06b0a);
+        }
+
+        .sev-card.minor {
+            background: linear-gradient(135deg, #ffc107, #d4a106);
+            color: #333;
+        }
+
+        .sev-card .count {
+            font-size: 1.8em;
+            display: block;
+        }
+
+        .sev-card .sev-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        /* Filters */
+        .filters-bar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .filters-bar select,
+        .filters-bar input[type="date"] {
+            padding: 9px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95em;
+            color: #333;
+            background: white;
+        }
+
+        .filters-bar input[type="date"] {
+            min-width: 135px;
+        }
+
+        .date-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .date-filter-group label {
+            font-size: 0.9em;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .btn-reset {
+            padding: 8px 16px !important;
+            background: #6c757d !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+            font-size: 0.9em !important;
+            width: auto !important;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268 !important;
+        }
+
+        /* Add NCR button */
+        .btn-add {
+            padding: 12px 24px !important;
+            background: linear-gradient(135deg, #0b3c5d, #1a6b8a) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 10px !important;
+            font-size: 1em !important;
+            font-weight: 600 !important;
+            cursor: pointer;
+            width: auto !important;
+            transition: transform 0.1s;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(11, 60, 93, 0.3);
+        }
+
+        /* Table */
+        .ncr-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .ncr-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ncr-table th {
+            background: #f8f9fa;
+            padding: 14px 10px;
+            text-align: right;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e9ecef;
+            font-size: 0.9em;
+        }
+
+        .ncr-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+            font-size: 0.9em;
+        }
+
+        .ncr-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Status badges */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge.open {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        .badge.review {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .badge.car-issued {
+            background: #e0f7fa;
+            color: #006064;
+        }
+
+        .badge.closed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        /* Severity badges */
+        .sev-badge {
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .sev-badge.critical {
+            background: #fce4ec;
+            color: #c62828;
+        }
+
+        .sev-badge.major {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .sev-badge.minor {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+
+        /* Action buttons */
+        .action-form {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .action-form select {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+
+        .action-form button {
+            padding: 5px 12px !important;
+            border: none !important;
+            border-radius: 6px !important;
+            cursor: pointer;
+            font-size: 0.85em !important;
+            width: auto !important;
+        }
+
+        .btn-save {
+            background: #0b3c5d !important;
+            color: white !important;
+        }
+
+        .btn-save:hover {
+            background: #094a6e !important;
+        }
+
+        .btn-car {
+            background: #17a2b8 !important;
+            color: white !important;
+        }
+
+        .btn-car:hover {
+            background: #138496 !important;
+        }
+
+        .btn-del {
+            background: #dc3545 !important;
+            color: white !important;
+        }
+
+        .btn-del:hover {
+            background: #c82333 !important;
+        }
+
+        /* CAR section */
+        .car-row {
+            background: #f0f9ff !important;
+        }
+
+        .car-row td {
+            padding: 10px 15px !important;
+        }
+
+        .car-box {
+            background: white;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+        }
+
+        .car-box h4 {
+            margin: 0 0 8px;
+            color: #0b3c5d;
+            font-size: 0.95em;
+        }
+
+        .car-box p {
+            margin: 4px 0;
+            font-size: 0.85em;
+            color: #555;
+        }
+
+        .car-box .car-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 28px;
+            width: 95%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal h2 {
+            margin: 0 0 20px;
+            color: #0b3c5d;
+            font-size: 1.3em;
+        }
+
+        .modal .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .modal .form-row.single {
+            grid-template-columns: 1fr;
+        }
+
+        .modal .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal .form-group label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        .modal .form-group label small {
+            font-weight: normal;
+            color: #888;
+        }
+
+        .modal .form-group input,
+        .modal .form-group select,
+        .modal .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #333;
+            background: white;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .modal .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .modal .form-group input:focus,
+        .modal .form-group select:focus,
+        .modal .form-group textarea:focus {
+            outline: none;
+            border-color: #0b3c5d;
+            box-shadow: 0 0 0 3px rgba(11, 60, 93, 0.15);
+        }
+
+        .modal-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .modal-btns button {
+            padding: 10px 24px !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            cursor: pointer;
+            width: auto !important;
+        }
+
+        .btn-submit {
+            background: #0b3c5d !important;
+            color: white !important;
+        }
+
+        .btn-submit:hover {
+            background: #094a6e !important;
+        }
+
+        .btn-cancel {
+            background: #e9ecef !important;
+            color: #333 !important;
+        }
+
+        .btn-cancel:hover {
+            background: #ddd !important;
+        }
+
+        /* Toggle CAR */
+        .toggle-car {
+            cursor: pointer;
+            color: #17a2b8;
+            font-size: 0.85em;
+            text-decoration: underline;
+        }
+
+        /* Count badge */
+        .count-badge {
+            background: #0b3c5d;
+            color: white;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            margin-right: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .ncr-table {
+                overflow-x: auto;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .modal .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .page-header {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <div>
+                <h1>🏭 إدارة عدم المطابقة والإجراءات التصحيحية</h1>
+                <p>ISO 9001 — NCR / CAR Management</p>
+            </div>
+            <div class="nav-links">
+                <a href="index.php">📊 لوحة القيادة</a>
+                <a href="admin.php">⚙️ الإدارة</a>
+                <a href="admin_issues.php">🛠️ المشاكل</a>
+                <a href="index.php?logout=1">🚪 خروج</a>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <?php if ($msg): ?>
+            <div class="alert alert-success">
+                <?= $msg ?>
+            </div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-error">
+                <?= $error ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="number">
+                    <?= $stats['total'] ?>
+                </div>
+                <div class="label">📋 إجمالي NCR<br>Total</div>
+            </div>
+            <div class="stat-card open">
+                <div class="number">
+                    <?= $stats['Open'] ?>
+                </div>
+                <div class="label">🔴 مفتوحة<br>Open</div>
+            </div>
+            <div class="stat-card review">
+                <div class="number">
+                    <?= $stats['Under Review'] ?>
+                </div>
+                <div class="label">🟡 قيد المراجعة<br>Under Review</div>
+            </div>
+            <div class="stat-card car-issued">
+                <div class="number">
+                    <?= $stats['CAR Issued'] ?>
+                </div>
+                <div class="label">🔵 CAR صادر<br>CAR Issued</div>
+            </div>
+            <div class="stat-card closed">
+                <div class="number">
+                    <?= $stats['Closed'] ?>
+                </div>
+                <div class="label">✅ مغلقة<br>Closed</div>
+            </div>
+        </div>
+
+        <!-- Severity breakdown -->
+        <div class="severity-grid">
+            <div class="sev-card critical">
+                <span class="count">
+                    <?= $stats['Critical'] ?>
+                </span>
+                <span class="sev-label">🚨 حرجة / Critical</span>
+            </div>
+            <div class="sev-card major">
+                <span class="count">
+                    <?= $stats['Major'] ?>
+                </span>
+                <span class="sev-label">⚠️ رئيسية / Major</span>
+            </div>
+            <div class="sev-card minor">
+                <span class="count">
+                    <?= $stats['Minor'] ?>
+                </span>
+                <span class="sev-label">📌 ثانوية / Minor</span>
+            </div>
+        </div>
+
+        <!-- Filters & Add -->
+        <div class="filters-bar">
+            <label>🔍 تصفية:</label>
+            <select id="f-status" onchange="filterTable()">
+                <option value="">كل الحالات</option>
+                <option value="Open">مفتوحة (Open)</option>
+                <option value="Under Review">قيد المراجعة</option>
+                <option value="CAR Issued">CAR صادر</option>
+                <option value="Closed">مغلقة (Closed)</option>
+            </select>
+            <select id="f-severity" onchange="filterTable()">
+                <option value="">كل المستويات</option>
+                <option value="Critical">حرجة (Critical)</option>
+                <option value="Major">رئيسية (Major)</option>
+                <option value="Minor">ثانوية (Minor)</option>
+            </select>
+            <select id="f-category" onchange="filterTable()">
+                <option value="">كل الفئات</option>
+                <option value="Product">منتج (Product)</option>
+                <option value="Process">عملية (Process)</option>
+                <option value="Material">مادة (Material)</option>
+                <option value="Supplier">مورد (Supplier)</option>
+                <option value="Other">أخرى (Other)</option>
+            </select>
+            <div class="date-filter-group">
+                <label>📅 من:</label>
+                <input type="date" id="f-from" onchange="filterTable()">
+                <label>إلى:</label>
+                <input type="date" id="f-to" onchange="filterTable()">
+            </div>
+            <button type="button" class="btn-reset" onclick="resetFilters()">🔄 إعادة تعيين</button>
+            <span id="filter-count" style="font-size:0.85em; color:#0b3c5d; font-weight:600;"></span>
+            <div style="flex-grow:1;"></div>
+            <button type="button" class="btn-add" onclick="openModal('ncr-modal')">➕ تسجيل عدم مطابقة جديدة</button>
+        </div>
+
+        <!-- NCR Table -->
+        <div class="ncr-table">
+            <table id="ncr-table">
+                <thead>
+                    <tr>
+                        <th>الرقم</th>
+                        <th>الفئة</th>
+                        <th>الشدة</th>
+                        <th>المصدر</th>
+                        <th>الموقع</th>
+                        <th>الوصف</th>
+                        <th>القرار</th>
+                        <th>المسؤول</th>
+                        <th>الموعد</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($ncrs as $ncr): ?>
+                        <?php
+                        $statusClass = match ($ncr['status']) {
+                            'Open' => 'open',
+                            'Under Review' => 'review',
+                            'CAR Issued' => 'car-issued',
+                            'Closed' => 'closed',
+                            default => 'open'
+                        };
+                        $sevClass = strtolower($ncr['severity'] ?? 'minor');
+                        $car_count = count($cars_by_ncr[$ncr['id']] ?? []);
+                        ?>
+                        <tr data-status="<?= $ncr['status'] ?>" data-severity="<?= $ncr['severity'] ?>"
+                            data-category="<?= $ncr['category'] ?>"
+                            data-date="<?= $ncr['created_at'] ? date('Y-m-d', strtotime($ncr['created_at'])) : '' ?>">
+                            <td>
+                                <strong style="color:#0b3c5d;">
+                                    <?= htmlspecialchars($ncr['ncr_number']) ?>
+                                </strong>
+                                <?php if ($car_count > 0): ?>
+                                    <br><span class="toggle-car" onclick="toggleCar(<?= $ncr['id'] ?>)">
+                                        <span class="count-badge">
+                                            <?= $car_count ?>
+                                        </span>CAR
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?= htmlspecialchars($ncr['category']) ?>
+                            </td>
+                            <td><span class="sev-badge <?= $sevClass ?>">
+                                    <?= htmlspecialchars($ncr['severity']) ?>
+                                </span></td>
+                            <td style="font-size:0.85em;">
+                                <?= htmlspecialchars($ncr['source']) ?>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <?= htmlspecialchars($ncr['location'] ?? '-') ?>
+                            </td>
+                            <td style="max-width:180px; font-size:0.85em;">
+                                <?= htmlspecialchars(mb_strimwidth($ncr['description_en'] ?: $ncr['description_ar'], 0, 80, '...')) ?>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <?= htmlspecialchars($ncr['disposition'] ?? '-') ?>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <div style="font-weight:600;">
+                                    <?= htmlspecialchars($ncr['assigned_to'] ?: '-') ?>
+                                </div>
+                                <div style="color:#888; font-size:0.9em;">👤
+                                    <?= htmlspecialchars($ncr['reporter_name'] ?? $ncr['reported_by']) ?>
+                                </div>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <?= $ncr['due_date'] ? date('d/m', strtotime($ncr['due_date'])) : '-' ?>
+                            </td>
+                            <td style="font-size:0.8em; color:#666;">
+                                <?= $ncr['created_at'] ? date('d/m/y H:i', strtotime($ncr['created_at'])) : '-' ?>
+                            </td>
+                            <td><span class="badge <?= $statusClass ?>">
+                                    <?= $ncr['status'] ?>
+                                </span></td>
+                            <td>
+                                <form method="POST" class="action-form">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="ncr_id" value="<?= $ncr['id'] ?>">
+                                    <?php if ($ncr['status'] !== 'Closed'): ?>
+                                        <select name="new_status">
+                                            <?php foreach (['Open', 'Under Review', 'CAR Issued', 'Closed'] as $s): ?>
+                                                <option value="<?= $s ?>" <?= $ncr['status'] === $s ? 'selected' : '' ?>>
+                                                    <?= $s ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="submit" name="update_ncr_status" class="btn-save" title="حفظ">💾</button>
+                                        <button type="button" class="btn-car" title="إنشاء CAR"
+                                            onclick="openCarModal(<?= $ncr['id'] ?>, '<?= htmlspecialchars($ncr['ncr_number']) ?>')">🔁</button>
+                                    <?php else: ?>
+                                        <span style="color:#28a745; font-weight:600;">✅</span>
+                                    <?php endif; ?>
+                                    <button type="submit" name="delete_ncr" class="btn-del" title="حذف"
+                                        onclick="return confirm('هل تريد حذف هذا التقرير نهائياً؟')">🗑️</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <!-- CAR rows (hidden by default) -->
+                        <?php if (!empty($cars_by_ncr[$ncr['id']])): ?>
+                            <?php foreach ($cars_by_ncr[$ncr['id']] as $car): ?>
+                                <tr class="car-row" id="car-row-<?= $ncr['id'] ?>" style="display:none;">
+                                    <td colspan="12">
+                                        <div class="car-box">
+                                            <h4>🔁
+                                                <?= htmlspecialchars($car['car_number']) ?> — إجراء تصحيحي / Corrective Action
+                                            </h4>
+                                            <p><span class="car-label">السبب الجذري:</span>
+                                                <?= htmlspecialchars($car['root_cause'] ?: '-') ?>
+                                            </p>
+                                            <p><span class="car-label">الإجراء التصحيحي:</span>
+                                                <?= htmlspecialchars($car['corrective_action'] ?: '-') ?>
+                                            </p>
+                                            <p><span class="car-label">الإجراء الوقائي:</span>
+                                                <?= htmlspecialchars($car['preventive_action'] ?: '-') ?>
+                                            </p>
+                                            <p><span class="car-label">المسؤول:</span>
+                                                <?= htmlspecialchars($car['responsible'] ?: '-') ?>
+                                                | <span class="car-label">الموعد:</span>
+                                                <?= $car['deadline'] ? date('d/m/Y', strtotime($car['deadline'])) : '-' ?>
+                                                | <span class="car-label">الحالة:</span>
+                                                <span
+                                                    class="badge <?= match ($car['status']) { 'Open' => 'open', 'In Progress' => 'review', 'Verification' => 'car-issued', 'Closed' => 'closed', default => 'open'} ?>">
+                                                    <?= $car['status'] ?>
+                                                </span>
+                                            </p>
+                                            <?php if ($car['status'] !== 'Closed'): ?>
+                                                <form method="POST" class="action-form" style="margin-top:8px;">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="car_id" value="<?= $car['id'] ?>">
+                                                    <select name="car_status">
+                                                        <?php foreach (['Open', 'In Progress', 'Verification', 'Closed'] as $cs): ?>
+                                                            <option value="<?= $cs ?>" <?= $car['status'] === $cs ? 'selected' : '' ?>>
+                                                                <?= $cs ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                    <label style="font-size:0.85em; display:flex; align-items:center; gap:4px;">
+                                                        <input type="checkbox" name="effectiveness_ok" value="1"
+                                                            <?= $car['effectiveness_ok'] ? 'checked' : '' ?>>
+                                                        فعّال ✅
+                                                    </label>
+                                                    <button type="submit" name="update_car_status" class="btn-save">💾 حفظ</button>
+                                                </form>
+                                            <?php else: ?>
+                                                <p style="color:#28a745; font-weight:600;">
+                                                    ✅ مغلق
+                                                    <?= $car['effectiveness_ok'] ? '— فعّال' : '' ?>
+                                                    <?= $car['verified_by'] ? "— تحقق: {$car['verified_by']}" : '' ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
+                    <?php if (empty($ncrs)): ?>
+                        <tr>
+                            <td colspan="12" style="text-align:center; padding:40px; color:#888;">
+                                📭 لا توجد تقارير عدم مطابقة حالياً<br>
+                                <small>No NCR reports yet — Click the button above to create one</small>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============ NCR MODAL ============ -->
+    <div class="modal-overlay" id="ncr-modal">
+        <div class="modal">
+            <h2>➕ تسجيل عدم مطابقة جديدة / New NCR</h2>
+            <form method="POST">
+                <?= csrf_field() ?>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>الفئة <small>/ Category</small></label>
+                        <select name="category">
+                            <option value="Product">منتج / Product</option>
+                            <option value="Process">عملية / Process</option>
+                            <option value="Material">مادة / Material</option>
+                            <option value="Supplier">مورد / Supplier</option>
+                            <option value="Other">أخرى / Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>الشدة <small>/ Severity</small></label>
+                        <select name="severity">
+                            <option value="Minor">ثانوية / Minor</option>
+                            <option value="Major">رئيسية / Major</option>
+                            <option value="Critical">حرجة / Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>المصدر <small>/ Source</small></label>
+                        <select name="source">
+                            <option value="Production">الإنتاج / Production</option>
+                            <option value="Internal Audit">تدقيق داخلي / Internal Audit</option>
+                            <option value="Incoming">استلام / Incoming</option>
+                            <option value="Customer">زبون / Customer</option>
+                            <option value="Supplier">مورد / Supplier</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>القرار <small>/ Disposition</small></label>
+                        <select name="disposition">
+                            <option value="Pending">معلق / Pending</option>
+                            <option value="Rework">إعادة تشغيل / Rework</option>
+                            <option value="Use As-Is">استعمال كما هو</option>
+                            <option value="Scrap">إتلاف / Scrap</option>
+                            <option value="Return to Supplier">إرجاع للمورد</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>الموقع <small>/ Location</small></label>
+                        <select name="location">
+                            <option value="">-- اختر --</option>
+                            <?php foreach ($locations as $loc): ?>
+                                <option value="<?= htmlspecialchars($loc) ?>">
+                                    <?= htmlspecialchars($loc) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>القسم <small>/ Department</small></label>
+                        <select name="department">
+                            <option value="">-- اختر --</option>
+                            <?php foreach ($departments as $dept): ?>
+                                <option value="<?= htmlspecialchars($dept) ?>">
+                                    <?= htmlspecialchars($dept) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>وصف عدم المطابقة - إنجليزي <small>/ Description EN</small></label>
+                        <textarea name="description_en" rows="2"
+                            placeholder="Describe the non-conformity..."></textarea>
+                    </div>
+                </div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>وصف عدم المطابقة - عربي <small>/ Description AR</small></label>
+                        <textarea name="description_ar" rows="2" placeholder="صف عدم المطابقة..." dir="rtl"></textarea>
+                    </div>
+                </div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>الإجراء الفوري <small>/ Immediate Action</small></label>
+                        <textarea name="immediate_action" rows="2"
+                            placeholder="What immediate action was taken?"></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>المسؤول <small>/ Assigned To</small></label>
+                        <input type="text" name="assigned_to" placeholder="اسم المسؤول">
+                    </div>
+                    <div class="form-group">
+                        <label>الموعد النهائي <small>/ Due Date</small></label>
+                        <input type="date" name="due_date">
+                    </div>
+                </div>
+                <div class="modal-btns">
+                    <button type="button" class="btn-cancel" onclick="closeModal('ncr-modal')">إلغاء</button>
+                    <button type="submit" name="create_ncr" class="btn-submit">✅ تسجيل NCR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ CAR MODAL ============ -->
+    <div class="modal-overlay" id="car-modal">
+        <div class="modal">
+            <h2>🔁 إجراء تصحيحي جديد / New CAR</h2>
+            <p style="color:#666; margin-bottom:15px;">مرتبط بـ: <strong id="car-ncr-ref"></strong></p>
+            <form method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="ncr_id" id="car-ncr-id">
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>تحليل السبب الجذري <small>/ Root Cause Analysis</small></label>
+                        <textarea name="root_cause" rows="3" placeholder="ما هو السبب الجذري؟"></textarea>
+                    </div>
+                </div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>الإجراء التصحيحي <small>/ Corrective Action</small></label>
+                        <textarea name="corrective_action" rows="3"
+                            placeholder="ما الإجراء التصحيحي المطلوب؟"></textarea>
+                    </div>
+                </div>
+                <div class="form-row single">
+                    <div class="form-group">
+                        <label>الإجراء الوقائي <small>/ Preventive Action</small></label>
+                        <textarea name="preventive_action" rows="2" placeholder="كيف نمنع تكرار المشكلة؟"></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>المسؤول <small>/ Responsible</small></label>
+                        <input type="text" name="car_responsible" placeholder="اسم المسؤول">
+                    </div>
+                    <div class="form-group">
+                        <label>الموعد النهائي <small>/ Deadline</small></label>
+                        <input type="date" name="car_deadline">
+                    </div>
+                </div>
+                <div class="modal-btns">
+                    <button type="button" class="btn-cancel" onclick="closeModal('car-modal')">إلغاء</button>
+                    <button type="submit" name="create_car" class="btn-submit">✅ إنشاء CAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- Modal ---
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+        function openCarModal(ncrId, ncrNum) {
+            document.getElementById('car-ncr-id').value = ncrId;
+            document.getElementById('car-ncr-ref').textContent = ncrNum;
+            openModal('car-modal');
+        }
+
+        // Close modal on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        });
+
+        // --- Toggle CAR rows ---
+        function toggleCar(ncrId) {
+            const rows = document.querySelectorAll(`#car-row-${ncrId}`);
+            rows.forEach(r => {
+                r.style.display = r.style.display === 'none' ? '' : 'none';
+            });
+        }
+
+        // --- Filters ---
+        function filterTable() {
+            const status = document.getElementById('f-status').value;
+            const severity = document.getElementById('f-severity').value;
+            const category = document.getElementById('f-category').value;
+            const dateFrom = document.getElementById('f-from').value;
+            const dateTo = document.getElementById('f-to').value;
+            const rows = document.querySelectorAll('#ncr-table tbody tr:not(.car-row)');
+            let visible = 0;
+
+            rows.forEach(row => {
+                if (!row.dataset.status) return; // skip empty rows
+                let show = true;
+                if (status && row.dataset.status !== status) show = false;
+                if (severity && row.dataset.severity !== severity) show = false;
+                if (category && row.dataset.category !== category) show = false;
+                const d = row.dataset.date || '';
+                if (dateFrom && d && d < dateFrom) show = false;
+                if (dateTo && d && d > dateTo) show = false;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+
+            const counter = document.getElementById('filter-count');
+            const total = rows.length;
+            if (status || severity || category || dateFrom || dateTo) {
+                counter.textContent = `📊 ${visible} / ${total}`;
+            } else {
+                counter.textContent = '';
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('f-status').value = '';
+            document.getElementById('f-severity').value = '';
+            document.getElementById('f-category').value = '';
+            document.getElementById('f-from').value = '';
+            document.getElementById('f-to').value = '';
+            filterTable();
+        }
+    </script>
+</body>
+
+</html>
