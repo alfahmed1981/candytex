@@ -81,8 +81,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
 
     // CREATE NCR
+    // --- EN ↔ AR Description Lookup Map ---
+    $desc_map = [
+        'Fabric Defect (Holes/Knots)' => 'عيوب في القماش (ثقوب / عقد)',
+        'Color Shading / Mismatch' => 'اختلاف درجات اللون (Nuance)',
+        'Wrong Fabric / GSM Issue' => 'قماش خاطئ / مشكلة في الوزن',
+        'Damaged / Wrong Accessories' => 'إكسسوارات تالفة أو خاطئة',
+        'Dirty / Stained Material' => 'مواد أولية متسخة / مبقعة',
+        'Wrong Cutting Dimension' => 'أبعاد القص غير صحيحة',
+        'Pattern Misalignment' => 'عدم تطابق الباترون',
+        'Numbering / Bundling Error' => 'خطأ في الترقيم أو التحزيم',
+        'Fraying Edges' => 'تنسيل حواف القماش',
+        'Missed Notches' => 'غياب علامات التقابل (Crans)',
+        'Broken / Skipped Stitches' => 'غرز مقطوعة / قفز الغرز',
+        'Open Seam / Seam Failure' => 'خياطة مفتوحة / فشل الدرزة',
+        'Asymmetry / Uneven Parts' => 'عدم تماثل الأجزاء',
+        'Puckering / Tension Issue' => 'تكرمش القماش / مشكلة شد الخيط',
+        'Needle Holes / Marks' => 'ثقوب الإبرة / آثار الأسنان',
+        'Oil Spots (Machine Oil)' => 'بقع زيت الماكينة',
+        'Wrong Label / Tag Placement' => 'تركيب الملصق في مكان خاطئ',
+        'Out of Tolerance (+/-)' => 'خارج نطاق القياس المسموح',
+        'Size Mismatch' => 'خطأ في المقاس',
+        'Ironing Burn / Shine' => 'حرق المكواة / لمعة غير مرغوبة',
+        'Loose Threads (Uncut)' => 'خيوط سائبة (عدم التشطيب)',
+        'Dirty / Stained Product' => 'منتج متسخ',
+        'Folding / Packing Error' => 'خطأ في الطي أو التغليف',
+        'Missing Documentation' => 'غياب الوثائق / أمر التصنيع',
+        'Safety Violation / Hazard' => 'مخالفة إجراءات السلامة',
+        'Machine Breakdown' => 'عطل في الماكينة',
+        'Process Non-Conformity' => 'عدم الالتزام بطريقة العمل',
+    ];
+
     if (isset($_POST['create_ncr'])) {
         $ncr_num = next_number($pdo, 'NCR', 'ncr_reports', 'ncr_number');
+
+        // Smart description: dropdown or custom
+        $desc_en_raw = trim($_POST['description_en'] ?? '');
+        if ($desc_en_raw === '__OTHER__') {
+            $desc_en = trim($_POST['description_custom_en'] ?? '');
+            $desc_ar = trim($_POST['description_custom_ar'] ?? '');
+        } else {
+            $desc_en = $desc_en_raw;
+            $desc_ar = $desc_map[$desc_en_raw] ?? trim($_POST['description_ar'] ?? '');
+        }
+
         $stmt = $pdo->prepare("INSERT INTO ncr_reports 
             (ncr_number, category, severity, source, location, department, description_en, description_ar, 
              immediate_action, disposition, reported_by, assigned_to, due_date, status)
@@ -94,8 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['source'] ?? 'Production',
             $_POST['location'] ?? '',
             $_POST['department'] ?? '',
-            trim($_POST['description_en'] ?? ''),
-            trim($_POST['description_ar'] ?? ''),
+            $desc_en,
+            $desc_ar,
             trim($_POST['immediate_action'] ?? ''),
             $_POST['disposition'] ?? 'Pending',
             $user_cin,
@@ -1481,22 +1523,105 @@ foreach ($ncrs as $ncr) {
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>وصف عدم المطابقة - إنجليزي <small>/ Description EN</small></label>
-                        <textarea name="description_en" rows="2"
-                            placeholder="Describe the non-conformity..."></textarea>
+                        <label>وصف عدم المطابقة <small>/ Description (EN ↔ AR auto-sync)</small></label>
+                        <select name="description_en" id="ncr-desc-select" onchange="syncNcrDesc(this)">
+                            <option value="">-- اختر نوع المشكلة / Select Issue --</option>
+                            <optgroup label="🧵 المواد الأولية / Raw Materials & Fabric">
+                                <option value="Fabric Defect (Holes/Knots)">Fabric Defect (Holes/Knots) | عيوب في القماش
+                                    (ثقوب / عقد)</option>
+                                <option value="Color Shading / Mismatch">Color Shading / Mismatch | اختلاف درجات اللون
+                                    (Nuance)</option>
+                                <option value="Wrong Fabric / GSM Issue">Wrong Fabric / GSM Issue | قماش خاطئ / مشكلة في
+                                    الوزن</option>
+                                <option value="Damaged / Wrong Accessories">Damaged / Wrong Accessories | إكسسوارات
+                                    تالفة أو خاطئة</option>
+                                <option value="Dirty / Stained Material">Dirty / Stained Material | مواد أولية متسخة /
+                                    مبقعة</option>
+                            </optgroup>
+                            <optgroup label="✂️ القص / Cutting Section">
+                                <option value="Wrong Cutting Dimension">Wrong Cutting Dimension | أبعاد القص غير صحيحة
+                                </option>
+                                <option value="Pattern Misalignment">Pattern Misalignment | عدم تطابق الباترون</option>
+                                <option value="Numbering / Bundling Error">Numbering / Bundling Error | خطأ في الترقيم
+                                    أو التحزيم</option>
+                                <option value="Fraying Edges">Fraying Edges | تنسيل حواف القماش</option>
+                                <option value="Missed Notches">Missed Notches | غياب علامات التقابل (Crans)</option>
+                            </optgroup>
+                            <optgroup label="🧷 الخياطة والتجميع / Sewing & Assembly">
+                                <option value="Broken / Skipped Stitches">Broken / Skipped Stitches | غرز مقطوعة / قفز
+                                    الغرز</option>
+                                <option value="Open Seam / Seam Failure">Open Seam / Seam Failure | خياطة مفتوحة / فشل
+                                    الدرزة</option>
+                                <option value="Asymmetry / Uneven Parts">Asymmetry / Uneven Parts | عدم تماثل الأجزاء
+                                </option>
+                                <option value="Puckering / Tension Issue">Puckering / Tension Issue | تكرمش القماش /
+                                    مشكلة شد الخيط</option>
+                                <option value="Needle Holes / Marks">Needle Holes / Marks | ثقوب الإبرة / آثار الأسنان
+                                </option>
+                                <option value="Oil Spots (Machine Oil)">Oil Spots (Machine Oil) | بقع زيت الماكينة
+                                </option>
+                                <option value="Wrong Label / Tag Placement">Wrong Label / Tag Placement | تركيب الملصق
+                                    في مكان خاطئ</option>
+                            </optgroup>
+                            <optgroup label="📏 القياسات والإنهاء / Measurement & Finishing">
+                                <option value="Out of Tolerance (+/-)">Out of Tolerance (+/-) | خارج نطاق القياس المسموح
+                                </option>
+                                <option value="Size Mismatch">Size Mismatch | خطأ في المقاس</option>
+                                <option value="Ironing Burn / Shine">Ironing Burn / Shine | حرق المكواة / لمعة غير
+                                    مرغوبة</option>
+                                <option value="Loose Threads (Uncut)">Loose Threads (Uncut) | خيوط سائبة (عدم التشطيب)
+                                </option>
+                                <option value="Dirty / Stained Product">Dirty / Stained Product | منتج متسخ</option>
+                                <option value="Folding / Packing Error">Folding / Packing Error | خطأ في الطي أو التغليف
+                                </option>
+                            </optgroup>
+                            <optgroup label="⚙️ النظام والإدارة / System & ISO">
+                                <option value="Missing Documentation">Missing Documentation | غياب الوثائق / أمر التصنيع
+                                </option>
+                                <option value="Safety Violation / Hazard">Safety Violation / Hazard | مخالفة إجراءات
+                                    السلامة</option>
+                                <option value="Machine Breakdown">Machine Breakdown | عطل في الماكينة</option>
+                                <option value="Process Non-Conformity">Process Non-Conformity | عدم الالتزام بطريقة
+                                    العمل</option>
+                            </optgroup>
+                            <optgroup label="📝 أخرى / Other">
+                                <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
+                            </optgroup>
+                        </select>
+                        <input type="hidden" name="description_ar" id="ncr-desc-ar-hidden">
+                        <textarea id="ncr-desc-custom-en" name="description_custom_en" rows="2"
+                            placeholder="Describe the non-conformity..."
+                            style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
-                <div class="form-row single">
+                <div class="form-row single" id="ncr-desc-ar-custom-row" style="display:none;">
                     <div class="form-group">
-                        <label>وصف عدم المطابقة - عربي <small>/ Description AR</small></label>
-                        <textarea name="description_ar" rows="2" placeholder="صف عدم المطابقة..." dir="rtl"></textarea>
+                        <label>وصف يدوي - عربي <small>/ Custom Description AR</small></label>
+                        <textarea id="ncr-desc-custom-ar" name="description_custom_ar" rows="2"
+                            placeholder="صف عدم المطابقة..." dir="rtl"></textarea>
                     </div>
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
                         <label>الإجراء الفوري <small>/ Immediate Action</small></label>
-                        <textarea name="immediate_action" rows="2"
-                            placeholder="What immediate action was taken?"></textarea>
+                        <select name="immediate_action" id="ncr-action-select">
+                            <option value="">-- اختر الإجراء / Select Action --</option>
+                            <option value="Rework / Repair | إعادة العمل / إصلاح">إعادة العمل / إصلاح — Rework / Repair
+                            </option>
+                            <option value="Scrap / Reject | إتلاف / رفض نهائي">إتلاف / رفض نهائي — Scrap / Reject
+                            </option>
+                            <option value="100% Sorting / Inspection | فرز شامل 100%">فرز شامل 100% — 100% Sorting
+                            </option>
+                            <option value="Quarantine / Isolate | حجز / عزل الكمية">حجز / عزل الكمية — Quarantine
+                            </option>
+                            <option value="Concession / Special Release | قبول استثنائي">قبول استثنائي — Concession
+                            </option>
+                            <option value="Return to Supplier | إرجاع للمورد">إرجاع للمورد — Return to Supplier</option>
+                            <option value="Machine Adjustment | تعديل/ضبط الماكينة">تعديل / ضبط الماكينة — Machine
+                                Adjustment</option>
+                            <option value="Clean / Spot Removal | تنظيف / إزالة البقع">تنظيف / إزالة البقع — Spot
+                                Removal</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-row">
@@ -1569,6 +1694,57 @@ foreach ($ncrs as $ncr) {
             const arrow = document.getElementById('guide-arrow');
             content.classList.toggle('active');
             arrow.classList.toggle('open');
+        }
+
+        // --- NCR Description Auto-Sync ---
+        const ncrDescMap = {
+            'Fabric Defect (Holes/Knots)': 'عيوب في القماش (ثقوب / عقد)',
+            'Color Shading / Mismatch': 'اختلاف درجات اللون (Nuance)',
+            'Wrong Fabric / GSM Issue': 'قماش خاطئ / مشكلة في الوزن',
+            'Damaged / Wrong Accessories': 'إكسسوارات تالفة أو خاطئة',
+            'Dirty / Stained Material': 'مواد أولية متسخة / مبقعة',
+            'Wrong Cutting Dimension': 'أبعاد القص غير صحيحة',
+            'Pattern Misalignment': 'عدم تطابق الباترون',
+            'Numbering / Bundling Error': 'خطأ في الترقيم أو التحزيم',
+            'Fraying Edges': 'تنسيل حواف القماش',
+            'Missed Notches': 'غياب علامات التقابل (Crans)',
+            'Broken / Skipped Stitches': 'غرز مقطوعة / قفز الغرز',
+            'Open Seam / Seam Failure': 'خياطة مفتوحة / فشل الدرزة',
+            'Asymmetry / Uneven Parts': 'عدم تماثل الأجزاء',
+            'Puckering / Tension Issue': 'تكرمش القماش / مشكلة شد الخيط',
+            'Needle Holes / Marks': 'ثقوب الإبرة / آثار الأسنان',
+            'Oil Spots (Machine Oil)': 'بقع زيت الماكينة',
+            'Wrong Label / Tag Placement': 'تركيب الملصق في مكان خاطئ',
+            'Out of Tolerance (+/-)': 'خارج نطاق القياس المسموح',
+            'Size Mismatch': 'خطأ في المقاس',
+            'Ironing Burn / Shine': 'حرق المكواة / لمعة غير مرغوبة',
+            'Loose Threads (Uncut)': 'خيوط سائبة (عدم التشطيب)',
+            'Dirty / Stained Product': 'منتج متسخ',
+            'Folding / Packing Error': 'خطأ في الطي أو التغليف',
+            'Missing Documentation': 'غياب الوثائق / أمر التصنيع',
+            'Safety Violation / Hazard': 'مخالفة إجراءات السلامة',
+            'Machine Breakdown': 'عطل في الماكينة',
+            'Process Non-Conformity': 'عدم الالتزام بطريقة العمل'
+        };
+
+        function syncNcrDesc(sel) {
+            const val = sel.value;
+            const arHidden = document.getElementById('ncr-desc-ar-hidden');
+            const customEn = document.getElementById('ncr-desc-custom-en');
+            const customAr = document.getElementById('ncr-desc-custom-ar');
+            const customArRow = document.getElementById('ncr-desc-ar-custom-row');
+
+            if (val === '__OTHER__') {
+                customEn.style.display = 'block';
+                customArRow.style.display = 'block';
+                arHidden.value = '';
+            } else {
+                customEn.style.display = 'none';
+                customArRow.style.display = 'none';
+                customEn.value = '';
+                if (customAr) customAr.value = '';
+                arHidden.value = ncrDescMap[val] || '';
+            }
         }
 
         // --- Modal ---
