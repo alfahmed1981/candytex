@@ -407,6 +407,7 @@ foreach ($users as $u) {
             <a href="global.php">🏭 عام</a>
             <a href="iso_ncr.php">📝 NCR</a>
             <a href="iso_risk.php">📋 مخاطر</a>
+            <a href="iso_docs.php">📄 وثائق</a>
             <a href="index.php?logout=1" class="logout">خروج</a>
         </div>
     </div>
@@ -420,6 +421,7 @@ foreach ($users as $u) {
         <a href="global.php" class="logout-btn" style="background:#6f42c1;">🏭 Global</a>
         <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
         <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
+        <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
         <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 
@@ -437,6 +439,7 @@ foreach ($users as $u) {
                 <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 Import CSV</a>
                 <a href="iso_ncr.php" class="btn btn-blue" style="background:#0b3c5d;">🏭 ISO NCR/CAR</a>
                 <a href="iso_risk.php" class="btn btn-blue" style="background:#c0392b;">📋 Risk Register</a>
+                <a href="iso_docs.php" class="btn btn-blue" style="background:#2e7d32;">📄 Document Control</a>
             </div>
 
             <?php if (isset($msg))

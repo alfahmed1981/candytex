@@ -494,6 +494,9 @@ foreach ($issues as $issue) {
             </div>
             <div class="nav-links">
                 <a href="index.php">📊 لوحة القيادة</a>
+                <a href="iso_ncr.php">📝 NCR</a>
+                <a href="iso_risk.php">📋 مخاطر</a>
+                <a href="iso_docs.php">📄 وثائق</a>
                 <a href="admin.php">⚙️ الإدارة</a>
                 <a href="?logout=1">🚪 خروج</a>
             </div>

@@ -214,6 +214,9 @@ if ($is_admin) {
         <div class="nav-links">
             <a href="index.php">📊 لوحة</a>
             <a href="global.php" class="active">🏭 عام</a>
+            <a href="iso_ncr.php">📝 NCR</a>
+            <a href="iso_risk.php">📋 مخاطر</a>
+            <a href="iso_docs.php">📄 وثائق</a>
             <a href="admin.php">⚙️ إدارة</a>
             <a href="index.php?logout=1" class="logout">خروج</a>
         </div>

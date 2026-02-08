@@ -378,6 +378,9 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
         <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+            <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
+            <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
+            <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
             <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
             <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
         <?php endif; ?>
