@@ -239,6 +239,8 @@ $high = count(array_filter($risks, fn($r) => $r['risk_level'] === 'High'));
 $medium = count(array_filter($risks, fn($r) => $r['risk_level'] === 'Medium'));
 $low = count(array_filter($risks, fn($r) => $r['risk_level'] === 'Low'));
 $open_risks = count(array_filter($risks, fn($r) => !in_array($r['status'], ['Closed', 'Mitigated'])));
+$reporters = array_values(array_unique(array_filter(array_column($risks, 'reporter_name'))));
+sort($reporters);
 
 // Risk matrix data (5x5)
 $matrix = [];
@@ -900,6 +902,12 @@ foreach ($risks as $r) {
                 <option>Monitoring</option>
                 <option>Closed</option>
             </select>
+            <select id="f-reporter" onchange="filterRisks()">
+                <option value="">كل المُسجّلين</option>
+                <?php foreach ($reporters as $rp): ?>
+                    <option value="<?= htmlspecialchars($rp) ?>"><?= htmlspecialchars($rp) ?></option>
+                <?php endforeach; ?>
+            </select>
             <button onclick="resetFilters()" style="background:#dc3545;color:#fff">🔄 إعادة</button>
         </div>
 
@@ -917,6 +925,7 @@ foreach ($risks as $r) {
                         <th>Score</th>
                         <th>المستوى</th>
                         <th>المسؤول</th>
+                        <th>أضافه</th>
                         <th>الموعد</th>
                         <th>الحالة</th>
                         <th>إجراء</th>
@@ -925,7 +934,7 @@ foreach ($risks as $r) {
                 <tbody>
                     <?php if (empty($risks)): ?>
                         <tr>
-                            <td colspan="12" style="padding:30px;color:#888;font-size:1.1em">لا توجد مخاطر مسجلة — اضغط ➕
+                            <td colspan="13" style="padding:30px;color:#888;font-size:1.1em">لا توجد مخاطر مسجلة — اضغط ➕
                                 لإضافة أول خطر</td>
                         </tr>
                     <?php else: ?>
@@ -937,7 +946,8 @@ foreach ($risks as $r) {
                             $risk_reviews = array_filter($reviews_all, fn($rv) => $rv['risk_id'] == $r['id']);
                             ?>
                             <tr data-level="<?= $r['risk_level'] ?>" data-category="<?= htmlspecialchars($r['category']) ?>"
-                                data-status="<?= $r['status'] ?>">
+                                data-status="<?= $r['status'] ?>"
+                                data-reporter="<?= htmlspecialchars($r['reporter_name'] ?? '') ?>">
                                 <td><?= $i + 1 ?></td>
                                 <td><strong><?= htmlspecialchars($r['risk_number']) ?></strong></td>
                                 <td><?= htmlspecialchars($r['category']) ?></td>
@@ -955,6 +965,8 @@ foreach ($risks as $r) {
                                 </td>
                                 <td><span class="badge <?= $lvl_cls ?>"><?= $r['risk_level'] ?></span></td>
                                 <td style="font-size:.75em"><?= htmlspecialchars($r['responsible'] ?: '-') ?></td>
+                                <td style="font-size:.75em">
+                                    <?= htmlspecialchars($r['reporter_name'] ?: ($r['created_by'] ?: '-')) ?></td>
                                 <td><?= $r['deadline'] ? date('d/m/Y', strtotime($r['deadline'])) : '-' ?></td>
                                 <td><span class="badge <?= $st_cls ?>"><?= $r['status'] ?></span></td>
                                 <td>
@@ -984,7 +996,7 @@ foreach ($risks as $r) {
                             <?php if (!empty($risk_reviews)): ?>
                                 <tr class="review-row" data-level="<?= $r['risk_level'] ?>"
                                     data-category="<?= htmlspecialchars($r['category']) ?>" data-status="<?= $r['status'] ?>">
-                                    <td colspan="12" style="text-align:left;padding:8px 15px;background:#fafbfc">
+                                    <td colspan="13" style="text-align:left;padding:8px 15px;background:#fafbfc">
                                         <strong style="font-size:.8em">📝 سجل المراجعات:</strong>
                                         <?php foreach ($risk_reviews as $rv): ?>
                                             <div class="review-box">
@@ -1337,30 +1349,30 @@ foreach ($risks as $r) {
 
             // --- Auto-suggestion: Risk → Controls + Mitigation ---
             const riskAutoMap = {
-                'Production Line Stoppage':         { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
-                'Inconsistent Stitching Quality':   { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
-                'Wrong Cut / Pattern Error':         { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية',          mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
-                'Overproduction / Wrong Quantity':   { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية',          mit: 'Conduct Internal Audit | إجراء تدقيق داخلي' },
-                'Sewing Machine Malfunction':        { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
-                'Cutting Machine Failure':           { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
-                'Iron / Press Malfunction':          { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
-                'Needle Breakage Frequency':         { ctrl: 'Metal Detection Policy | نظام الكشف عن المعادن',             mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
-                'Fabric Defect from Supplier':       { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
-                'Thread Color Variation':            { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
-                'Accessory Shortage':                { ctrl: 'Safety Stock Level | مخزون الأمان',                          mit: 'Increase Buffer Stock | رفع مخزون الطوارئ' },
-                'Wrong Material Delivery':           { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Conduct Internal Audit | إجراء تدقيق داخلي' },
-                'Operator Skill Gap':                { ctrl: 'Staff Training Matrix | التدريب والتأهيل',                   mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
-                'High Staff Turnover':               { ctrl: 'Staff Training Matrix | التدريب والتأهيل',                   mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
-                'Safety Violation Risk':             { ctrl: 'PPE Usage (Mandatory) | معدات الوقاية الشخصية',             mit: 'Install Safety Guards/Sensors | تركيب أنظمة حماية إضافية' },
-                'Insufficient Training':             { ctrl: 'Staff Training Matrix | التدريب والتأهيل',                   mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
-                'Customer Return / Rejection':       { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
-                'Measurement Out of Tolerance':      { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
-                'Appearance Defect':                 { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
-                'Label / Packing Error':             { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية',          mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
-                'Delivery Delay':                    { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
-                'Supplier Quality Decline':          { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
-                'Raw Material Price Increase':       { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Increase Buffer Stock | رفع مخزون الطوارئ' },
-                'Transportation Damage':             { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Transfer Risk (Insurance) | نقل المخاطر (تأمين)' },
+                'Production Line Stoppage': { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية', mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Inconsistent Stitching Quality': { ctrl: 'Quality Inspection (AQL) | فحص الجودة', mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
+                'Wrong Cut / Pattern Error': { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية', mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
+                'Overproduction / Wrong Quantity': { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية', mit: 'Conduct Internal Audit | إجراء تدقيق داخلي' },
+                'Sewing Machine Malfunction': { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية', mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Cutting Machine Failure': { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية', mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Iron / Press Malfunction': { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية', mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Needle Breakage Frequency': { ctrl: 'Metal Detection Policy | نظام الكشف عن المعادن', mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'Fabric Defect from Supplier': { ctrl: 'Quality Inspection (AQL) | فحص الجودة', mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Thread Color Variation': { ctrl: 'Quality Inspection (AQL) | فحص الجودة', mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Accessory Shortage': { ctrl: 'Safety Stock Level | مخزون الأمان', mit: 'Increase Buffer Stock | رفع مخزون الطوارئ' },
+                'Wrong Material Delivery': { ctrl: 'Approved Supplier Contracts | العقود المعتمدة', mit: 'Conduct Internal Audit | إجراء تدقيق داخلي' },
+                'Operator Skill Gap': { ctrl: 'Staff Training Matrix | التدريب والتأهيل', mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'High Staff Turnover': { ctrl: 'Staff Training Matrix | التدريب والتأهيل', mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'Safety Violation Risk': { ctrl: 'PPE Usage (Mandatory) | معدات الوقاية الشخصية', mit: 'Install Safety Guards/Sensors | تركيب أنظمة حماية إضافية' },
+                'Insufficient Training': { ctrl: 'Staff Training Matrix | التدريب والتأهيل', mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'Customer Return / Rejection': { ctrl: 'Quality Inspection (AQL) | فحص الجودة', mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
+                'Measurement Out of Tolerance': { ctrl: 'Quality Inspection (AQL) | فحص الجودة', mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
+                'Appearance Defect': { ctrl: 'Quality Inspection (AQL) | فحص الجودة', mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
+                'Label / Packing Error': { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية', mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
+                'Delivery Delay': { ctrl: 'Approved Supplier Contracts | العقود المعتمدة', mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Supplier Quality Decline': { ctrl: 'Approved Supplier Contracts | العقود المعتمدة', mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Raw Material Price Increase': { ctrl: 'Approved Supplier Contracts | العقود المعتمدة', mit: 'Increase Buffer Stock | رفع مخزون الطوارئ' },
+                'Transportation Damage': { ctrl: 'Approved Supplier Contracts | العقود المعتمدة', mit: 'Transfer Risk (Insurance) | نقل المخاطر (تأمين)' },
             };
 
             // --- Modal functions ---
@@ -1450,23 +1462,26 @@ foreach ($risks as $r) {
                 const fLevel = document.getElementById('f-level').value;
                 const fCat = document.getElementById('f-category').value;
                 const fStat = document.getElementById('f-status').value;
+                const fReporter = document.getElementById('f-reporter').value;
                 const rows = document.querySelectorAll('#risk-table tbody tr');
                 let shown = 0;
                 rows.forEach(row => {
                     const level = row.dataset.level || '';
                     const cat = row.dataset.category || '';
                     const stat = row.dataset.status || '';
-                    const match = (!fLevel || level === fLevel) && (!fCat || cat === fCat) && (!fStat || stat === fStat);
+                    const reporter = row.dataset.reporter || '';
+                    const match = (!fLevel || level === fLevel) && (!fCat || cat === fCat) && (!fStat || stat === fStat) && (!fReporter || reporter === fReporter);
                     row.style.display = match ? '' : 'none';
                     if (match && !row.classList.contains('review-row')) shown++;
                 });
-                document.getElementById('filter-count').textContent = (fLevel || fCat || fStat) ? `عرض ${shown} من ${<?= $total ?>}` : '';
+                document.getElementById('filter-count').textContent = (fLevel || fCat || fStat || fReporter) ? `عرض ${shown} من ${<?= $total ?>}` : '';
             }
 
             function resetFilters() {
                 document.getElementById('f-level').value = '';
                 document.getElementById('f-category').value = '';
                 document.getElementById('f-status').value = '';
+                document.getElementById('f-reporter').value = '';
                 filterRisks();
             }
 
