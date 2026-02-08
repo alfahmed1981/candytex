@@ -212,12 +212,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// --- Fetch all NCRs with reporter info ---
-$sql = "SELECT n.*, u.name as reporter_name 
-        FROM ncr_reports n 
-        LEFT JOIN users u ON n.reported_by = u.cin 
-        ORDER BY n.created_at DESC";
-$ncrs = $pdo->query($sql)->fetchAll();
+// --- Fetch NCRs: role-based access ---
+$is_admin = ($user_role === 'admin');
+if ($is_admin) {
+    // Admin: optionally filter by reporter via GET param
+    $filter_reporter = trim($_GET['reporter'] ?? '');
+    if ($filter_reporter) {
+        $stmt = $pdo->prepare("SELECT n.*, u.name as reporter_name 
+            FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin 
+            WHERE n.reported_by = ? ORDER BY n.created_at DESC");
+        $stmt->execute([$filter_reporter]);
+    } else {
+        $stmt = $pdo->query("SELECT n.*, u.name as reporter_name 
+            FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin 
+            ORDER BY n.created_at DESC");
+    }
+    $ncrs = $stmt->fetchAll();
+
+    // Fetch all reporters for the dropdown
+    $reporters = $pdo->query("SELECT DISTINCT n.reported_by, u.name 
+        FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin 
+        WHERE n.reported_by IS NOT NULL ORDER BY u.name")->fetchAll();
+} else {
+    // Non-admin: only their own NCRs
+    $stmt = $pdo->prepare("SELECT n.*, u.name as reporter_name 
+        FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin 
+        WHERE n.reported_by = ? ORDER BY n.created_at DESC");
+    $stmt->execute([$user_cin]);
+    $ncrs = $stmt->fetchAll();
+    $reporters = [];
+}
 
 // --- Fetch all CARs ---
 $cars_all = $pdo->query("SELECT * FROM car_reports ORDER BY created_at DESC")->fetchAll();
@@ -1238,6 +1262,17 @@ foreach ($ncrs as $ncr) {
         <!-- Filters & Add -->
         <div class="filters-bar">
             <label>🔍 تصفية:</label>
+            <?php if ($is_admin): ?>
+                <select id="f-reporter" onchange="filterByReporter(this.value)"
+                    style="border:2px solid #0b3c5d; font-weight:600;">
+                    <option value="">👥 كل رؤساء الفرق</option>
+                    <?php foreach ($reporters as $rep): ?>
+                        <option value="<?= htmlspecialchars($rep['reported_by']) ?>" <?= ($filter_reporter === $rep['reported_by']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($rep['name'] ?? $rep['reported_by']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            <?php endif; ?>
             <select id="f-status" onchange="filterTable()">
                 <option value="">كل الحالات</option>
                 <option value="Open">مفتوحة (Open)</option>
@@ -1277,6 +1312,8 @@ foreach ($ncrs as $ncr) {
                 <thead>
                     <tr>
                         <th>الرقم</th>
+                        <?php if ($is_admin): ?>
+                            <th>المُبلِّغ</th><?php endif; ?>
                         <th>الفئة</th>
                         <th>الشدة</th>
                         <th>المصدر</th>
@@ -1305,7 +1342,8 @@ foreach ($ncrs as $ncr) {
                         ?>
                         <tr data-status="<?= $ncr['status'] ?>" data-severity="<?= $ncr['severity'] ?>"
                             data-category="<?= $ncr['category'] ?>"
-                            data-date="<?= $ncr['created_at'] ? date('Y-m-d', strtotime($ncr['created_at'])) : '' ?>">
+                            data-date="<?= $ncr['created_at'] ? date('Y-m-d', strtotime($ncr['created_at'])) : '' ?>"
+                            data-reporter="<?= htmlspecialchars($ncr['reported_by'] ?? '') ?>">
                             <td>
                                 <strong style="color:#0b3c5d;">
                                     <?= htmlspecialchars($ncr['ncr_number']) ?>
@@ -1318,6 +1356,13 @@ foreach ($ncrs as $ncr) {
                                     </span>
                                 <?php endif; ?>
                             </td>
+                            <?php if ($is_admin): ?>
+                                <td>
+                                    <span style="font-size:0.85em; color:#555;">
+                                        <?= htmlspecialchars($ncr['reporter_name'] ?? $ncr['reported_by'] ?? '—') ?>
+                                    </span>
+                                </td>
+                            <?php endif; ?>
                             <td>
                                 <?= htmlspecialchars($ncr['category']) ?>
                             </td>
@@ -1775,7 +1820,18 @@ foreach ($ncrs as $ncr) {
             });
         }
 
-        // --- Filters ---
+        // --- Reporter filter (admin only, server-side) ---
+        function filterByReporter(cin) {
+            const url = new URL(window.location.href);
+            if (cin) {
+                url.searchParams.set('reporter', cin);
+            } else {
+                url.searchParams.delete('reporter');
+            }
+            window.location.href = url.toString();
+        }
+
+        // --- Client-side Filters ---
         function filterTable() {
             const status = document.getElementById('f-status').value;
             const severity = document.getElementById('f-severity').value;
@@ -1786,7 +1842,7 @@ foreach ($ncrs as $ncr) {
             let visible = 0;
 
             rows.forEach(row => {
-                if (!row.dataset.status) return; // skip empty rows
+                if (!row.dataset.status) return;
                 let show = true;
                 if (status && row.dataset.status !== status) show = false;
                 if (severity && row.dataset.severity !== severity) show = false;
@@ -1813,6 +1869,13 @@ foreach ($ncrs as $ncr) {
             document.getElementById('f-category').value = '';
             document.getElementById('f-from').value = '';
             document.getElementById('f-to').value = '';
+            // Reset reporter filter too (admin only)
+            const repSel = document.getElementById('f-reporter');
+            if (repSel && repSel.value) {
+                repSel.value = '';
+                filterByReporter('');
+                return; // page will reload
+            }
             filterTable();
         }
     </script>
