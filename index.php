@@ -51,9 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if (!empty($user['password']) && password_verify($cred_input, $user['password'])) {
                         $login_ok = true;
                     }
-                    // 2. Legacy Phone Check (Treat input as phone)
-                    elseif (empty($user['password']) && $user['phone'] === $cred_input) {
-                        $login_ok = true;
+                    // 2. Legacy Phone Check (no password set — match phone or whatsapp)
+                    elseif (empty($user['password'])) {
+                        if ($user['phone'] === $cred_input) {
+                            $login_ok = true;
+                        } elseif (!empty($user['whatsapp']) && $user['whatsapp'] === $cred_input) {
+                            $login_ok = true;
+                        }
                     }
 
                     if ($login_ok) {
