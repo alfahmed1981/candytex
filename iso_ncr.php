@@ -1039,6 +1039,168 @@ foreach ($ncrs as $ncr) {
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ====== ISO A4 PRINT STYLES ====== */
+        #print-area {
+            display: none;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+
+            #print-area,
+            #print-area * {
+                visibility: visible !important;
+            }
+
+            #print-area {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 210mm;
+                margin: 0;
+                padding: 12mm 15mm;
+                font-size: 11pt;
+                color: #000;
+                direction: ltr;
+                text-align: left;
+            }
+
+            .print-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                border-bottom: 3px solid #0b3c5d;
+                padding-bottom: 10px;
+                margin-bottom: 15px;
+            }
+
+            .print-header .company {
+                font-size: 18pt;
+                font-weight: 700;
+                color: #0b3c5d;
+            }
+
+            .print-header .company small {
+                font-size: 9pt;
+                font-weight: 400;
+                color: #555;
+                display: block;
+            }
+
+            .print-header .doc-meta {
+                text-align: right;
+                font-size: 9pt;
+                color: #333;
+            }
+
+            .print-header .doc-meta .doc-num {
+                font-size: 14pt;
+                font-weight: 700;
+                color: #c62828;
+            }
+
+            .print-title {
+                text-align: center;
+                font-size: 16pt;
+                font-weight: 700;
+                color: #0b3c5d;
+                margin: 10px 0 15px;
+                padding: 8px;
+                border: 2px solid #0b3c5d;
+                background: #f5f9ff;
+            }
+
+            .print-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 15px;
+            }
+
+            .print-table th,
+            .print-table td {
+                border: 1px solid #333;
+                padding: 6px 10px;
+                font-size: 10pt;
+            }
+
+            .print-table th {
+                background: #e8edf2;
+                font-weight: 600;
+                width: 35%;
+                text-align: left;
+            }
+
+            .print-table td {
+                text-align: left;
+            }
+
+            .print-table .section-header {
+                background: #0b3c5d;
+                color: #fff;
+                text-align: center;
+                font-weight: 700;
+                font-size: 11pt;
+            }
+
+            .print-signatures {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 30px;
+                page-break-inside: avoid;
+            }
+
+            .print-sig-box {
+                border: 1px solid #555;
+                padding: 12px;
+                width: 45%;
+                min-height: 80px;
+            }
+
+            .print-sig-box h4 {
+                margin: 0 0 5px;
+                font-size: 10pt;
+                color: #0b3c5d;
+            }
+
+            .print-sig-box .sig-line {
+                border-bottom: 1px dotted #999;
+                margin-top: 40px;
+                height: 1px;
+            }
+
+            .print-footer {
+                text-align: center;
+                font-size: 8pt;
+                color: #888;
+                border-top: 1px solid #ccc;
+                padding-top: 8px;
+                margin-top: 20px;
+            }
+
+            .btn-print {
+                display: none !important;
+            }
+        }
+
+        .btn-print {
+            background: none;
+            border: 1px solid #0b3c5d;
+            color: #0b3c5d;
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .btn-print:hover {
+            background: #0b3c5d;
+            color: #fff;
+        }
     </style>
 </head>
 
@@ -1429,6 +1591,8 @@ foreach ($ncrs as $ncr) {
                                     <?php endif; ?>
                                     <button type="submit" name="delete_ncr" class="btn-del" title="حذف"
                                         onclick="return confirm('هل تريد حذف هذا التقرير نهائياً؟')">🗑️</button>
+                                    <button type="button" class="btn-print" title="طباعة NCR"
+                                        onclick="printNCR(<?= $ncr['id'] ?>)">🖨️</button>
                                 </form>
                             </td>
                         </tr>
@@ -1485,6 +1649,9 @@ foreach ($ncrs as $ncr) {
                                                     <?= $car['verified_by'] ? "— تحقق: {$car['verified_by']}" : '' ?>
                                                 </p>
                                             <?php endif; ?>
+                                            <button type="button" class="btn-print" style="margin-top:6px;" title="طباعة CAR"
+                                                onclick="printCAR('<?= htmlspecialchars($car['car_number']) ?>', <?= $ncr['id'] ?>)">🖨️
+                                                طباعة CAR</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -1712,67 +1879,90 @@ foreach ($ncrs as $ncr) {
                         <select name="root_cause" id="car-root-cause" onchange="syncCarCause(this)">
                             <option value="">-- اختر السبب / Select Cause --</option>
                             <optgroup label="👤 العامل / Man">
-                                <option value="Operator Lack of Skill / Training">Operator Lack of Skill / Training | نقص في مهارة / تدريب العامل</option>
-                                <option value="Negligence / Attention Error">Negligence / Attention Error | إهمال / سهو / عدم انتباه</option>
+                                <option value="Operator Lack of Skill / Training">Operator Lack of Skill / Training |
+                                    نقص في مهارة / تدريب العامل</option>
+                                <option value="Negligence / Attention Error">Negligence / Attention Error | إهمال / سهو
+                                    / عدم انتباه</option>
                             </optgroup>
                             <optgroup label="⚙️ الآلة / Machine">
-                                <option value="Machine Breakdown / Wear">Machine Breakdown / Wear | عطل ميكانيكي / تآكل قطع الغيار</option>
-                                <option value="Wrong Machine Settings">Wrong Machine Settings | خطأ في ضبط إعدادات الماكينة</option>
+                                <option value="Machine Breakdown / Wear">Machine Breakdown / Wear | عطل ميكانيكي / تآكل
+                                    قطع الغيار</option>
+                                <option value="Wrong Machine Settings">Wrong Machine Settings | خطأ في ضبط إعدادات
+                                    الماكينة</option>
                             </optgroup>
                             <optgroup label="🧶 المواد / Material">
-                                <option value="Defective Raw Material">Defective Raw Material | مواد أولية معيبة (من المصدر)</option>
-                                <option value="Wrong Material Supplied">Wrong Material Supplied | تزويد بمواد خاطئة (خيط/قماش)</option>
+                                <option value="Defective Raw Material">Defective Raw Material | مواد أولية معيبة (من
+                                    المصدر)</option>
+                                <option value="Wrong Material Supplied">Wrong Material Supplied | تزويد بمواد خاطئة
+                                    (خيط/قماش)</option>
                             </optgroup>
                             <optgroup label="📋 الطريقة / Method">
-                                <option value="Unclear Tech Pack / Instructions">Unclear Tech Pack / Instructions | تعليمات / ورقة تقنية غير واضحة</option>
-                                <option value="Bad Pattern / Marker Layout">Bad Pattern / Marker Layout | خطأ في الباترون / الماركر</option>
+                                <option value="Unclear Tech Pack / Instructions">Unclear Tech Pack / Instructions |
+                                    تعليمات / ورقة تقنية غير واضحة</option>
+                                <option value="Bad Pattern / Marker Layout">Bad Pattern / Marker Layout | خطأ في
+                                    الباترون / الماركر</option>
                             </optgroup>
                             <optgroup label="💡 البيئة / Environment">
-                                <option value="Lighting / Environment Issue">Lighting / Environment Issue | سوء الإضاءة / بيئة العمل</option>
+                                <option value="Lighting / Environment Issue">Lighting / Environment Issue | سوء الإضاءة
+                                    / بيئة العمل</option>
                             </optgroup>
                             <optgroup label="📝 أخرى / Other">
                                 <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other</option>
                             </optgroup>
                         </select>
-                        <textarea id="car-root-custom" name="root_cause_custom" rows="2" 
+                        <textarea id="car-root-custom" name="root_cause_custom" rows="2"
                             placeholder="صف السبب الجذري... / Describe the root cause..."
                             style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>الإجراء التصحيحي <small>/ Corrective Action</small> <span id="car-ca-hint" style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
+                        <label>الإجراء التصحيحي <small>/ Corrective Action</small> <span id="car-ca-hint"
+                                style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
                         <select name="corrective_action" id="car-corrective">
                             <option value="">-- اختر الإجراء / Select Action --</option>
-                            <option value="Operator Retraining / Briefing | إعادة تدريب / توجيه العامل">إعادة تدريب / توجيه العامل — Retraining</option>
-                            <option value="Machine Repair / Parts Replacement | إصلاح الماكينة / استبدال قطع الغيار">إصلاح الماكينة / استبدال قطع — Machine Repair</option>
-                            <option value="Calibration / Setting Adjustment | معايرة / ضبط الإعدادات">معايرة / ضبط الإعدادات — Calibration</option>
-                            <option value="Update Tech Pack / Pattern | تعديل الملف التقني / الباترون">تعديل الملف التقني — Update Tech Pack</option>
-                            <option value="Supplier Complaint Issued | إصدار شكوى رسمية للمورد">إصدار شكوى للمورد — Supplier Complaint</option>
-                            <option value="Material Exchange | استبدال المواد المعيبة">استبدال المواد المعيبة — Material Exchange</option>
-                            <option value="Process Audit Conducted | إجراء تدقيق فوري للعملية">إجراء تدقيق فوري — Process Audit</option>
+                            <option value="Operator Retraining / Briefing | إعادة تدريب / توجيه العامل">إعادة تدريب /
+                                توجيه العامل — Retraining</option>
+                            <option value="Machine Repair / Parts Replacement | إصلاح الماكينة / استبدال قطع الغيار">
+                                إصلاح الماكينة / استبدال قطع — Machine Repair</option>
+                            <option value="Calibration / Setting Adjustment | معايرة / ضبط الإعدادات">معايرة / ضبط
+                                الإعدادات — Calibration</option>
+                            <option value="Update Tech Pack / Pattern | تعديل الملف التقني / الباترون">تعديل الملف
+                                التقني — Update Tech Pack</option>
+                            <option value="Supplier Complaint Issued | إصدار شكوى رسمية للمورد">إصدار شكوى للمورد —
+                                Supplier Complaint</option>
+                            <option value="Material Exchange | استبدال المواد المعيبة">استبدال المواد المعيبة — Material
+                                Exchange</option>
+                            <option value="Process Audit Conducted | إجراء تدقيق فوري للعملية">إجراء تدقيق فوري —
+                                Process Audit</option>
                         </select>
-                        <textarea id="car-corrective-custom" name="corrective_action_custom" rows="2" 
-                            placeholder="صف الإجراء التصحيحي..."
-                            style="display:none; margin-top:8px;"></textarea>
+                        <textarea id="car-corrective-custom" name="corrective_action_custom" rows="2"
+                            placeholder="صف الإجراء التصحيحي..." style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>الإجراء الوقائي <small>/ Preventive Action</small> <span id="car-pa-hint" style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
+                        <label>الإجراء الوقائي <small>/ Preventive Action</small> <span id="car-pa-hint"
+                                style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
                         <select name="preventive_action" id="car-preventive">
                             <option value="">-- اختر الإجراء / Select Action --</option>
-                            <option value="Update SOP / Work Instructions | تحديث إجراءات العمل القياسية">تحديث إجراءات العمل (SOP) — Update SOP</option>
-                            <option value="Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة">إضافة نقطة تفتيش جودة — QC Checkpoint</option>
-                            <option value="Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ">نظام منع الخطأ (Poka-Yoke)</option>
-                            <option value="Update Maintenance Schedule | تعديل جدول الصيانة الوقائية">تعديل جدول الصيانة الوقائية — Maintenance</option>
-                            <option value="Change Supplier / Vendor | تغيير المورد">تغيير المورد — Change Supplier</option>
-                            <option value="Modify Training Matrix | تعديل مصفوفة التدريب">تعديل مصفوفة التدريب (Polyvalence)</option>
-                            <option value="Install Better Lighting / Tools | تحسين الإضاءة / أدوات">تحسين الإضاءة / الأدوات — Lighting/Tools</option>
+                            <option value="Update SOP / Work Instructions | تحديث إجراءات العمل القياسية">تحديث إجراءات
+                                العمل (SOP) — Update SOP</option>
+                            <option value="Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة">إضافة نقطة تفتيش جودة — QC
+                                Checkpoint</option>
+                            <option value="Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ">نظام منع الخطأ
+                                (Poka-Yoke)</option>
+                            <option value="Update Maintenance Schedule | تعديل جدول الصيانة الوقائية">تعديل جدول الصيانة
+                                الوقائية — Maintenance</option>
+                            <option value="Change Supplier / Vendor | تغيير المورد">تغيير المورد — Change Supplier
+                            </option>
+                            <option value="Modify Training Matrix | تعديل مصفوفة التدريب">تعديل مصفوفة التدريب
+                                (Polyvalence)</option>
+                            <option value="Install Better Lighting / Tools | تحسين الإضاءة / أدوات">تحسين الإضاءة /
+                                الأدوات — Lighting/Tools</option>
                         </select>
-                        <textarea id="car-preventive-custom" name="preventive_action_custom" rows="2" 
-                            placeholder="كيف نمنع تكرار المشكلة؟"
-                            style="display:none; margin-top:8px;"></textarea>
+                        <textarea id="car-preventive-custom" name="preventive_action_custom" rows="2"
+                            placeholder="كيف نمنع تكرار المشكلة؟" style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row">
@@ -2021,6 +2211,226 @@ foreach ($ncrs as $ncr) {
                 return; // page will reload
             }
             filterTable();
+        }
+    </script>
+
+    <!-- ============ PRINT TEMPLATE ============ -->
+    <div id="print-area"></div>
+
+    <script>
+        // --- NCR/CAR Data for Print ---
+        const ncrData = <?= json_encode(array_map(function ($n) {
+            return [
+                'id' => $n['id'],
+                'ncr_number' => $n['ncr_number'],
+                'category' => $n['category'],
+                'severity' => $n['severity'],
+                'source' => $n['source'],
+                'location' => $n['location'] ?? '-',
+                'department' => $n['department'] ?? '-',
+                'description_en' => $n['description_en'] ?? '',
+                'description_ar' => $n['description_ar'] ?? '',
+                'immediate_action' => $n['immediate_action'] ?? '-',
+                'disposition' => $n['disposition'] ?? '-',
+                'assigned_to' => $n['assigned_to'] ?? '-',
+                'reported_by' => $n['reported_by'] ?? '-',
+                'reporter_name' => $n['reporter_name'] ?? $n['reported_by'] ?? '-',
+                'due_date' => $n['due_date'] ?? '-',
+                'created_at' => $n['created_at'] ?? '-',
+                'status' => $n['status'],
+            ];
+        }, $ncrs), JSON_UNESCAPED_UNICODE) ?>;
+
+        const carData = <?= json_encode(array_map(function ($c) {
+            return [
+                'car_number' => $c['car_number'],
+                'ncr_id' => $c['ncr_id'],
+                'root_cause' => $c['root_cause'] ?? '-',
+                'corrective_action' => $c['corrective_action'] ?? '-',
+                'preventive_action' => $c['preventive_action'] ?? '-',
+                'responsible' => $c['responsible'] ?? '-',
+                'deadline' => $c['deadline'] ?? '-',
+                'status' => $c['status'],
+                'effectiveness_ok' => $c['effectiveness_ok'] ?? 0,
+                'verified_by' => $c['verified_by'] ?? '-',
+                'verified_at' => $c['verified_at'] ?? '-',
+                'created_at' => $c['created_at'] ?? '-',
+            ];
+        }, $cars_all), JSON_UNESCAPED_UNICODE) ?>;
+
+        function fmtDate(d) {
+            if (!d || d === '-') return '-';
+            const dt = new Date(d);
+            return dt.toLocaleDateString('en-GB');
+        }
+
+        function printNCR(ncrId) {
+            const ncr = ncrData.find(n => n.id == ncrId);
+            if (!ncr) return alert('NCR not found');
+
+            // Find associated CARs
+            const cars = carData.filter(c => c.ncr_id == ncrId);
+            let carSection = '';
+            if (cars.length > 0) {
+                cars.forEach(car => {
+                    carSection += `
+                    <tr><td class="section-header" colspan="2">CORRECTIVE ACTION REPORT — ${car.car_number}</td></tr>
+                    <tr><th>Root Cause / السبب الجذري</th><td>${car.root_cause}</td></tr>
+                    <tr><th>Corrective Action / إجراء تصحيحي</th><td>${car.corrective_action}</td></tr>
+                    <tr><th>Preventive Action / إجراء وقائي</th><td>${car.preventive_action}</td></tr>
+                    <tr><th>Responsible</th><td>${car.responsible}</td></tr>
+                    <tr><th>Deadline</th><td>${fmtDate(car.deadline)}</td></tr>
+                    <tr><th>CAR Status</th><td>${car.status}${car.effectiveness_ok ? ' — Effective ✅' : ''}</td></tr>`;
+                });
+            }
+
+            const html = `
+            <div class="print-header">
+                <div class="company">
+                    CANDYTEX<br>
+                    <small>Textile Manufacturing — Casablanca, Morocco</small>
+                    <small>ISO 9001:2015 Quality Management System</small>
+                </div>
+                <div class="doc-meta">
+                    <div class="doc-num">${ncr.ncr_number}</div>
+                    <div>Document: QMS-NCR-001</div>
+                    <div>Revision: 01</div>
+                    <div>Date: ${fmtDate(ncr.created_at)}</div>
+                    <div>Page 1 of 1</div>
+                </div>
+            </div>
+
+            <div class="print-title">
+                NON-CONFORMITY REPORT (NCR)<br>
+                <span style="font-size:12pt;">تقرير عدم المطابقة</span>
+            </div>
+
+            <table class="print-table">
+                <tr><td class="section-header" colspan="2">NCR DETAILS / تفاصيل عدم المطابقة</td></tr>
+                <tr><th>NCR Number / الرقم</th><td><strong>${ncr.ncr_number}</strong></td></tr>
+                <tr><th>Date Raised / التاريخ</th><td>${fmtDate(ncr.created_at)}</td></tr>
+                <tr><th>Category / الفئة</th><td>${ncr.category}</td></tr>
+                <tr><th>Severity / الشدة</th><td><strong>${ncr.severity}</strong></td></tr>
+                <tr><th>Source / المصدر</th><td>${ncr.source}</td></tr>
+                <tr><th>Location / الموقع</th><td>${ncr.location}</td></tr>
+                <tr><th>Department / القسم</th><td>${ncr.department}</td></tr>
+
+                <tr><td class="section-header" colspan="2">DESCRIPTION / الوصف</td></tr>
+                <tr><th>Description (EN)</th><td>${ncr.description_en || '-'}</td></tr>
+                <tr><th>Description (AR) / الوصف بالعربية</th><td style="direction:rtl; text-align:right;">${ncr.description_ar || '-'}</td></tr>
+                <tr><th>Immediate Action / الإجراء الفوري</th><td>${ncr.immediate_action}</td></tr>
+
+                <tr><td class="section-header" colspan="2">DISPOSITION & ASSIGNMENT / القرار والمسؤولية</td></tr>
+                <tr><th>Disposition / القرار</th><td>${ncr.disposition}</td></tr>
+                <tr><th>Reported By / المُبلِّغ</th><td>${ncr.reporter_name}</td></tr>
+                <tr><th>Assigned To / المسؤول</th><td>${ncr.assigned_to}</td></tr>
+                <tr><th>Due Date / الموعد النهائي</th><td>${fmtDate(ncr.due_date)}</td></tr>
+                <tr><th>Status / الحالة</th><td><strong>${ncr.status}</strong></td></tr>
+
+                ${carSection}
+            </table>
+
+            <div class="print-signatures">
+                <div class="print-sig-box">
+                    <h4>Raised By / المُبلِّغ</h4>
+                    <div>Name: ${ncr.reporter_name}</div>
+                    <div>Date: ${fmtDate(ncr.created_at)}</div>
+                    <div class="sig-line"></div>
+                    <div style="font-size:8pt; color:#888; margin-top:4px;">Signature / التوقيع</div>
+                </div>
+                <div class="print-sig-box">
+                    <h4>Reviewed By / المراجع</h4>
+                    <div>Name: ________________________</div>
+                    <div>Date: ________________________</div>
+                    <div class="sig-line"></div>
+                    <div style="font-size:8pt; color:#888; margin-top:4px;">Signature / التوقيع</div>
+                </div>
+            </div>
+
+            <div class="print-footer">
+                CANDYTEX Quality Management System — ISO 9001:2015 | Document QMS-NCR-001 Rev.01 | Printed: ${new Date().toLocaleDateString('en-GB')}
+            </div>`;
+
+            document.getElementById('print-area').innerHTML = html;
+            setTimeout(() => window.print(), 200);
+        }
+
+        function printCAR(carNum, ncrId) {
+            const car = carData.find(c => c.car_number === carNum);
+            const ncr = ncrData.find(n => n.id == ncrId);
+            if (!car || !ncr) return alert('Data not found');
+
+            const html = `
+            <div class="print-header">
+                <div class="company">
+                    CANDYTEX<br>
+                    <small>Textile Manufacturing — Casablanca, Morocco</small>
+                    <small>ISO 9001:2015 Quality Management System</small>
+                </div>
+                <div class="doc-meta">
+                    <div class="doc-num">${car.car_number}</div>
+                    <div>Document: QMS-CAR-001</div>
+                    <div>Revision: 01</div>
+                    <div>Date: ${fmtDate(car.created_at)}</div>
+                    <div>Page 1 of 1</div>
+                </div>
+            </div>
+
+            <div class="print-title">
+                CORRECTIVE ACTION REPORT (CAR)<br>
+                <span style="font-size:12pt;">تقرير الإجراء التصحيحي</span>
+            </div>
+
+            <table class="print-table">
+                <tr><td class="section-header" colspan="2">REFERENCE NCR / مرجع عدم المطابقة</td></tr>
+                <tr><th>NCR Number</th><td>${ncr.ncr_number}</td></tr>
+                <tr><th>NCR Description</th><td>${ncr.description_en || ncr.description_ar || '-'}</td></tr>
+                <tr><th>Category / Severity</th><td>${ncr.category} / ${ncr.severity}</td></tr>
+                <tr><th>NCR Date</th><td>${fmtDate(ncr.created_at)}</td></tr>
+
+                <tr><td class="section-header" colspan="2">ROOT CAUSE ANALYSIS / تحليل السبب الجذري</td></tr>
+                <tr><th>Root Cause</th><td>${car.root_cause}</td></tr>
+
+                <tr><td class="section-header" colspan="2">CORRECTIVE ACTION / الإجراء التصحيحي</td></tr>
+                <tr><th>Corrective Action</th><td>${car.corrective_action}</td></tr>
+
+                <tr><td class="section-header" colspan="2">PREVENTIVE ACTION / الإجراء الوقائي</td></tr>
+                <tr><th>Preventive Action</th><td>${car.preventive_action}</td></tr>
+
+                <tr><td class="section-header" colspan="2">RESPONSIBILITY & TIMELINE / المسؤولية والجدول</td></tr>
+                <tr><th>Responsible / المسؤول</th><td>${car.responsible}</td></tr>
+                <tr><th>Deadline / الموعد النهائي</th><td>${fmtDate(car.deadline)}</td></tr>
+                <tr><th>CAR Status / الحالة</th><td><strong>${car.status}</strong></td></tr>
+
+                <tr><td class="section-header" colspan="2">VERIFICATION / التحقق</td></tr>
+                <tr><th>Effectiveness Verified</th><td>${car.effectiveness_ok ? 'Yes ✅ — Effective' : 'Pending'}</td></tr>
+                <tr><th>Verified By</th><td>${car.verified_by !== '-' ? car.verified_by : '________________________'}</td></tr>
+                <tr><th>Verification Date</th><td>${car.verified_at !== '-' ? fmtDate(car.verified_at) : '________________________'}</td></tr>
+            </table>
+
+            <div class="print-signatures">
+                <div class="print-sig-box">
+                    <h4>Initiated By / المُبادر</h4>
+                    <div>Name: ${ncr.reporter_name}</div>
+                    <div>Date: ${fmtDate(car.created_at)}</div>
+                    <div class="sig-line"></div>
+                    <div style="font-size:8pt; color:#888; margin-top:4px;">Signature / التوقيع</div>
+                </div>
+                <div class="print-sig-box">
+                    <h4>Approved By / معتمد من</h4>
+                    <div>Name: ________________________</div>
+                    <div>Date: ________________________</div>
+                    <div class="sig-line"></div>
+                    <div style="font-size:8pt; color:#888; margin-top:4px;">Signature / التوقيع</div>
+                </div>
+            </div>
+
+            <div class="print-footer">
+                CANDYTEX Quality Management System — ISO 9001:2015 | Document QMS-CAR-001 Rev.01 | Printed: ${new Date().toLocaleDateString('en-GB')}
+            </div>`;
+
+            document.getElementById('print-area').innerHTML = html;
+            setTimeout(() => window.print(), 200);
         }
     </script>
 </body>
