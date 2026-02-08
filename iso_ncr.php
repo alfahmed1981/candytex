@@ -177,6 +177,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['create_car'])) {
         $ncr_id = intval($_POST['ncr_id']);
         $car_num = next_number($pdo, 'CAR', 'car_reports', 'car_number');
+
+        // Smart fields: dropdown or custom
+        $root_cause_raw = trim($_POST['root_cause'] ?? '');
+        $root_cause = ($root_cause_raw === '__OTHER__') ? trim($_POST['root_cause_custom'] ?? '') : $root_cause_raw;
+
+        $corrective_raw = trim($_POST['corrective_action'] ?? '');
+        $corrective = !empty($corrective_raw) ? $corrective_raw : trim($_POST['corrective_action_custom'] ?? '');
+
+        $preventive_raw = trim($_POST['preventive_action'] ?? '');
+        $preventive = !empty($preventive_raw) ? $preventive_raw : trim($_POST['preventive_action_custom'] ?? '');
+
         $stmt = $pdo->prepare("INSERT INTO car_reports 
             (car_number, ncr_id, root_cause, corrective_action, preventive_action, 
              responsible, deadline, status, created_by)
@@ -184,9 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $car_num,
             $ncr_id,
-            trim($_POST['root_cause'] ?? ''),
-            trim($_POST['corrective_action'] ?? ''),
-            trim($_POST['preventive_action'] ?? ''),
+            $root_cause,
+            $corrective,
+            $preventive,
             trim($_POST['car_responsible'] ?? ''),
             $_POST['car_deadline'] ?: null,
             $user_cin
@@ -1698,20 +1709,70 @@ foreach ($ncrs as $ncr) {
                 <div class="form-row single">
                     <div class="form-group">
                         <label>تحليل السبب الجذري <small>/ Root Cause Analysis</small></label>
-                        <textarea name="root_cause" rows="3" placeholder="ما هو السبب الجذري؟"></textarea>
+                        <select name="root_cause" id="car-root-cause" onchange="syncCarCause(this)">
+                            <option value="">-- اختر السبب / Select Cause --</option>
+                            <optgroup label="👤 العامل / Man">
+                                <option value="Operator Lack of Skill / Training">Operator Lack of Skill / Training | نقص في مهارة / تدريب العامل</option>
+                                <option value="Negligence / Attention Error">Negligence / Attention Error | إهمال / سهو / عدم انتباه</option>
+                            </optgroup>
+                            <optgroup label="⚙️ الآلة / Machine">
+                                <option value="Machine Breakdown / Wear">Machine Breakdown / Wear | عطل ميكانيكي / تآكل قطع الغيار</option>
+                                <option value="Wrong Machine Settings">Wrong Machine Settings | خطأ في ضبط إعدادات الماكينة</option>
+                            </optgroup>
+                            <optgroup label="🧶 المواد / Material">
+                                <option value="Defective Raw Material">Defective Raw Material | مواد أولية معيبة (من المصدر)</option>
+                                <option value="Wrong Material Supplied">Wrong Material Supplied | تزويد بمواد خاطئة (خيط/قماش)</option>
+                            </optgroup>
+                            <optgroup label="📋 الطريقة / Method">
+                                <option value="Unclear Tech Pack / Instructions">Unclear Tech Pack / Instructions | تعليمات / ورقة تقنية غير واضحة</option>
+                                <option value="Bad Pattern / Marker Layout">Bad Pattern / Marker Layout | خطأ في الباترون / الماركر</option>
+                            </optgroup>
+                            <optgroup label="💡 البيئة / Environment">
+                                <option value="Lighting / Environment Issue">Lighting / Environment Issue | سوء الإضاءة / بيئة العمل</option>
+                            </optgroup>
+                            <optgroup label="📝 أخرى / Other">
+                                <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other</option>
+                            </optgroup>
+                        </select>
+                        <textarea id="car-root-custom" name="root_cause_custom" rows="2" 
+                            placeholder="صف السبب الجذري... / Describe the root cause..."
+                            style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>الإجراء التصحيحي <small>/ Corrective Action</small></label>
-                        <textarea name="corrective_action" rows="3"
-                            placeholder="ما الإجراء التصحيحي المطلوب؟"></textarea>
+                        <label>الإجراء التصحيحي <small>/ Corrective Action</small> <span id="car-ca-hint" style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
+                        <select name="corrective_action" id="car-corrective">
+                            <option value="">-- اختر الإجراء / Select Action --</option>
+                            <option value="Operator Retraining / Briefing | إعادة تدريب / توجيه العامل">إعادة تدريب / توجيه العامل — Retraining</option>
+                            <option value="Machine Repair / Parts Replacement | إصلاح الماكينة / استبدال قطع الغيار">إصلاح الماكينة / استبدال قطع — Machine Repair</option>
+                            <option value="Calibration / Setting Adjustment | معايرة / ضبط الإعدادات">معايرة / ضبط الإعدادات — Calibration</option>
+                            <option value="Update Tech Pack / Pattern | تعديل الملف التقني / الباترون">تعديل الملف التقني — Update Tech Pack</option>
+                            <option value="Supplier Complaint Issued | إصدار شكوى رسمية للمورد">إصدار شكوى للمورد — Supplier Complaint</option>
+                            <option value="Material Exchange | استبدال المواد المعيبة">استبدال المواد المعيبة — Material Exchange</option>
+                            <option value="Process Audit Conducted | إجراء تدقيق فوري للعملية">إجراء تدقيق فوري — Process Audit</option>
+                        </select>
+                        <textarea id="car-corrective-custom" name="corrective_action_custom" rows="2" 
+                            placeholder="صف الإجراء التصحيحي..."
+                            style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>الإجراء الوقائي <small>/ Preventive Action</small></label>
-                        <textarea name="preventive_action" rows="2" placeholder="كيف نمنع تكرار المشكلة؟"></textarea>
+                        <label>الإجراء الوقائي <small>/ Preventive Action</small> <span id="car-pa-hint" style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
+                        <select name="preventive_action" id="car-preventive">
+                            <option value="">-- اختر الإجراء / Select Action --</option>
+                            <option value="Update SOP / Work Instructions | تحديث إجراءات العمل القياسية">تحديث إجراءات العمل (SOP) — Update SOP</option>
+                            <option value="Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة">إضافة نقطة تفتيش جودة — QC Checkpoint</option>
+                            <option value="Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ">نظام منع الخطأ (Poka-Yoke)</option>
+                            <option value="Update Maintenance Schedule | تعديل جدول الصيانة الوقائية">تعديل جدول الصيانة الوقائية — Maintenance</option>
+                            <option value="Change Supplier / Vendor | تغيير المورد">تغيير المورد — Change Supplier</option>
+                            <option value="Modify Training Matrix | تعديل مصفوفة التدريب">تعديل مصفوفة التدريب (Polyvalence)</option>
+                            <option value="Install Better Lighting / Tools | تحسين الإضاءة / أدوات">تحسين الإضاءة / الأدوات — Lighting/Tools</option>
+                        </select>
+                        <textarea id="car-preventive-custom" name="preventive_action_custom" rows="2" 
+                            placeholder="كيف نمنع تكرار المشكلة؟"
+                            style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row">
@@ -1792,7 +1853,90 @@ foreach ($ncrs as $ncr) {
             }
         }
 
-        // --- Modal ---
+        // --- CAR Root Cause → Smart Suggestion (Conditional Logic) ---
+        const carCauseMap = {
+            'Operator Lack of Skill / Training': {
+                ca: 'Operator Retraining / Briefing | إعادة تدريب / توجيه العامل',
+                pa: 'Modify Training Matrix | تعديل مصفوفة التدريب'
+            },
+            'Negligence / Attention Error': {
+                ca: 'Operator Retraining / Briefing | إعادة تدريب / توجيه العامل',
+                pa: 'Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة'
+            },
+            'Machine Breakdown / Wear': {
+                ca: 'Machine Repair / Parts Replacement | إصلاح الماكينة / استبدال قطع الغيار',
+                pa: 'Update Maintenance Schedule | تعديل جدول الصيانة الوقائية'
+            },
+            'Wrong Machine Settings': {
+                ca: 'Calibration / Setting Adjustment | معايرة / ضبط الإعدادات',
+                pa: 'Update SOP / Work Instructions | تحديث إجراءات العمل القياسية'
+            },
+            'Defective Raw Material': {
+                ca: 'Supplier Complaint Issued | إصدار شكوى رسمية للمورد',
+                pa: 'Change Supplier / Vendor | تغيير المورد'
+            },
+            'Wrong Material Supplied': {
+                ca: 'Material Exchange | استبدال المواد المعيبة',
+                pa: 'Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة'
+            },
+            'Unclear Tech Pack / Instructions': {
+                ca: 'Update Tech Pack / Pattern | تعديل الملف التقني / الباترون',
+                pa: 'Update SOP / Work Instructions | تحديث إجراءات العمل القياسية'
+            },
+            'Bad Pattern / Marker Layout': {
+                ca: 'Update Tech Pack / Pattern | تعديل الملف التقني / الباترون',
+                pa: 'Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ'
+            },
+            'Lighting / Environment Issue': {
+                ca: 'Process Audit Conducted | إجراء تدقيق فوري للعملية',
+                pa: 'Install Better Lighting / Tools | تحسين الإضاءة / أدوات'
+            }
+        };
+
+        function syncCarCause(sel) {
+            const val = sel.value;
+            const rootCustom = document.getElementById('car-root-custom');
+            const caSel = document.getElementById('car-corrective');
+            const paSel = document.getElementById('car-preventive');
+            const caHint = document.getElementById('car-ca-hint');
+            const paHint = document.getElementById('car-pa-hint');
+
+            // Handle __OTHER__ for root cause
+            if (val === '__OTHER__') {
+                rootCustom.style.display = 'block';
+                caHint.style.display = 'none';
+                paHint.style.display = 'none';
+                return;
+            }
+            rootCustom.style.display = 'none';
+            rootCustom.value = '';
+
+            // Smart suggestion: auto-select corrective & preventive
+            const suggestion = carCauseMap[val];
+            if (suggestion) {
+                // Set corrective action
+                for (let opt of caSel.options) {
+                    if (opt.value === suggestion.ca) {
+                        caSel.value = suggestion.ca;
+                        break;
+                    }
+                }
+                caHint.style.display = 'inline';
+
+                // Set preventive action
+                for (let opt of paSel.options) {
+                    if (opt.value === suggestion.pa) {
+                        paSel.value = suggestion.pa;
+                        break;
+                    }
+                }
+                paHint.style.display = 'inline';
+            } else {
+                caHint.style.display = 'none';
+                paHint.style.display = 'none';
+            }
+        }
+
         function openModal(id) {
             document.getElementById(id).classList.add('active');
         }
