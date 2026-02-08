@@ -509,46 +509,49 @@ foreach ($users as $u) {
 
             <!-- Filters -->
             <div class="filter-bar">
-                <strong>🔍 تصفية:</strong>
+                <strong>🔍 Filter:</strong>
                 <form method="GET" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <select name="filter_role">
-                        <option value="">كل الأدوار</option>
-                        <option value="admin" <?= $filter_role == 'admin' ? 'selected' : '' ?>>مدير النظام</option>
-                        <option value="manager" <?= $filter_role == 'manager' ? 'selected' : '' ?>>رئيس فريق</option>
-                        <option value="viewer" <?= $filter_role == 'viewer' ? 'selected' : '' ?>>مستخدم عادي</option>
+                        <option value="">All Roles / كل الأدوار</option>
+                        <option value="admin" <?= $filter_role == 'admin' ? 'selected' : '' ?>>Admin / مدير</option>
+                        <option value="manager" <?= $filter_role == 'manager' ? 'selected' : '' ?>>Team Leader / رئيس فريق
+                        </option>
+                        <option value="viewer" <?= $filter_role == 'viewer' ? 'selected' : '' ?>>Viewer / مشاهد</option>
                     </select>
                     <select name="filter_location">
-                        <option value="">كل المواقع</option>
+                        <option value="">All Locations / كل المواقع</option>
                         <?php foreach ($loc_list as $l): ?>
                             <option value="<?= htmlspecialchars($l) ?>" <?= $filter_location == $l ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($l) ?></option>
+                                <?= htmlspecialchars($l) ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
-                    <button type="submit" class="btn btn-blue">تصفية</button>
-                    <a href="admin.php" class="btn" style="background:#6c757d;">إعادة</a>
+                    <button type="submit" class="btn btn-blue">Filter</button>
+                    <a href="admin.php" class="btn" style="background:#6c757d;">Reset</a>
                 </form>
             </div>
 
             <!-- Column Toggles -->
             <div class="col-toggles">
-                <strong style="font-size:13px;">👁️ الأعمدة:</strong>
+                <strong style="font-size:13px;">👁️ Columns / الأعمدة:</strong>
                 <label><input type="checkbox" checked onchange="toggleCol('col-id')">#</label>
                 <label><input type="checkbox" checked onchange="toggleCol('col-cin')">CIN</label>
-                <label><input type="checkbox" checked onchange="toggleCol('col-name')">الاسم</label>
-                <label><input type="checkbox" checked onchange="toggleCol('col-phone')">الهاتف</label>
-                <label><input type="checkbox" checked onchange="toggleCol('col-role')">الدور</label>
-                <label><input type="checkbox" checked onchange="toggleCol('col-dept')">القسم</label>
-                <label><input type="checkbox" checked onchange="toggleCol('col-loc')">الموقع</label>
-                <label><input type="checkbox" onchange="toggleCol('col-birth')">تاريخ الميلاد</label>
-                <label><input type="checkbox" onchange="toggleCol('col-status')">الحالة</label>
-                <label><input type="checkbox" onchange="toggleCol('col-created')">تاريخ التسجيل</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-name')">Name / الاسم</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-phone')">Phone / الهاتف</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-role')">Role / الدور</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-dept')">Department / القسم</label>
+                <label><input type="checkbox" checked onchange="toggleCol('col-loc')">Location / الموقع</label>
+                <label><input type="checkbox" onchange="toggleCol('col-birth')">Birth Date / تاريخ الميلاد</label>
+                <label><input type="checkbox" onchange="toggleCol('col-status')">Status / الحالة</label>
+                <label><input type="checkbox" onchange="toggleCol('col-created')">Created / تاريخ التسجيل</label>
             </div>
 
             <!-- User List -->
-            <h3>📋 قائمة المستخدمين (<?= count($users) ?>)</h3>
+            <h3>📋 User List / قائمة المستخدمين (<?= count($users) ?>)</h3>
 
             <?php if (count($users) == 0): ?>
-                <p style="text-align:center; color:#999; padding:30px;">لا يوجد مستخدمون يطابقون الفلتر.</p>
+                <p style="text-align:center; color:#999; padding:30px;">No users match the current filters. / لا يوجد
+                    مستخدمون يطابقون الفلتر.</p>
             <?php else: ?>
                 <?php foreach ($grouped as $location => $loc_users): ?>
                     <div class="location-header">
@@ -561,15 +564,15 @@ foreach ($users as $u) {
                                 <tr>
                                     <th class="col-id">#</th>
                                     <th class="col-cin">CIN</th>
-                                    <th class="col-name">الاسم</th>
-                                    <th class="col-phone">الهاتف</th>
-                                    <th class="col-role">الدور</th>
-                                    <th class="col-dept">القسم</th>
-                                    <th class="col-loc">الموقع</th>
-                                    <th class="col-birth" style="display:none;">تاريخ الميلاد</th>
-                                    <th class="col-status" style="display:none;">الحالة</th>
-                                    <th class="col-created" style="display:none;">تاريخ التسجيل</th>
-                                    <th>إجراءات</th>
+                                    <th class="col-name">Name<br><small>الاسم</small></th>
+                                    <th class="col-phone">Phone<br><small>الهاتف</small></th>
+                                    <th class="col-role">Role<br><small>الدور</small></th>
+                                    <th class="col-dept">Department<br><small>القسم</small></th>
+                                    <th class="col-loc">Location<br><small>الموقع</small></th>
+                                    <th class="col-birth" style="display:none;">Birth Date<br><small>تاريخ الميلاد</small></th>
+                                    <th class="col-status" style="display:none;">Status<br><small>الحالة</small></th>
+                                    <th class="col-created" style="display:none;">Created<br><small>تاريخ التسجيل</small></th>
+                                    <th>Actions<br><small>إجراءات</small></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -580,9 +583,9 @@ foreach ($users as $u) {
                                         default => 'background:#6c757d;'
                                     };
                                     $roleLabel = match ($u['role']) {
-                                        'admin' => 'مدير',
-                                        'manager' => 'رئيس فريق',
-                                        default => 'مشاهد'
+                                        'admin' => 'Admin',
+                                        'manager' => 'Team Leader',
+                                        default => 'Viewer'
                                     };
                                     ?>
                                     <tr>
@@ -596,16 +599,17 @@ foreach ($users as $u) {
                                         <td class="col-loc"><?= htmlspecialchars($u['location'] ?? '—') ?></td>
                                         <td class="col-birth" style="display:none;"><?= $u['birth_date'] ?? '—' ?></td>
                                         <td class="col-status" style="display:none;"><span
-                                                style="color:<?= $u['status'] === 'active' ? '#28a745' : '#fd7e14' ?>;"><?= $u['status'] === 'active' ? '✅ نشط' : '⏳ معلق' ?></span>
+                                                style="color:<?= $u['status'] === 'active' ? '#28a745' : '#fd7e14' ?>;"><?= $u['status'] === 'active' ? '✅ Active' : '⏳ Pending' ?></span>
                                         </td>
                                         <td class="col-created" style="display:none;">
-                                            <?= isset($u['created_at']) ? date('Y-m-d', strtotime($u['created_at'])) : '—' ?></td>
+                                            <?= isset($u['created_at']) ? date('Y-m-d', strtotime($u['created_at'])) : '—' ?>
+                                        </td>
                                         <td>
                                             <div class="actions-cell">
                                                 <button type="button" class="btn btn-edit" style="padding:4px 8px; font-size:12px;"
                                                     onclick="openEditModal(<?= $u['id'] ?>, '<?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['phone']), ENT_QUOTES) ?>', '<?= $u['role'] ?>', '<?= htmlspecialchars(addslashes($u['department'] ?? ''), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($u['location'] ?? ''), ENT_QUOTES) ?>')">✏️</button>
                                                 <form method="POST"
-                                                    onsubmit="return confirm('الدخول كـ <?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>?');">
+                                                    onsubmit="return confirm('Login as <?= htmlspecialchars(addslashes($u['name']), ENT_QUOTES) ?>?');">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="action" value="login_as">
                                                     <input type="hidden" name="cin" value="<?= htmlspecialchars($u['cin']) ?>">
@@ -613,7 +617,7 @@ foreach ($users as $u) {
                                                         style="padding:4px 8px; font-size:12px;">🕵️</button>
                                                 </form>
                                                 <?php if ($u['cin'] !== 'admin'): ?>
-                                                    <form method="POST" onsubmit="return confirm('حذف هذا المستخدم؟');">
+                                                    <form method="POST" onsubmit="return confirm('Delete this user?');">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="action" value="delete">
                                                         <input type="hidden" name="id" value="<?= $u['id'] ?>">
