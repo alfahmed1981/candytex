@@ -162,6 +162,8 @@ try {
     } elseif ($action === 'update_own_profile') {
         $name = strtoupper(trim($input['name'] ?? ''));
         $phone = trim($input['phone'] ?? '');
+        $email = trim($input['email'] ?? '');
+        $whatsapp = trim($input['whatsapp'] ?? '');
         $dept = trim($input['department'] ?? '');
         $loc = trim($input['location'] ?? '');
         $bdate = $input['birth_date'] ?? '';
@@ -173,8 +175,8 @@ try {
             api_response(false, [], 'Invalid date format');
         }
 
-        $stmt = $pdo->prepare("UPDATE users SET name = ?, phone = ?, department = ?, location = ?, birth_date = ? WHERE cin = ?");
-        $stmt->execute([$name, $phone, $dept, $loc, $bdate, $_SESSION['user_cin']]);
+        $stmt = $pdo->prepare("UPDATE users SET name = ?, phone = ?, email = ?, whatsapp = ?, department = ?, location = ?, birth_date = ? WHERE cin = ?");
+        $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $dept, $loc, $bdate, $_SESSION['user_cin']]);
         $_SESSION['user_name'] = $name;
         api_response(true);
 

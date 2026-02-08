@@ -164,6 +164,20 @@ ob_start();
                 <input type="text" name="phone" required value="<?= htmlspecialchars($user['phone']) ?>">
             </div>
 
+            <!-- Email -->
+            <div class="form-group">
+                <label>📧 Email / البريد الإلكتروني</label>
+                <input type="email" name="email" value="<?= htmlspecialchars($user['email'] ?? '') ?>"
+                    placeholder="user@example.com">
+            </div>
+
+            <!-- WhatsApp -->
+            <div class="form-group">
+                <label>📱 WhatsApp / هاتف واتساب</label>
+                <input type="text" name="whatsapp" value="<?= htmlspecialchars($user['whatsapp'] ?? '') ?>"
+                    placeholder="06XXXXXXXX">
+            </div>
+
             <!-- Department -->
             <div class="form-group">
                 <label>Department / القسم *</label>
