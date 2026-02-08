@@ -444,19 +444,19 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
 
         <hr>
         <div class="countermeasures-section">
-            <h3>🛠️ Counter Measures<br><span style="font-size:0.6em">الإجراءات المضادة / Contre-mesures</span></h3>
-            <button onclick="addCounterMeasure()" class="add-btn">+ Add Issue<br><small>إضافة مشكلة /
-                    Ajouter</small></button>
+            <h3>🛠️ الإجراءات التصحيحية<br><span style="font-size:0.6em">Contre-mesures / Counter Measures</span></h3>
+            <button onclick="addCounterMeasure()" class="add-btn">+ إضافة مشكلة<br><small>Ajouter /
+                    Add Issue</small></button>
             <table id="cm-table">
                 <thead>
                     <tr>
-                        <th>Cat<br><small>فئة</small></th>
-                        <th>Issue<br><small>المشكلة / Problème</small></th>
-                        <th>Action<br><small>الإجراء / Action</small></th>
-                        <th>Who<br><small>المسؤول / Qui</small></th>
-                        <th>Due Date<br><small>الموعد / Échéance</small></th>
-                        <th>Status<br><small>الحالة / Statut</small></th>
-                        <th>Action</th>
+                        <th>فئة<br><small>Cat</small></th>
+                        <th>المشكلة<br><small>Issue / Problème</small></th>
+                        <th>الإجراء<br><small>Action</small></th>
+                        <th>المسؤول<br><small>Who / Qui</small></th>
+                        <th>الموعد<br><small>Due Date / Échéance</small></th>
+                        <th>الحالة<br><small>Status / Statut</small></th>
+                        <th>إجراء</th>
                     </tr>
                 </thead>
                 <tbody>

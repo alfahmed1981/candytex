@@ -339,16 +339,16 @@ function createStatusModal() {
     modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;';
     modal.innerHTML = `
         <div style="background:white; padding:30px; border-radius:15px; text-align:center; max-width:400px; width:90%;">
-            <h3 id="modalTitle" style="margin-bottom:20px;">Update Status</h3>
+            <h3 id="modalTitle" style="margin-bottom:20px;">تحديث الحالة</h3>
             <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;">
-                <button onclick="selectStatus('green')" style="background:#28a745; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">✓ موافق<br><small>Met</small></button>
-                <button onclick="selectStatus('orange')" style="background:#fd7e14; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">⚠️ إجراء<br><small>Action</small></button>
-                <button onclick="selectStatus('red')" style="background:#dc3545; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">✗ خطر<br><small>Missed</small></button>
-                <button onclick="selectStatus('blue')" style="background:#007bff; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">📅 عطلة<br><small>Holiday</small></button>
+                <button onclick="selectStatus('green')" style="background:#28a745; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">✓ موافق<br><small>تم تحقيق الهدف</small></button>
+                <button onclick="selectStatus('orange')" style="background:#fd7e14; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">⚠️ إجراء<br><small>يحتاج انتباه</small></button>
+                <button onclick="selectStatus('red')" style="background:#dc3545; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">✗ خطر<br><small>لم يتحقق الهدف</small></button>
+                <button onclick="selectStatus('blue')" style="background:#007bff; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">📅 عطلة<br><small>يوم عطلة</small></button>
             </div>
-            <button onclick="selectStatus('gray')" style="background:#6c757d; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; margin-bottom:15px;">○ مسح<br><small>Clear</small></button>
+            <button onclick="selectStatus('gray')" style="background:#6c757d; color:white; padding:10px 30px; border:none; border-radius:8px; cursor:pointer; margin-bottom:15px;">○ مسح<br><small>إعادة تعيين</small></button>
             <br>
-            <button onclick="closeModal()" style="background:#eee; color:#333; padding:10px 30px; border:none; border-radius:8px; cursor:pointer;">إلغاء / Cancel</button>
+            <button onclick="closeModal()" style="background:#eee; color:#333; padding:10px 30px; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
         </div>
     `;
     document.body.appendChild(modal);
@@ -400,16 +400,16 @@ function selectStatus(status) {
     closeModal();
 
     if (status === 'green' || status === 'blue') {
-        Swal.fire({ title: 'Confirm', html: msg, icon: 'question', showCancelButton: true, confirmButtonText: '✅ Confirm' }).then((r) => {
+        Swal.fire({ title: 'تأكيد', html: msg, icon: 'question', showCancelButton: true, confirmButtonText: '✅ تأكيد', cancelButtonText: 'إلغاء' }).then((r) => {
             if (r.isConfirmed) performStatusUpdate(category, dateStr, status);
         });
     } else if (status === 'orange') {
-        Swal.fire({ title: 'Warning', html: msg, icon: 'warning', showCancelButton: true, confirmButtonText: '⚠️ Add Issue', cancelButtonText: 'Save Only' }).then((r) => {
+        Swal.fire({ title: 'تحذير', html: msg, icon: 'warning', showCancelButton: true, confirmButtonText: '⚠️ إضافة مشكلة', cancelButtonText: 'حفظ فقط' }).then((r) => {
             performStatusUpdate(category, dateStr, status, r.isConfirmed);
             if (r.isConfirmed) openIssueModal(category, dateStr);
         });
     } else if (status === 'red') {
-        Swal.fire({ title: 'STOP', html: msg, icon: 'error', confirmButtonColor: '#d33', confirmButtonText: '🚨 Register Issue' }).then(() => {
+        Swal.fire({ title: 'توقف', html: msg, icon: 'error', confirmButtonColor: '#d33', confirmButtonText: '🚨 تسجيل المشكلة' }).then(() => {
             openIssueModal(category, dateStr);
             pendingRedUpdate = { category, date: dateStr, status: 'red' };
         });

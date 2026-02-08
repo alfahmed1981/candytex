@@ -362,7 +362,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
         <!-- Header -->
         <div class="guide-header">
             <h1>📊 دليل استخدام لوحة SQD+C</h1>
-            <p>دليل شامل للمستخدمين: رؤساء الفرق والعاملين</p>
+            <p>دليل شامل لرؤساء الفرق: كيفية استخدام لوحة المتابعة اليومية</p>
             <?php if ($is_logged_in): ?>
                 <p style="margin-top:15px; font-size:0.9em;">👋 مرحباً
                     <?php echo htmlspecialchars($user_name); ?>
@@ -448,18 +448,18 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
 
             <div class="kpi-grid" style="margin-top: 15px;">
                 <div class="kpi-card" style="background: linear-gradient(135deg, #28a745, #20c997);">
-                    <h3>👔 Admin</h3>
-                    <p>مدير النظام</p>
+                    <h3>👔 مدير النظام</h3>
+                    <p>Admin</p>
                     <p style="font-size:0.75em; margin-top:8px;">إدارة المستخدمين، استيراد البيانات، تعديل السجلات</p>
                 </div>
                 <div class="kpi-card" style="background: linear-gradient(135deg, #007bff, #6610f2);">
-                    <h3>👷 Manager</h3>
-                    <p>رئيس الفريق</p>
+                    <h3>👷 رئيس الفريق</h3>
+                    <p>Manager</p>
                     <p style="font-size:0.75em; margin-top:8px;">ملء اللوحة اليومية، إدارة الفريق، إضافة الإجراءات</p>
                 </div>
                 <div class="kpi-card" style="background: linear-gradient(135deg, #6c757d, #495057);">
-                    <h3>👁️ Viewer</h3>
-                    <p>مستخدم عادي</p>
+                    <h3>👁️ مستخدم عادي</h3>
+                    <p>Viewer</p>
                     <p style="font-size:0.75em; margin-top:8px;">مشاهدة البيانات فقط، بدون صلاحيات تعديل</p>
                 </div>
             </div>
@@ -678,7 +678,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
 
         <!-- Countermeasures -->
         <div class="section" style="border-right-color: #dc3545;">
-            <h2><span class="emoji">🛠️</span> الخطوة 3: إضافة إجراء تصحيحي (Counter Measure)</h2>
+            <h2><span class="emoji">🛠️</span> الخطوة 3: إضافة إجراء تصحيحي</h2>
 
             <div class="step-content">
                 <p>عندما تضع <strong>لون أحمر أو برتقالي</strong>، يجب أن تضيف إجراء تصحيحي لشرح المشكلة وكيف ستحلها.
@@ -687,9 +687,9 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
 
             <div class="step-box">
                 <span class="step-number">1</span>
-                <span class="step-title">اضغط على "+ Add Issue"</span>
+                <span class="step-title">اضغط على "+ إضافة مشكلة"</span>
                 <div class="step-content">
-                    <p>في أسفل الصفحة، اضغط على زر <strong>"+ Add Issue / إضافة مشكلة"</strong></p>
+                    <p>في أسفل الصفحة، اضغط على زر <strong>"+ إضافة مشكلة"</strong></p>
                 </div>
             </div>
 
@@ -795,8 +795,8 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
                 <span class="step-number">1</span>
                 <span class="step-title">مشاهدة الوضع العام للمصنع</span>
                 <div class="step-content">
-                    <p>اذهب إلى صفحة <a href="global.php" style="color:#6f42c1; font-weight:bold;">🏭 Factory Global
-                            Status</a> لمشاهدة أداء المصنع بالكامل.</p>
+                    <p>اذهب إلى صفحة <a href="global.php" style="color:#6f42c1; font-weight:bold;">🏭 الوضع العام
+                            للمصنع</a> لمشاهدة أداء المصنع بالكامل.</p>
                     <p>هذه الصفحة تجمع بيانات جميع الفرق وتعرض <strong>الوضع الأسوأ</strong> لكل يوم:</p>
                     <ul style="margin-top:10px; line-height:2;">
                         <li>🟢 <strong>أخضر</strong>: جميع الفرق حققت الهدف</li>
@@ -895,7 +895,7 @@ $user_name = $is_logged_in ? $_SESSION['user_name'] : '';
             <div class="step-box" style="border-right-color: #6f42c1;">
                 <span class="step-title">❓ ما هي صفحة "الوضع العام للمصنع"؟</span>
                 <div class="step-content">
-                    <p>صفحة <a href="global.php" style="color:#6f42c1;">🏭 Factory Global Status</a> تجمع بيانات جميع
+                    <p>صفحة <a href="global.php" style="color:#6f42c1;">🏭 الوضع العام للمصنع</a> تجمع بيانات جميع
                         الفرق وتعرض الحالة الإجمالية للمصنع. مفيدة للإدارة لمتابعة الأداء العام.</p>
                 </div>
             </div>
