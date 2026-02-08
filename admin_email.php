@@ -232,9 +232,32 @@ function send_smtp_test($cfg, $to)
     <title>Email Settings - SQD+C</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* === Override global style.css button defaults === */
+        .email-container button {
+            background: transparent !important;
+            color: #333 !important;
+            width: auto !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            font-weight: normal !important;
+        }
+
         .email-container {
             max-width: 800px;
             margin: 0 auto;
+            color: #333;
+        }
+
+        .email-container h1 {
+            color: #222 !important;
+        }
+
+        .email-container p {
+            color: #555 !important;
+        }
+
+        .email-container small {
+            color: #888 !important;
         }
 
         .settings-card {
@@ -250,10 +273,11 @@ function send_smtp_test($cfg, $to)
             margin: 0 0 20px;
             padding-bottom: 12px;
             border-bottom: 2px solid #f0f0f0;
-            color: #333;
+            color: #333 !important;
             display: flex;
             align-items: center;
             gap: 8px;
+            font-size: 17px;
         }
 
         .form-row {
@@ -274,30 +298,34 @@ function send_smtp_test($cfg, $to)
 
         .form-group label {
             font-weight: 600;
-            color: #444;
+            color: #444 !important;
             margin-bottom: 6px;
             font-size: 13px;
         }
 
         .form-group label small {
             font-weight: normal;
-            color: #888;
+            color: #888 !important;
         }
 
         .form-group input,
         .form-group select {
-            padding: 10px 14px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            padding: 10px 14px !important;
+            border: 1px solid #ddd !important;
+            border-radius: 8px !important;
             font-size: 14px;
             transition: border-color 0.2s, box-shadow 0.2s;
             font-family: inherit;
+            color: #333 !important;
+            background: white !important;
+            width: 100% !important;
+            box-sizing: border-box;
         }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #667eea !important;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
         }
 
@@ -314,20 +342,22 @@ function send_smtp_test($cfg, $to)
         }
 
         .btn-save {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+            color: white !important;
+            border: none !important;
+            padding: 12px 28px !important;
+            border-radius: 8px !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
             cursor: pointer;
             transition: transform 0.1s, box-shadow 0.2s;
+            width: auto !important;
         }
 
         .btn-save:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            background: linear-gradient(135deg, #218838 0%, #1aae88 100%) !important;
         }
 
         /* Test Email Section */
@@ -349,21 +379,23 @@ function send_smtp_test($cfg, $to)
         }
 
         .btn-test {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            border: none !important;
+            padding: 10px 24px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
             cursor: pointer;
             white-space: nowrap;
             transition: transform 0.1s, box-shadow 0.2s;
+            width: auto !important;
         }
 
         .btn-test:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            background: linear-gradient(135deg, #5568d3 0%, #6a3e99 100%) !important;
         }
 
         /* Alerts */
@@ -378,14 +410,14 @@ function send_smtp_test($cfg, $to)
         }
 
         .alert-success {
-            background: #d4edda;
-            color: #155724;
+            background: #d4edda !important;
+            color: #155724 !important;
             border: 1px solid #c3e6cb;
         }
 
         .alert-error {
-            background: #f8d7da;
-            color: #721c24;
+            background: #f8d7da !important;
+            color: #721c24 !important;
             border: 1px solid #f5c6cb;
         }
 
@@ -395,8 +427,8 @@ function send_smtp_test($cfg, $to)
         }
 
         .password-wrapper input {
-            width: 100%;
-            padding-right: 40px;
+            width: 100% !important;
+            padding-right: 40px !important;
             box-sizing: border-box;
         }
 
@@ -405,12 +437,17 @@ function send_smtp_test($cfg, $to)
             right: 10px;
             top: 50%;
             transform: translateY(-50%);
-            background: none;
-            border: none;
+            background: none !important;
+            border: none !important;
             cursor: pointer;
             font-size: 18px;
-            padding: 4px;
-            color: #888;
+            padding: 4px !important;
+            color: #888 !important;
+            width: auto !important;
+        }
+
+        .toggle-pass:hover {
+            background: none !important;
         }
 
         /* Status indicator */
@@ -435,19 +472,23 @@ function send_smtp_test($cfg, $to)
         /* Help text */
         .help-text {
             font-size: 11px;
-            color: #999;
+            color: #999 !important;
             margin-top: 4px;
         }
 
         /* Info box */
         .info-box {
             background: #e7f3ff;
-            color: #004085;
+            color: #004085 !important;
             padding: 12px 16px;
             border-radius: 8px;
             margin-bottom: 20px;
             font-size: 13px;
             border-left: 4px solid #007bff;
+        }
+
+        .info-box strong {
+            color: #004085 !important;
         }
 
         /* Common providers */
@@ -459,30 +500,51 @@ function send_smtp_test($cfg, $to)
         }
 
         .provider-btn {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px 14px;
+            background: white !important;
+            border: 2px solid #ddd !important;
+            border-radius: 10px !important;
+            padding: 12px 14px !important;
             cursor: pointer;
             text-align: center;
-            font-size: 13px;
+            font-size: 14px !important;
+            font-weight: 600 !important;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 8px;
             justify-content: center;
+            color: #333 !important;
+            width: 100% !important;
         }
 
         .provider-btn:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
-            transform: translateY(-1px);
+            border-color: #667eea !important;
+            background: #f0f4ff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            color: #4a5ad8 !important;
         }
 
         .provider-btn.active {
-            border-color: #667eea;
-            background: #f0f4ff;
-            font-weight: 600;
+            border-color: #667eea !important;
+            background: #eef2ff !important;
+            font-weight: 700 !important;
+            color: #4a5ad8 !important;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Gmail guide */
+        .settings-card ol {
+            color: #555 !important;
+        }
+
+        .settings-card ol li {
+            color: #555 !important;
+        }
+
+        .settings-card ol a {
+            color: #667eea !important;
+            text-decoration: underline;
         }
 
         @media (max-width: 600px) {
