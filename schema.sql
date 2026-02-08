@@ -112,3 +112,11 @@ INSERT IGNORE INTO shifts (code, name) VALUES
 INSERT IGNORE INTO system_roles (slug, name) VALUES
     ('admin', 'Administrator'),
     ('manager', 'Manager / Chef d''équipe');
+
+-- 8. Email Settings (SMTP Configuration)
+CREATE TABLE IF NOT EXISTS `email_settings` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `setting_key` VARCHAR(100) NOT NULL UNIQUE,
+    `setting_value` TEXT DEFAULT NULL,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -81,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $loc = trim($_POST['edit_location']);
         $status = $_POST['edit_status'] ?? 'active';
         $birth = $_POST['edit_birth_date'] ?? null;
-        if ($birth === '') $birth = null;
+        if ($birth === '')
+            $birth = null;
         audit_log($pdo, 'edit_user', "Edited user ID: $id — Name: $name, Role: $role");
         $stmt = $pdo->prepare("UPDATE users SET name=?, phone=?, email=?, whatsapp=?, role=?, department=?, location=?, status=?, birth_date=? WHERE id=?");
         $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $role, $dept, $loc, $status, $birth, $id]);
@@ -428,6 +429,7 @@ foreach ($users as $u) {
                 <a href="admin_daily.php" class="btn btn-blue" style="background:#28a745;">📸 Daily Snapshot</a>
                 <a href="admin_reports.php" class="btn btn-blue" style="background:#fd7e14;">📅 Monthly Matrix</a>
                 <a href="admin_advanced.php" class="btn btn-blue" style="background:#6f42c1;">⚙️ Advanced</a>
+                <a href="admin_email.php" class="btn btn-blue" style="background:#e83e8c;">📧 Email Settings</a>
                 <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 Import CSV</a>
             </div>
 
@@ -623,7 +625,8 @@ foreach ($users as $u) {
                                         <td class="col-dept"><?= htmlspecialchars($u['department'] ?? '—') ?></td>
                                         <td class="col-loc"><?= htmlspecialchars($u['location'] ?? '—') ?></td>
                                         <td class="col-email" style="display:none;"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
-                                        <td class="col-whatsapp" style="display:none;"><?= htmlspecialchars($u['whatsapp'] ?? '—') ?></td>
+                                        <td class="col-whatsapp" style="display:none;">
+                                            <?= htmlspecialchars($u['whatsapp'] ?? '—') ?></td>
                                         <td class="col-birth" style="display:none;"><?= $u['birth_date'] ?? '—' ?></td>
                                         <td class="col-status" style="display:none;"><span
                                                 style="color:<?= $u['status'] === 'active' ? '#28a745' : '#fd7e14' ?>;"><?= $u['status'] === 'active' ? '✅ Active' : '⏳ Pending' ?></span>
@@ -732,8 +735,8 @@ foreach ($users as $u) {
                 <input type="date" name="edit_birth_date" id="edit_birth_date">
 
                 <div class="modal-actions">
-                    <button type="button" class="btn" style="background:#6c757d;"
-                        onclick="closeEditModal()">Cancel / إلغاء</button>
+                    <button type="button" class="btn" style="background:#6c757d;" onclick="closeEditModal()">Cancel /
+                        إلغاء</button>
                     <button type="submit" class="btn btn-blue">💾 Save / حفظ</button>
                 </div>
             </form>
