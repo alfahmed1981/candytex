@@ -440,6 +440,7 @@ foreach ($users as $u) {
                 <a href="iso_ncr.php" class="btn btn-blue" style="background:#0b3c5d;">🏭 ISO NCR/CAR</a>
                 <a href="iso_risk.php" class="btn btn-blue" style="background:#c0392b;">📋 Risk Register</a>
                 <a href="iso_docs.php" class="btn btn-blue" style="background:#2e7d32;">📄 Document Control</a>
+                <a href="admin_backup.php" class="btn btn-blue" style="background:#455a64;">💾 Backup</a>
             </div>
 
             <?php if (isset($msg))
