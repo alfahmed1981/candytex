@@ -8,6 +8,9 @@ if (!isset($_SESSION['user_cin'])) {
     exit;
 }
 
+$is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+$user_cin = $_SESSION['user_cin'];
+
 $year = date('Y');
 $month = date('m');
 if (isset($_GET['year']))
@@ -95,11 +98,20 @@ $columns = [
     'C' => ['title' => 'C', 'sub' => 'التكلفة']
 ];
 
-// Build display order
-$display_locations = array_merge(['__ALL__'], $all_locations);
-if (isset($location_data['غير محدد']))
-    $display_locations[] = 'غير محدد';
-$display_locations = array_unique($display_locations);
+// Build display order based on user role
+if ($is_admin) {
+    // Admin sees ALL locations + global aggregate
+    $display_locations = array_merge(['__ALL__'], $all_locations);
+    if (isset($location_data['غير محدد']))
+        $display_locations[] = 'غير محدد';
+    $display_locations = array_unique($display_locations);
+} else {
+    // Team leader: only sees their own location
+    $user_loc_stmt = $pdo->prepare("SELECT location FROM users WHERE cin = ?");
+    $user_loc_stmt->execute([$user_cin]);
+    $user_location = $user_loc_stmt->fetchColumn() ?: 'غير محدد';
+    $display_locations = [$user_location];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -238,15 +250,22 @@ $display_locations = array_unique($display_locations);
             <h3><?php echo "$month_name $year"; ?></h3>
         </div>
 
-        <!-- Tab Navigation -->
-        <div class="tab-bar">
-            <button class="tab-btn active" onclick="showLocation('all')">🌍 الكل</button>
-            <?php foreach ($all_locations as $loc): ?>
-                <button class="tab-btn" onclick="showLocation('<?= htmlspecialchars($loc) ?>')">
-                    <?= $loc_emoji[$loc] ?? '📍' ?>     <?= htmlspecialchars($loc) ?>
-                </button>
-            <?php endforeach; ?>
-        </div>
+        <!-- Tab Navigation (Admin only) -->
+        <?php if ($is_admin): ?>
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="showLocation('all')">🌍 الكل</button>
+                <?php foreach ($all_locations as $loc): ?>
+                    <button class="tab-btn" onclick="showLocation('<?= htmlspecialchars($loc) ?>')">
+                        <?= $loc_emoji[$loc] ?? '📍' ?>         <?= htmlspecialchars($loc) ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div
+                style="padding:10px 15px; background:#e8f5e9; border-radius:8px; margin-bottom:15px; font-weight:600; color:#2e7d32;">
+                📍 موقعك: <?= htmlspecialchars($display_locations[0] ?? '-') ?>
+            </div>
+        <?php endif; ?>
 
         <!-- Legend -->
         <div class="legend"
