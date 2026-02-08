@@ -24,47 +24,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     // --- LOGIN LOGIC ---
     if ($_POST['action'] === 'login') {
-        $cin = strtoupper(str_replace(' ', '', trim($_POST['cin'])));
-        $cred_input = trim($_POST['password']); // Unified field
+        // Rate Limiting: max 5 attempts per 15 minutes
+        if (!isset($_SESSION['login_attempts']))
+            $_SESSION['login_attempts'] = 0;
+        if (!isset($_SESSION['login_lockout']))
+            $_SESSION['login_lockout'] = 0;
 
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE cin = ?");
-        $stmt->execute([$cin]);
-        $user = $stmt->fetch();
+        if ($_SESSION['login_lockout'] > time()) {
+            $wait = ceil(($_SESSION['login_lockout'] - time()) / 60);
+            $error = "⏳ Too many attempts. Please wait {$wait} minutes.";
+        } else {
+            $cin = strtoupper(str_replace(' ', '', trim($_POST['cin'])));
+            $cred_input = trim($_POST['password']); // Unified field
 
-        if ($user) {
-            if ($user['status'] === 'pending') {
-                $error = "⏳ Account pending approval. Please wait.";
-            } else {
-                $login_ok = false;
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE cin = ?");
+            $stmt->execute([$cin]);
+            $user = $stmt->fetch();
 
-                // 1. Password Check
-                if (!empty($user['password']) && password_verify($cred_input, $user['password'])) {
-                    $login_ok = true;
-                }
-                // 2. Legacy Phone Check (Treat input as phone)
-                elseif (empty($user['password']) && $user['phone'] === $cred_input) {
-                    $login_ok = true;
-                }
-
-                if ($login_ok) {
-                    $_SESSION['user_cin'] = $user['cin'];
-                    $_SESSION['user_name'] = $user['name'];
-                    $_SESSION['role'] = $user['role'];
-                    audit_log($pdo, 'login', "User logged in: " . $user['cin']);
-
-                    if ($user['role'] === 'admin') {
-                        header("Location: admin.php");
-                    } else {
-                        header("Location: index.php");
-                    }
-                    exit;
+            if ($user) {
+                if ($user['status'] === 'pending') {
+                    $error = "⏳ Account pending approval. Please wait.";
                 } else {
-                    $error = "❌ Incorrect Credential (Password or Phone).";
+                    $login_ok = false;
+
+                    // 1. Password Check
+                    if (!empty($user['password']) && password_verify($cred_input, $user['password'])) {
+                        $login_ok = true;
+                    }
+                    // 2. Legacy Phone Check (Treat input as phone)
+                    elseif (empty($user['password']) && $user['phone'] === $cred_input) {
+                        $login_ok = true;
+                    }
+
+                    if ($login_ok) {
+                        $_SESSION['user_cin'] = $user['cin'];
+                        $_SESSION['user_name'] = $user['name'];
+                        $_SESSION['role'] = $user['role'];
+                        audit_log($pdo, 'login', "User logged in: " . $user['cin']);
+
+                        if ($user['role'] === 'admin') {
+                            header("Location: admin.php");
+                        } else {
+                            header("Location: index.php");
+                        }
+                        exit;
+                    } else {
+                        $_SESSION['login_attempts']++;
+                        if ($_SESSION['login_attempts'] >= 5) {
+                            $_SESSION['login_lockout'] = time() + 900; // 15 min lockout
+                            $_SESSION['login_attempts'] = 0;
+                            $error = "🔒 Account locked for 15 minutes due to too many attempts.";
+                        } else {
+                            $error = "❌ Incorrect Credential (Password or Phone).";
+                        }
+                    }
+                }
+            } else {
+                $_SESSION['login_attempts']++;
+                if ($_SESSION['login_attempts'] >= 5) {
+                    $_SESSION['login_lockout'] = time() + 900;
+                    $_SESSION['login_attempts'] = 0;
+                    $error = "🔒 Account locked for 15 minutes due to too many attempts.";
+                } else {
+                    $error = "❌ User not found.";
                 }
             }
-        } else {
-            $error = "❌ User not found.";
-        }
+        } // end rate-limit else
     }
 
     // --- REGISTRATION LOGIC ---
@@ -444,6 +469,7 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
     <!-- Pass PHP data to JS -->
     <script>
         const initialCM = <?php echo json_encode($sqdc_data['countermeasures'] ?? []); ?>;
+        const CSRF_TOKEN = '<?php echo csrf_token(); ?>';
     </script>
     <script src="script.js?v=<?php echo time(); ?>"></script>
 

@@ -194,7 +194,7 @@ ob_start();
             fetch('api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ ...data, csrf_token: '<?php echo csrf_token(); ?>' })
             })
                 .then(res => res.json())
                 .then(response => {

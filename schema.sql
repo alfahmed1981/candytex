@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS `sqdc_daily` (
 CREATE TABLE IF NOT EXISTS `countermeasures` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `user_cin` VARCHAR(20) NOT NULL,
+    `category` ENUM('S', 'Q', 'D', '5S', 'C') DEFAULT 'S',
     `issue` TEXT NOT NULL,
     `action_plan` TEXT NOT NULL,
     `responsible` VARCHAR(100),

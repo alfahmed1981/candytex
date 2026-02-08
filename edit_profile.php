@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'db.php';
+require 'includes/auth.php';
 
 // Security: User must be logged in
 if (!isset($_SESSION['user_cin'])) {
@@ -211,7 +212,7 @@ ob_start();
             fetch('api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ ...data, csrf_token: '<?php echo csrf_token(); ?>' })
             })
                 .then(res => res.json())
                 .then(response => {

@@ -422,7 +422,7 @@ function performStatusUpdate(kpi, date, status, skipReload = false) {
     return fetch('api.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_day', kpi, date, status })
+        body: JSON.stringify({ action: 'update_day', kpi, date, status, csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '') })
     }).then(r => r.json()).then(d => {
         if (d.success && !skipReload) location.reload();
         else if (!d.success) Swal.fire('Error', 'Update failed', 'error');
@@ -488,7 +488,8 @@ function saveRow(index) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'save_countermeasures',
-                    data: [row] // Send single row as array
+                    data: [row],
+                    csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
                 })
             })
                 .then(res => res.json())

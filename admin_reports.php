@@ -381,6 +381,7 @@ $month_name = date('F', mktime(0, 0, 0, $selected_month, 10)); // e.g. "January"
         let currentCin = null;
         let currentDate = null;
         const statusOrder = ['green', 'orange', 'red', 'blue', 'gray'];
+        const CSRF_TOKEN = '<?php echo csrf_token(); ?>';
 
         function openEditModal(cin, name, date) {
             currentCin = cin;
@@ -444,7 +445,8 @@ $month_name = date('F', mktime(0, 0, 0, $selected_month, 10)); // e.g. "January"
                     target_cin: currentCin,
                     date: currentDate,
                     kpi: kpi,
-                    status: nextStatus
+                    status: nextStatus,
+                    csrf_token: CSRF_TOKEN
                 })
             }).then(res => res.json()).then(data => {
                 if (!data.success) {
