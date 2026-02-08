@@ -785,6 +785,160 @@ foreach ($ncrs as $ncr) {
             margin-right: 4px;
         }
 
+        /* Guide Section */
+        .guide-section {
+            background: white;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid #e3e8ef;
+        }
+
+        .guide-toggle {
+            width: 100%;
+            padding: 16px 24px !important;
+            background: linear-gradient(135deg, #eef2f7, #f8f9fb) !important;
+            border: none !important;
+            border-radius: 0 !important;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1em !important;
+            font-weight: 700 !important;
+            color: #0b3c5d !important;
+        }
+
+        .guide-toggle:hover {
+            background: #e8edf3 !important;
+        }
+
+        .guide-toggle .arrow {
+            transition: transform 0.3s;
+            font-size: 1.2em;
+        }
+
+        .guide-toggle .arrow.open {
+            transform: rotate(180deg);
+        }
+
+        .guide-content {
+            display: none;
+            padding: 0 28px 28px;
+            animation: fadeIn 0.3s;
+        }
+
+        .guide-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .guide-card {
+            background: #f8f9fb;
+            border-radius: 12px;
+            padding: 20px;
+            border-right: 4px solid #0b3c5d;
+        }
+
+        .guide-card h3 {
+            color: #0b3c5d;
+            margin: 0 0 12px;
+            font-size: 1.05em;
+        }
+
+        .guide-card h3 small {
+            font-weight: normal;
+            color: #888;
+            font-size: 0.8em;
+        }
+
+        .guide-card p,
+        .guide-card li {
+            color: #444;
+            font-size: 0.9em;
+            line-height: 1.7;
+            margin: 4px 0;
+        }
+
+        .guide-card ul {
+            padding-right: 18px;
+            margin: 8px 0;
+        }
+
+        .guide-card .term {
+            display: inline-block;
+            background: #e8edf5;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #0b3c5d;
+            font-size: 0.85em;
+        }
+
+        .guide-workflow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: wrap;
+            margin: 12px 0;
+        }
+
+        .guide-workflow .step {
+            background: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .guide-workflow .arrow-right {
+            font-size: 1.2em;
+            color: #0b3c5d;
+            padding: 0 4px;
+        }
+
+        .guide-card.highlight {
+            background: #fff8e1;
+            border-right-color: #ffc107;
+        }
+
+        .btn-guide-nav {
+            padding: 10px 20px !important;
+            background: rgba(255, 255, 255, 0.25) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            color: white !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+            font-size: 0.95em !important;
+            width: auto !important;
+            transition: background 0.3s;
+        }
+
+        .btn-guide-nav:hover {
+            background: rgba(255, 255, 255, 0.35) !important;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .ncr-table {
@@ -803,6 +957,10 @@ foreach ($ncrs as $ncr) {
                 flex-direction: column;
                 text-align: center;
             }
+
+            .guide-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -816,10 +974,154 @@ foreach ($ncrs as $ncr) {
                 <p>ISO 9001 — NCR / CAR Management</p>
             </div>
             <div class="nav-links">
+                <button type="button" class="btn-guide-nav" onclick="toggleGuide()">📖 دليل الاستخدام</button>
                 <a href="index.php">📊 لوحة القيادة</a>
                 <a href="admin.php">⚙️ الإدارة</a>
                 <a href="admin_issues.php">🛠️ المشاكل</a>
                 <a href="index.php?logout=1">🚪 خروج</a>
+            </div>
+        </div>
+
+        <!-- ============ USER GUIDE ============ -->
+        <div class="guide-section" id="guide-section">
+            <button type="button" class="guide-toggle" onclick="toggleGuide()">
+                <span>📖 دليل استخدام لوحة إدارة عدم المطابقة — NCR / CAR Guide</span>
+                <span class="arrow" id="guide-arrow">▼</span>
+            </button>
+            <div class="guide-content" id="guide-content">
+
+                <div class="guide-grid">
+                    <!-- What is NCR? -->
+                    <div class="guide-card">
+                        <h3>🚫 ما هو تقرير عدم المطابقة؟ <small>/ What is NCR?</small></h3>
+                        <p><span class="term">NCR</span> = <strong>Non-Conformity Report</strong> — تقرير عدم المطابقة
+                        </p>
+                        <p>هو تقرير يُسجَّل عند اكتشاف أي <strong>خلل أو خطأ أو مشكلة</strong> في المنتج أو العملية أو
+                            المواد الخام.</p>
+                        <p>ببساطة: <em>"وجدنا مشكلة ← نسجلها رسمياً"</em></p>
+                        <p style="margin-top:10px; font-weight:600;">📌 أمثلة:</p>
+                        <ul>
+                            <li>قماش وصل من المورد به عيب</li>
+                            <li>قطعة خياطة غير مطابقة للمقاسات</li>
+                            <li>آلة تنتج قطعاً معيبة</li>
+                            <li>ملاحظة من الزبون على جودة المنتج</li>
+                        </ul>
+                    </div>
+
+                    <!-- What is CAR? -->
+                    <div class="guide-card">
+                        <h3>🔁 ما هو الإجراء التصحيحي؟ <small>/ What is CAR?</small></h3>
+                        <p><span class="term">CAR</span> = <strong>Corrective Action Report</strong> — تقرير الإجراء
+                            التصحيحي</p>
+                        <p>هو الخطوات التي نتخذها <strong>لمعالجة المشكلة ومنع تكرارها</strong>.</p>
+                        <p>ببساطة: <em>"عرفنا المشكلة ← نبحث عن سببها ← نحلها ← نتأكد إنها ما ترجع"</em></p>
+                        <p style="margin-top:10px; font-weight:600;">📌 يتضمن CAR:</p>
+                        <ul>
+                            <li><strong>السبب الجذري</strong> — لماذا حدثت المشكلة أصلاً؟</li>
+                            <li><strong>الإجراء التصحيحي</strong> — ماذا سنفعل لحلها؟</li>
+                            <li><strong>الإجراء الوقائي</strong> — كيف نمنع تكرارها؟</li>
+                        </ul>
+                    </div>
+
+                    <!-- Workflow -->
+                    <div class="guide-card highlight">
+                        <h3>📋 سير العمل <small>/ Workflow</small></h3>
+                        <p>كل تقرير عدم مطابقة يمر بالمراحل التالية:</p>
+                        <div class="guide-workflow">
+                            <div class="step" style="background:#fce4ec; color:#c62828;">🔴
+                                مفتوحة<br><small>Open</small></div>
+                            <span class="arrow-right">←</span>
+                            <div class="step" style="background:#fff3e0; color:#ef6c00;">🟡 قيد المراجعة<br><small>Under
+                                    Review</small></div>
+                            <span class="arrow-right">←</span>
+                            <div class="step" style="background:#e0f7fa; color:#006064;">🔵 CAR صادر<br><small>CAR
+                                    Issued</small></div>
+                            <span class="arrow-right">←</span>
+                            <div class="step" style="background:#e8f5e9; color:#2e7d32;">✅
+                                مغلقة<br><small>Closed</small></div>
+                        </div>
+                        <ul style="margin-top:12px;">
+                            <li><strong>مفتوحة:</strong> تم اكتشاف المشكلة وتسجيلها</li>
+                            <li><strong>قيد المراجعة:</strong> يتم فحص المشكلة من طرف المسؤول</li>
+                            <li><strong>CAR صادر:</strong> تم إنشاء إجراء تصحيحي لحلها</li>
+                            <li><strong>مغلقة:</strong> تم حل المشكلة والتحقق من فعالية الحل</li>
+                        </ul>
+                    </div>
+
+                    <!-- Severity Levels -->
+                    <div class="guide-card">
+                        <h3>⚡ مستويات الشدة <small>/ Severity Levels</small></h3>
+                        <p>كل مشكلة يتم تصنيفها حسب خطورتها:</p>
+                        <ul>
+                            <li>🚨 <span class="term" style="background:#fce4ec; color:#c62828;">Critical —
+                                    حرجة</span><br>
+                                مشكلة خطيرة جداً تؤثر على سلامة المنتج أو الزبون. <em>مثال: منتج قد يسبب ضرراً</em></li>
+                            <li style="margin-top:8px;">⚠️ <span class="term"
+                                    style="background:#fff3e0; color:#e65100;">Major — رئيسية</span><br>
+                                مشكلة كبيرة تؤثر على جودة المنتج. <em>مثال: عيب واضح في الخياطة</em></li>
+                            <li style="margin-top:8px;">📌 <span class="term"
+                                    style="background:#fff8e1; color:#f57f17;">Minor — ثانوية</span><br>
+                                مشكلة صغيرة لا تؤثر على الوظيفة. <em>مثال: اختلاف بسيط في اللون</em></li>
+                        </ul>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="guide-card">
+                        <h3>📂 فئات عدم المطابقة <small>/ Categories</small></h3>
+                        <ul>
+                            <li><span class="term">Product — منتج</span>: مشكلة في المنتج النهائي</li>
+                            <li><span class="term">Process — عملية</span>: مشكلة في طريقة العمل أو الإنتاج</li>
+                            <li><span class="term">Material — مادة</span>: مشكلة في المواد الخام أو اللوازم</li>
+                            <li><span class="term">Supplier — مورد</span>: مشكلة مصدرها المورد</li>
+                            <li><span class="term">Other — أخرى</span>: أي مشكلة أخرى</li>
+                        </ul>
+                    </div>
+
+                    <!-- Sources -->
+                    <div class="guide-card">
+                        <h3>🔍 مصادر الاكتشاف <small>/ Detection Sources</small></h3>
+                        <p>من أين تم اكتشاف المشكلة:</p>
+                        <ul>
+                            <li><span class="term">Production — الإنتاج</span>: أثناء عملية التصنيع</li>
+                            <li><span class="term">Internal Audit — تدقيق داخلي</span>: أثناء التفتيش الداخلي</li>
+                            <li><span class="term">Incoming — استلام</span>: عند استلام المواد من المورد</li>
+                            <li><span class="term">Customer — زبون</span>: شكوى أو ملاحظة من الزبون</li>
+                            <li><span class="term">Supplier — مورد</span>: إشعار من المورد نفسه</li>
+                        </ul>
+                    </div>
+
+                    <!-- Disposition -->
+                    <div class="guide-card">
+                        <h3>⚖️ القرار المتخذ <small>/ Disposition</small></h3>
+                        <p>ماذا نفعل بالمنتج غير المطابق:</p>
+                        <ul>
+                            <li><span class="term">Pending — معلق</span>: لم يُتخذ قرار بعد</li>
+                            <li><span class="term">Rework — إعادة تشغيل</span>: إصلاح المنتج وإعادته للإنتاج</li>
+                            <li><span class="term">Use As-Is — استعمال كما هو</span>: قبول المنتج رغم العيب (بموافقة
+                                خاصة)</li>
+                            <li><span class="term">Scrap — إتلاف</span>: التخلص من المنتج نهائياً</li>
+                            <li><span class="term">Return to Supplier — إرجاع للمورد</span>: إعادة المواد المعيبة للمورد
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- How to Use -->
+                    <div class="guide-card highlight">
+                        <h3>🚀 كيف أستخدم هذه اللوحة؟ <small>/ How to Use</small></h3>
+                        <ol style="padding-right:18px; margin:8px 0; color:#444; font-size:0.9em; line-height:1.8;">
+                            <li>اضغط على زر <strong>"➕ تسجيل عدم مطابقة جديدة"</strong></li>
+                            <li>املأ النموذج: اختر الفئة والشدة والمصدر، ثم اكتب وصف المشكلة</li>
+                            <li>حدد المسؤول والموعد النهائي</li>
+                            <li>عند مراجعة المشكلة، غيّر الحالة إلى <strong>"قيد المراجعة"</strong></li>
+                            <li>اضغط 🔁 لإنشاء <strong>إجراء تصحيحي (CAR)</strong></li>
+                            <li>بعد تنفيذ الحل والتحقق منه، غيّر الحالة إلى <strong>"مغلقة"</strong></li>
+                        </ol>
+                        <p style="margin-top:10px; background:#e8f5e9; padding:10px; border-radius:8px; color:#2e7d32;">
+                            💡 <strong>نصيحة:</strong> استخدم الفلاتر أعلى الجدول لتصفية التقارير حسب الحالة أو الشدة أو
+                            التاريخ.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1261,6 +1563,14 @@ foreach ($ncrs as $ncr) {
     </div>
 
     <script>
+        // --- Guide Toggle ---
+        function toggleGuide() {
+            const content = document.getElementById('guide-content');
+            const arrow = document.getElementById('guide-arrow');
+            content.classList.toggle('active');
+            arrow.classList.toggle('open');
+        }
+
         // --- Modal ---
         function openModal(id) {
             document.getElementById(id).classList.add('active');
