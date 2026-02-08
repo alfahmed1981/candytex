@@ -136,6 +136,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $desc_ar = $risk_desc_map[$desc_en] ?? $desc_ar;
         }
+        $controls_val = trim($_POST['existing_controls'] ?? '');
+        if ($controls_val === '__OTHER__')
+            $controls_val = trim($_POST['existing_controls_custom'] ?? '');
+        $mitigation_val = trim($_POST['mitigation_action'] ?? '');
+        if ($mitigation_val === '__OTHER__')
+            $mitigation_val = trim($_POST['mitigation_action_custom'] ?? '');
 
         $likelihood = intval($_POST['likelihood'] ?? 1);
         $severity_val = intval($_POST['severity_risk'] ?? 1);
@@ -156,12 +162,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             trim($_POST['department'] ?? ''),
             $desc_en,
             $desc_ar,
-            trim($_POST['existing_controls'] ?? ''),
+            $controls_val,
             $likelihood,
             $severity_val,
             $risk_score,
             $risk_level,
-            trim($_POST['mitigation_action'] ?? ''),
+            $mitigation_val,
             trim($_POST['responsible'] ?? ''),
             $_POST['deadline'] ?: null,
             $user_cin
@@ -788,10 +794,10 @@ foreach ($risks as $r) {
             <h2>📋 سجل المخاطر <span style="font-size:.55em;color:#666">Risk Register — ISO 9001:2015 §6.1</span></h2>
         </div>
         <?php if ($msg): ?>
-                    <div
-                        style="background:#d4edda;color:#155724;padding:12px 18px;border-radius:8px;margin-bottom:15px;font-weight:600">
-                        <?= $msg ?>
-                    </div>
+            <div
+                style="background:#d4edda;color:#155724;padding:12px 18px;border-radius:8px;margin-bottom:15px;font-weight:600">
+                <?= $msg ?>
+            </div>
         <?php endif; ?>
 
         <!-- Dashboard Cards -->
@@ -833,18 +839,18 @@ foreach ($risks as $r) {
                     <div class="risk-matrix">
                         <div class="rm-cell" style="background:transparent"></div>
                         <?php for ($s = 1; $s <= 5; $s++): ?>
-                                    <div class="rm-cell rm-header"><?= $s ?></div>
+                            <div class="rm-cell rm-header"><?= $s ?></div>
                         <?php endfor; ?>
                         <?php for ($l = 5; $l >= 1; $l--): ?>
-                                    <div class="rm-cell rm-header"><?= $l ?></div>
-                                    <?php for ($s = 1; $s <= 5; $s++):
-                                        $sc = $l * $s;
-                                        $cls = $sc >= 16 ? 'rm-crit' : ($sc >= 10 ? 'rm-high' : ($sc >= 5 ? 'rm-med' : 'rm-low'));
-                                        $cnt = $matrix["$l-$s"] ?? 0;
-                                        ?>
-                                                <div class="rm-cell <?= $cls ?>"><?= $cnt > 0 ? "<span class='rm-count'>$cnt</span>" : $sc ?>
-                                                </div>
-                                    <?php endfor; ?>
+                            <div class="rm-cell rm-header"><?= $l ?></div>
+                            <?php for ($s = 1; $s <= 5; $s++):
+                                $sc = $l * $s;
+                                $cls = $sc >= 16 ? 'rm-crit' : ($sc >= 10 ? 'rm-high' : ($sc >= 5 ? 'rm-med' : 'rm-low'));
+                                $cnt = $matrix["$l-$s"] ?? 0;
+                                ?>
+                                <div class="rm-cell <?= $cls ?>"><?= $cnt > 0 ? "<span class='rm-count'>$cnt</span>" : $sc ?>
+                                </div>
+                            <?php endfor; ?>
                         <?php endfor; ?>
                     </div>
                     <div style="font-size:.75em;color:#555;margin-top:2px">↑ الاحتمالية (Likelihood)</div>
@@ -918,82 +924,82 @@ foreach ($risks as $r) {
                 </thead>
                 <tbody>
                     <?php if (empty($risks)): ?>
-                                <tr>
-                                    <td colspan="12" style="padding:30px;color:#888;font-size:1.1em">لا توجد مخاطر مسجلة — اضغط ➕
-                                        لإضافة أول خطر</td>
-                                </tr>
+                        <tr>
+                            <td colspan="12" style="padding:30px;color:#888;font-size:1.1em">لا توجد مخاطر مسجلة — اضغط ➕
+                                لإضافة أول خطر</td>
+                        </tr>
                     <?php else: ?>
-                                <?php foreach ($risks as $i => $r):
-                                    $lvl_cls = match ($r['risk_level']) { 'Critical' => 'b-critical', 'High' => 'b-high', 'Medium' => 'b-medium', default => 'b-low'};
-                                    $st_cls = match ($r['status']) { 'Identified' => 'b-identified', 'Under Assessment' => 'b-assessing', 'Mitigated' => 'b-mitigated', 'Monitoring' => 'b-monitoring', 'Closed' => 'b-closed', default => 'b-identified'};
-                                    $sc_bg = $r['risk_score'] >= 16 ? '#e74c3c' : ($r['risk_score'] >= 10 ? '#e67e22' : ($r['risk_score'] >= 5 ? '#f1c40f' : '#2ecc71'));
-                                    $sc_color = $r['risk_score'] >= 5 && $r['risk_score'] < 10 ? '#333' : '#fff';
-                                    $risk_reviews = array_filter($reviews_all, fn($rv) => $rv['risk_id'] == $r['id']);
-                                    ?>
-                                            <tr data-level="<?= $r['risk_level'] ?>" data-category="<?= htmlspecialchars($r['category']) ?>"
-                                                data-status="<?= $r['status'] ?>">
-                                                <td><?= $i + 1 ?></td>
-                                                <td><strong><?= htmlspecialchars($r['risk_number']) ?></strong></td>
-                                                <td><?= htmlspecialchars($r['category']) ?></td>
-                                                <td style="text-align:left;max-width:200px">
-                                                    <?= htmlspecialchars($r['description_en'] ?: '-') ?>
-                                                    <?php if ($r['description_ar']): ?>
-                                                                <br><small
-                                                                    style="color:#888;direction:rtl"><?= htmlspecialchars($r['description_ar']) ?></small>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td><?= $r['likelihood'] ?></td>
-                                                <td><?= $r['severity'] ?></td>
-                                                <td><span class="score-box"
-                                                        style="background:<?= $sc_bg ?>;color:<?= $sc_color ?>"><?= $r['risk_score'] ?></span>
-                                                </td>
-                                                <td><span class="badge <?= $lvl_cls ?>"><?= $r['risk_level'] ?></span></td>
-                                                <td style="font-size:.75em"><?= htmlspecialchars($r['responsible'] ?: '-') ?></td>
-                                                <td><?= $r['deadline'] ? date('d/m/Y', strtotime($r['deadline'])) : '-' ?></td>
-                                                <td><span class="badge <?= $st_cls ?>"><?= $r['status'] ?></span></td>
-                                                <td>
-                                                    <form method="POST" style="display:inline">
-                                                        <?= csrf_field() ?>
-                                                        <input type="hidden" name="risk_id" value="<?= $r['id'] ?>">
-                                                        <?php if ($r['status'] !== 'Closed'): ?>
-                                                                    <select name="new_status" style="font-size:.75em;padding:3px">
-                                                                        <?php foreach (['Identified', 'Under Assessment', 'Mitigated', 'Monitoring', 'Closed'] as $st): ?>
-                                                                                    <option value="<?= $st ?>" <?= $r['status'] === $st ? 'selected' : '' ?>><?= $st ?>
-                                                                                    </option>
-                                                                        <?php endforeach; ?>
-                                                                    </select>
-                                                                    <button type="submit" name="update_risk_status" class="btn-save" title="حفظ">💾</button>
-                                                                    <button type="button" class="btn-review" title="مراجعة"
-                                                                        onclick="openReviewModal(<?= $r['id'] ?>, '<?= htmlspecialchars($r['risk_number']) ?>', <?= $r['likelihood'] ?>, <?= $r['severity'] ?>)">🔄</button>
-                                                        <?php else: ?>
-                                                                    <span style="color:#28a745;font-weight:600">✅</span>
-                                                        <?php endif; ?>
-                                                        <button type="button" class="btn-print" title="طباعة"
-                                                            onclick="printRisk(<?= $r['id'] ?>)">🖨️</button>
-                                                        <button type="submit" name="delete_risk" class="btn-del" title="حذف"
-                                                            onclick="return confirm('هل تريد حذف هذا الخطر نهائياً؟')">🗑️</button>
-                                                    </form>
-                                                </td>
-                                            </tr>
-                                            <?php if (!empty($risk_reviews)): ?>
-                                                        <tr class="review-row" data-level="<?= $r['risk_level'] ?>"
-                                                            data-category="<?= htmlspecialchars($r['category']) ?>" data-status="<?= $r['status'] ?>">
-                                                            <td colspan="12" style="text-align:left;padding:8px 15px;background:#fafbfc">
-                                                                <strong style="font-size:.8em">📝 سجل المراجعات:</strong>
-                                                                <?php foreach ($risk_reviews as $rv): ?>
-                                                                            <div class="review-box">
-                                                                                <strong><?= date('d/m/Y', strtotime($rv['review_date'] ?? $rv['created_at'])) ?></strong>
-                                                                                — L:<?= $rv['new_likelihood'] ?> × S:<?= $rv['new_severity'] ?> =
-                                                                                <strong><?= $rv['new_risk_score'] ?></strong> (<?= $rv['new_risk_level'] ?>)
-                                                                                <?php if ($rv['reviewed_by']): ?> —
-                                                                                            <?= htmlspecialchars($rv['reviewed_by']) ?>                                                <?php endif; ?>
-                                                                                <?php if ($rv['notes']): ?><br><em><?= htmlspecialchars($rv['notes']) ?></em><?php endif; ?>
-                                                                            </div>
-                                                                <?php endforeach; ?>
-                                                            </td>
-                                                        </tr>
-                                            <?php endif; ?>
-                                <?php endforeach; ?>
+                        <?php foreach ($risks as $i => $r):
+                            $lvl_cls = match ($r['risk_level']) { 'Critical' => 'b-critical', 'High' => 'b-high', 'Medium' => 'b-medium', default => 'b-low'};
+                            $st_cls = match ($r['status']) { 'Identified' => 'b-identified', 'Under Assessment' => 'b-assessing', 'Mitigated' => 'b-mitigated', 'Monitoring' => 'b-monitoring', 'Closed' => 'b-closed', default => 'b-identified'};
+                            $sc_bg = $r['risk_score'] >= 16 ? '#e74c3c' : ($r['risk_score'] >= 10 ? '#e67e22' : ($r['risk_score'] >= 5 ? '#f1c40f' : '#2ecc71'));
+                            $sc_color = $r['risk_score'] >= 5 && $r['risk_score'] < 10 ? '#333' : '#fff';
+                            $risk_reviews = array_filter($reviews_all, fn($rv) => $rv['risk_id'] == $r['id']);
+                            ?>
+                            <tr data-level="<?= $r['risk_level'] ?>" data-category="<?= htmlspecialchars($r['category']) ?>"
+                                data-status="<?= $r['status'] ?>">
+                                <td><?= $i + 1 ?></td>
+                                <td><strong><?= htmlspecialchars($r['risk_number']) ?></strong></td>
+                                <td><?= htmlspecialchars($r['category']) ?></td>
+                                <td style="text-align:left;max-width:200px">
+                                    <?= htmlspecialchars($r['description_en'] ?: '-') ?>
+                                    <?php if ($r['description_ar']): ?>
+                                        <br><small
+                                            style="color:#888;direction:rtl"><?= htmlspecialchars($r['description_ar']) ?></small>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= $r['likelihood'] ?></td>
+                                <td><?= $r['severity'] ?></td>
+                                <td><span class="score-box"
+                                        style="background:<?= $sc_bg ?>;color:<?= $sc_color ?>"><?= $r['risk_score'] ?></span>
+                                </td>
+                                <td><span class="badge <?= $lvl_cls ?>"><?= $r['risk_level'] ?></span></td>
+                                <td style="font-size:.75em"><?= htmlspecialchars($r['responsible'] ?: '-') ?></td>
+                                <td><?= $r['deadline'] ? date('d/m/Y', strtotime($r['deadline'])) : '-' ?></td>
+                                <td><span class="badge <?= $st_cls ?>"><?= $r['status'] ?></span></td>
+                                <td>
+                                    <form method="POST" style="display:inline">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="risk_id" value="<?= $r['id'] ?>">
+                                        <?php if ($r['status'] !== 'Closed'): ?>
+                                            <select name="new_status" style="font-size:.75em;padding:3px">
+                                                <?php foreach (['Identified', 'Under Assessment', 'Mitigated', 'Monitoring', 'Closed'] as $st): ?>
+                                                    <option value="<?= $st ?>" <?= $r['status'] === $st ? 'selected' : '' ?>><?= $st ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" name="update_risk_status" class="btn-save" title="حفظ">💾</button>
+                                            <button type="button" class="btn-review" title="مراجعة"
+                                                onclick="openReviewModal(<?= $r['id'] ?>, '<?= htmlspecialchars($r['risk_number']) ?>', <?= $r['likelihood'] ?>, <?= $r['severity'] ?>)">🔄</button>
+                                        <?php else: ?>
+                                            <span style="color:#28a745;font-weight:600">✅</span>
+                                        <?php endif; ?>
+                                        <button type="button" class="btn-print" title="طباعة"
+                                            onclick="printRisk(<?= $r['id'] ?>)">🖨️</button>
+                                        <button type="submit" name="delete_risk" class="btn-del" title="حذف"
+                                            onclick="return confirm('هل تريد حذف هذا الخطر نهائياً؟')">🗑️</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php if (!empty($risk_reviews)): ?>
+                                <tr class="review-row" data-level="<?= $r['risk_level'] ?>"
+                                    data-category="<?= htmlspecialchars($r['category']) ?>" data-status="<?= $r['status'] ?>">
+                                    <td colspan="12" style="text-align:left;padding:8px 15px;background:#fafbfc">
+                                        <strong style="font-size:.8em">📝 سجل المراجعات:</strong>
+                                        <?php foreach ($risk_reviews as $rv): ?>
+                                            <div class="review-box">
+                                                <strong><?= date('d/m/Y', strtotime($rv['review_date'] ?? $rv['created_at'])) ?></strong>
+                                                — L:<?= $rv['new_likelihood'] ?> × S:<?= $rv['new_severity'] ?> =
+                                                <strong><?= $rv['new_risk_score'] ?></strong> (<?= $rv['new_risk_level'] ?>)
+                                                <?php if ($rv['reviewed_by']): ?> —
+                                                    <?= htmlspecialchars($rv['reviewed_by']) ?>                 <?php endif; ?>
+                                                <?php if ($rv['notes']): ?><br><em><?= htmlspecialchars($rv['notes']) ?></em><?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -1039,7 +1045,7 @@ foreach ($risks as $r) {
                             <select name="location">
                                 <option value="">-- اختر --</option>
                                 <?php foreach ($locations as $loc): ?>
-                                            <option value="<?= htmlspecialchars($loc) ?>"><?= htmlspecialchars($loc) ?></option>
+                                    <option value="<?= htmlspecialchars($loc) ?>"><?= htmlspecialchars($loc) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1048,7 +1054,7 @@ foreach ($risks as $r) {
                             <select name="department">
                                 <option value="">-- اختر --</option>
                                 <?php foreach ($departments as $dep): ?>
-                                            <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
+                                    <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1096,17 +1102,45 @@ foreach ($risks as $r) {
                                 </optgroup>
                                 <option value="__OTHER__">✏️ أخرى (كتابة يدوية)</option>
                             </select>
-                            <input type="text" id="risk-desc-custom-en" name="description_en_custom" placeholder="وصف الخطر بالإنجليزية" style="display:none;margin-top:8px">
+                            <input type="text" id="risk-desc-custom-en" name="description_en_custom"
+                                placeholder="وصف الخطر بالإنجليزية" style="display:none;margin-top:8px">
                             <input type="hidden" id="risk-desc-ar-hidden" name="description_ar" value="">
                             <div id="risk-desc-ar-custom-row" style="display:none;margin-top:8px">
-                                <input type="text" id="risk-desc-custom-ar" name="description_ar_custom" placeholder="وصف الخطر بالعربية">
+                                <input type="text" id="risk-desc-custom-ar" name="description_ar_custom"
+                                    placeholder="وصف الخطر بالعربية">
                             </div>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>الضوابط الحالية <small>/ Existing Controls</small></label>
-                            <textarea name="existing_controls" rows="2" placeholder="ما هي الإجراءات المتبعة حالياً؟"></textarea>
+                            <select name="existing_controls" id="risk-controls"
+                                onchange="toggleCustom(this,'ctrl-custom')">
+                                <option value="">-- اختر --</option>
+                                <option value="SOPs & Work Instructions | إجراءات العمل القياسية">📋 SOPs & Work
+                                    Instructions | إجراءات العمل القياسية</option>
+                                <option value="Preventive Maintenance Plan | جدول الصيانة الوقائية">🔧 Preventive
+                                    Maintenance Plan | جدول الصيانة الوقائية</option>
+                                <option value="Quality Inspection (AQL) | فحص الجودة">🔍 Quality Inspection (AQL) | فحص
+                                    الجودة</option>
+                                <option value="PPE Usage (Mandatory) | معدات الوقاية الشخصية">🦺 PPE Usage (Mandatory) |
+                                    معدات الوقاية الشخصية</option>
+                                <option value="Safety Stock Level | مخزون الأمان">📦 Safety Stock Level | مخزون الأمان
+                                </option>
+                                <option value="Metal Detection Policy | نظام الكشف عن المعادن">🧲 Metal Detection Policy
+                                    | نظام الكشف عن المعادن</option>
+                                <option value="CCTV & Security Access | كاميرات المراقبة / الأمن">📹 CCTV & Security
+                                    Access | كاميرات المراقبة / الأمن</option>
+                                <option value="Staff Training Matrix | التدريب والتأهيل">🎓 Staff Training Matrix |
+                                    التدريب والتأهيل</option>
+                                <option value="Approved Supplier Contracts | العقود المعتمدة">📄 Approved Supplier
+                                    Contracts | العقود المعتمدة</option>
+                                <option value="Fire Alarm & Sprinklers | أجهزة الإنذار / الإطفاء">🔥 Fire Alarm &
+                                    Sprinklers | أجهزة الإنذار / الإطفاء</option>
+                                <option value="__OTHER__">✏️ أخرى (كتابة يدوية)</option>
+                            </select>
+                            <input type="text" id="ctrl-custom" name="existing_controls_custom"
+                                placeholder="اكتب الضوابط..." style="display:none;margin-top:8px">
                         </div>
                     </div>
                     <div class="form-row">
@@ -1137,7 +1171,31 @@ foreach ($risks as $r) {
                     <div class="form-row">
                         <div class="form-group">
                             <label>إجراء التخفيف <small>/ Mitigation Action</small></label>
-                            <textarea name="mitigation_action" rows="2" placeholder="ما الذي سيتم فعله لتقليل الخطر؟"></textarea>
+                            <select name="mitigation_action" id="risk-mitigation"
+                                onchange="toggleCustom(this,'mit-custom')">
+                                <option value="">-- اختر --</option>
+                                <option value="Increase Inspection Frequency | زيادة وتيرة الفحص">🔍 Increase Inspection
+                                    Frequency | زيادة وتيرة الفحص</option>
+                                <option value="Conduct Refresher Training | إعادة تدريب الموظفين">🎓 Conduct Refresher
+                                    Training | إعادة تدريب الموظفين</option>
+                                <option value="Update SOPs / Process | تحديث إجراءات العمل">📋 Update SOPs / Process |
+                                    تحديث إجراءات العمل</option>
+                                <option value="Source Alternative Supplier | البحث عن مورد بديل">🔄 Source Alternative
+                                    Supplier | البحث عن مورد بديل</option>
+                                <option value="Upgrade Machine / Tooling | شراء معدات جديدة/أحدث">⚙️ Upgrade Machine /
+                                    Tooling | شراء معدات جديدة/أحدث</option>
+                                <option value="Conduct Internal Audit | إجراء تدقيق داخلي">📝 Conduct Internal Audit |
+                                    إجراء تدقيق داخلي</option>
+                                <option value="Install Safety Guards/Sensors | تركيب أنظمة حماية إضافية">🛡️ Install
+                                    Safety Guards/Sensors | تركيب أنظمة حماية إضافية</option>
+                                <option value="Increase Buffer Stock | رفع مخزون الطوارئ">📦 Increase Buffer Stock | رفع
+                                    مخزون الطوارئ</option>
+                                <option value="Transfer Risk (Insurance) | نقل المخاطر (تأمين)">🏦 Transfer Risk
+                                    (Insurance) | نقل المخاطر (تأمين)</option>
+                                <option value="__OTHER__">✏️ أخرى (كتابة يدوية)</option>
+                            </select>
+                            <input type="text" id="mit-custom" name="mitigation_action_custom"
+                                placeholder="اكتب إجراء التخفيف..." style="display:none;margin-top:8px">
                         </div>
                     </div>
                     <div class="form-row">
@@ -1146,28 +1204,36 @@ foreach ($risks as $r) {
                             <select name="responsible">
                                 <option value="">-- اختر المسؤول --</option>
                                 <optgroup label="🏭 الإنتاج / Production">
-                                    <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج</option>
+                                    <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج
+                                    </option>
                                     <option value="Floor Manager | رئيس الورشة">Floor Manager | رئيس الورشة</option>
                                     <option value="Line Supervisor | رئيس الفريق">Line Supervisor | رئيس الفريق</option>
                                 </optgroup>
                                 <optgroup label="🔍 الجودة / Quality & Technical">
                                     <option value="Quality Manager | مدير الجودة">Quality Manager | مدير الجودة</option>
-                                    <option value="Quality Controller (QC) | مراقب الجودة">Quality Controller (QC) | مراقب الجودة</option>
-                                    <option value="Technical Manager | المدير التقني">Technical Manager | المدير التقني</option>
+                                    <option value="Quality Controller (QC) | مراقب الجودة">Quality Controller (QC) |
+                                        مراقب الجودة</option>
+                                    <option value="Technical Manager | المدير التقني">Technical Manager | المدير التقني
+                                    </option>
                                     <option value="Method Agent | مسؤول الطرائق">Method Agent | مسؤول الطرائق</option>
                                 </optgroup>
                                 <optgroup label="🔧 الصيانة / Maintenance">
-                                    <option value="Maintenance Manager | مدير الصيانة">Maintenance Manager | مدير الصيانة</option>
+                                    <option value="Maintenance Manager | مدير الصيانة">Maintenance Manager | مدير
+                                        الصيانة</option>
                                     <option value="Mechanic | ميكانيكي">Mechanic | ميكانيكي</option>
                                 </optgroup>
                                 <optgroup label="📦 الإمداد / Supply Chain">
-                                    <option value="Purchasing Manager | مدير المشتريات">Purchasing Manager | مدير المشتريات</option>
-                                    <option value="Warehouse Manager | أمين المخزن">Warehouse Manager | أمين المخزن</option>
+                                    <option value="Purchasing Manager | مدير المشتريات">Purchasing Manager | مدير
+                                        المشتريات</option>
+                                    <option value="Warehouse Manager | أمين المخزن">Warehouse Manager | أمين المخزن
+                                    </option>
                                 </optgroup>
                                 <optgroup label="💼 الإدارة / Admin & HR">
-                                    <option value="HR Manager | مدير الموارد البشرية">HR Manager | مدير الموارد البشرية</option>
+                                    <option value="HR Manager | مدير الموارد البشرية">HR Manager | مدير الموارد البشرية
+                                    </option>
                                     <option value="HSE Officer | مسؤول السلامة">HSE Officer | مسؤول السلامة</option>
-                                    <option value="Factory Director | مدير المصنع">Factory Director | مدير المصنع</option>
+                                    <option value="Factory Director | مدير المصنع">Factory Director | مدير المصنع
+                                    </option>
                                 </optgroup>
                             </select>
                         </div>
@@ -1195,16 +1261,20 @@ foreach ($risks as $r) {
                         <div class="form-group">
                             <label>الاحتمالية الجديدة <small>/ New Likelihood</small></label>
                             <select name="new_likelihood" id="review-likelihood" onchange="updateReviewScore()">
-                                <option value="1">1 — نادر</option><option value="2">2 — غير مرجح</option>
-                                <option value="3">3 — ممكن</option><option value="4">4 — مرجح</option>
+                                <option value="1">1 — نادر</option>
+                                <option value="2">2 — غير مرجح</option>
+                                <option value="3">3 — ممكن</option>
+                                <option value="4">4 — مرجح</option>
                                 <option value="5">5 — شبه مؤكد</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>الشدة الجديدة <small>/ New Severity</small></label>
                             <select name="new_severity" id="review-severity" onchange="updateReviewScore()">
-                                <option value="1">1 — ضئيل</option><option value="2">2 — طفيف</option>
-                                <option value="3">3 — معتدل</option><option value="4">4 — كبير</option>
+                                <option value="1">1 — ضئيل</option>
+                                <option value="2">2 — طفيف</option>
+                                <option value="3">3 — معتدل</option>
+                                <option value="4">4 — كبير</option>
                                 <option value="5">5 — كارثي</option>
                             </select>
                         </div>
@@ -1230,132 +1300,185 @@ foreach ($risks as $r) {
             </div>
         </div>
 
-    <!-- Print Area -->
-    <div id="print-area"></div>
+        <!-- Print Area -->
+        <div id="print-area"></div>
 
-    <script>
-    // --- Data for printing ---
-    const risksData = <?= json_encode($risks, JSON_UNESCAPED_UNICODE) ?>;
+        <script>
+            // --- Data for printing ---
+            const risksData = <?= json_encode($risks, JSON_UNESCAPED_UNICODE) ?>;
 
-    // --- EN→AR Description Map ---
-    const riskDescMap = {
-        'Production Line Stoppage': 'توقف خط الإنتاج',
-        'Inconsistent Stitching Quality': 'عدم انتظام جودة الغرز',
-        'Wrong Cut / Pattern Error': 'خطأ في القص / الباترون',
-        'Overproduction / Wrong Quantity': 'إنتاج زائد / كمية خاطئة',
-        'Sewing Machine Malfunction': 'عطل ماكينة الخياطة',
-        'Cutting Machine Failure': 'عطل ماكينة القص',
-        'Iron / Press Malfunction': 'عطل المكواة / المكبس',
-        'Needle Breakage Frequency': 'تكرار كسر الإبر',
-        'Fabric Defect from Supplier': 'عيب قماش من المورد',
-        'Thread Color Variation': 'تباين لون الخيط',
-        'Accessory Shortage': 'نقص إكسسوارات',
-        'Wrong Material Delivery': 'توريد مواد خاطئة',
-        'Operator Skill Gap': 'نقص مهارات العامل',
-        'High Staff Turnover': 'ارتفاع دوران العمالة',
-        'Safety Violation Risk': 'خطر مخالفة السلامة',
-        'Insufficient Training': 'عدم كفاية التدريب',
-        'Customer Return / Rejection': 'إرجاع / رفض العميل',
-        'Measurement Out of Tolerance': 'قياسات خارج الحدود',
-        'Appearance Defect': 'عيوب المظهر',
-        'Label / Packing Error': 'خطأ في التغليف / البطاقات',
-        'Delivery Delay': 'تأخير التسليم',
-        'Supplier Quality Decline': 'تراجع جودة المورد',
-        'Raw Material Price Increase': 'ارتفاع أسعار المواد',
-        'Transportation Damage': 'تلف أثناء النقل',
-    };
+            // --- EN→AR Description Map ---
+            const riskDescMap = {
+                'Production Line Stoppage': 'توقف خط الإنتاج',
+                'Inconsistent Stitching Quality': 'عدم انتظام جودة الغرز',
+                'Wrong Cut / Pattern Error': 'خطأ في القص / الباترون',
+                'Overproduction / Wrong Quantity': 'إنتاج زائد / كمية خاطئة',
+                'Sewing Machine Malfunction': 'عطل ماكينة الخياطة',
+                'Cutting Machine Failure': 'عطل ماكينة القص',
+                'Iron / Press Malfunction': 'عطل المكواة / المكبس',
+                'Needle Breakage Frequency': 'تكرار كسر الإبر',
+                'Fabric Defect from Supplier': 'عيب قماش من المورد',
+                'Thread Color Variation': 'تباين لون الخيط',
+                'Accessory Shortage': 'نقص إكسسوارات',
+                'Wrong Material Delivery': 'توريد مواد خاطئة',
+                'Operator Skill Gap': 'نقص مهارات العامل',
+                'High Staff Turnover': 'ارتفاع دوران العمالة',
+                'Safety Violation Risk': 'خطر مخالفة السلامة',
+                'Insufficient Training': 'عدم كفاية التدريب',
+                'Customer Return / Rejection': 'إرجاع / رفض العميل',
+                'Measurement Out of Tolerance': 'قياسات خارج الحدود',
+                'Appearance Defect': 'عيوب المظهر',
+                'Label / Packing Error': 'خطأ في التغليف / البطاقات',
+                'Delivery Delay': 'تأخير التسليم',
+                'Supplier Quality Decline': 'تراجع جودة المورد',
+                'Raw Material Price Increase': 'ارتفاع أسعار المواد',
+                'Transportation Damage': 'تلف أثناء النقل',
+            };
 
-    // --- Modal functions ---
-    function openModal(id) { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+            // --- Auto-suggestion: Risk → Controls + Mitigation ---
+            const riskAutoMap = {
+                'Production Line Stoppage':         { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Inconsistent Stitching Quality':   { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
+                'Wrong Cut / Pattern Error':         { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية',          mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
+                'Overproduction / Wrong Quantity':   { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية',          mit: 'Conduct Internal Audit | إجراء تدقيق داخلي' },
+                'Sewing Machine Malfunction':        { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Cutting Machine Failure':           { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Iron / Press Malfunction':          { ctrl: 'Preventive Maintenance Plan | جدول الصيانة الوقائية',          mit: 'Upgrade Machine / Tooling | شراء معدات جديدة/أحدث' },
+                'Needle Breakage Frequency':         { ctrl: 'Metal Detection Policy | نظام الكشف عن المعادن',             mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'Fabric Defect from Supplier':       { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Thread Color Variation':            { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Accessory Shortage':                { ctrl: 'Safety Stock Level | مخزون الأمان',                          mit: 'Increase Buffer Stock | رفع مخزون الطوارئ' },
+                'Wrong Material Delivery':           { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Conduct Internal Audit | إجراء تدقيق داخلي' },
+                'Operator Skill Gap':                { ctrl: 'Staff Training Matrix | التدريب والتأهيل',                   mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'High Staff Turnover':               { ctrl: 'Staff Training Matrix | التدريب والتأهيل',                   mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'Safety Violation Risk':             { ctrl: 'PPE Usage (Mandatory) | معدات الوقاية الشخصية',             mit: 'Install Safety Guards/Sensors | تركيب أنظمة حماية إضافية' },
+                'Insufficient Training':             { ctrl: 'Staff Training Matrix | التدريب والتأهيل',                   mit: 'Conduct Refresher Training | إعادة تدريب الموظفين' },
+                'Customer Return / Rejection':       { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
+                'Measurement Out of Tolerance':      { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
+                'Appearance Defect':                 { ctrl: 'Quality Inspection (AQL) | فحص الجودة',                     mit: 'Increase Inspection Frequency | زيادة وتيرة الفحص' },
+                'Label / Packing Error':             { ctrl: 'SOPs & Work Instructions | إجراءات العمل القياسية',          mit: 'Update SOPs / Process | تحديث إجراءات العمل' },
+                'Delivery Delay':                    { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Supplier Quality Decline':          { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Source Alternative Supplier | البحث عن مورد بديل' },
+                'Raw Material Price Increase':       { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Increase Buffer Stock | رفع مخزون الطوارئ' },
+                'Transportation Damage':             { ctrl: 'Approved Supplier Contracts | العقود المعتمدة',              mit: 'Transfer Risk (Insurance) | نقل المخاطر (تأمين)' },
+            };
 
-    // --- Description sync ---
-    function syncRiskDesc(sel) {
-        const v = sel.value;
-        const customEn = document.getElementById('risk-desc-custom-en');
-        const customArRow = document.getElementById('risk-desc-ar-custom-row');
-        const hiddenAr = document.getElementById('risk-desc-ar-hidden');
-        if (v === '__OTHER__') {
-            customEn.style.display = 'block';
-            customArRow.style.display = 'block';
-            hiddenAr.value = '';
-        } else {
-            customEn.style.display = 'none';
-            customArRow.style.display = 'none';
-            hiddenAr.value = riskDescMap[v] || '';
-        }
-    }
+            // --- Modal functions ---
+            function openModal(id) { document.getElementById(id).classList.add('active'); }
+            function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    // --- Score preview ---
-    function calcLevel(score) {
-        if (score >= 16) return { label: 'Critical', cls: 'b-critical', ar: 'حرج' };
-        if (score >= 10) return { label: 'High', cls: 'b-high', ar: 'مرتفع' };
-        if (score >= 5) return { label: 'Medium', cls: 'b-medium', ar: 'متوسط' };
-        return { label: 'Low', cls: 'b-low', ar: 'منخفض' };
-    }
+            // --- Toggle __OTHER__ custom input ---
+            function toggleCustom(sel, customId) {
+                document.getElementById(customId).style.display = sel.value === '__OTHER__' ? 'block' : 'none';
+            }
 
-    function updateScorePreview() {
-        const l = parseInt(document.getElementById('risk-likelihood').value);
-        const s = parseInt(document.getElementById('risk-severity').value);
-        const score = l * s;
-        const level = calcLevel(score);
-        document.getElementById('score-preview').innerHTML =
-            `المخاطرة: ${l} × ${s} = <strong>${score}</strong> → <span class="badge ${level.cls}">${level.label} (${level.ar})</span>`;
-    }
+            // --- Description sync + auto-suggestion ---
+            function syncRiskDesc(sel) {
+                const v = sel.value;
+                const customEn = document.getElementById('risk-desc-custom-en');
+                const customArRow = document.getElementById('risk-desc-ar-custom-row');
+                const hiddenAr = document.getElementById('risk-desc-ar-hidden');
+                const ctrlSel = document.getElementById('risk-controls');
+                const mitSel = document.getElementById('risk-mitigation');
 
-    function updateReviewScore() {
-        const l = parseInt(document.getElementById('review-likelihood').value);
-        const s = parseInt(document.getElementById('review-severity').value);
-        const score = l * s;
-        const level = calcLevel(score);
-        document.getElementById('review-score-preview').innerHTML =
-            `المخاطرة الجديدة: ${l} × ${s} = <strong>${score}</strong> → <span class="badge ${level.cls}">${level.label} (${level.ar})</span>`;
-    }
+                if (v === '__OTHER__') {
+                    customEn.style.display = 'block';
+                    customArRow.style.display = 'block';
+                    hiddenAr.value = '';
+                } else {
+                    customEn.style.display = 'none';
+                    customArRow.style.display = 'none';
+                    hiddenAr.value = riskDescMap[v] || '';
 
-    // --- Review modal ---
-    function openReviewModal(id, riskNum, curL, curS) {
-        document.getElementById('review-risk-id').value = id;
-        document.getElementById('review-risk-ref').textContent = riskNum;
-        document.getElementById('review-likelihood').value = curL;
-        document.getElementById('review-severity').value = curS;
-        updateReviewScore();
-        openModal('review-modal');
-    }
+                    // Auto-suggest controls + mitigation
+                    const auto = riskAutoMap[v];
+                    if (auto) {
+                        setSelectValue(ctrlSel, auto.ctrl);
+                        setSelectValue(mitSel, auto.mit);
+                        // Hide custom inputs if they were shown
+                        document.getElementById('ctrl-custom').style.display = 'none';
+                        document.getElementById('mit-custom').style.display = 'none';
+                    }
+                }
+            }
 
-    // --- Filters ---
-    function filterRisks() {
-        const fLevel = document.getElementById('f-level').value;
-        const fCat = document.getElementById('f-category').value;
-        const fStat = document.getElementById('f-status').value;
-        const rows = document.querySelectorAll('#risk-table tbody tr');
-        let shown = 0;
-        rows.forEach(row => {
-            const level = row.dataset.level || '';
-            const cat = row.dataset.category || '';
-            const stat = row.dataset.status || '';
-            const match = (!fLevel || level === fLevel) && (!fCat || cat === fCat) && (!fStat || stat === fStat);
-            row.style.display = match ? '' : 'none';
-            if (match && !row.classList.contains('review-row')) shown++;
-        });
-        document.getElementById('filter-count').textContent = (fLevel || fCat || fStat) ? `عرض ${shown} من ${<?= $total ?>}` : '';
-    }
+            // Helper: set select to matching value
+            function setSelectValue(sel, val) {
+                for (let i = 0; i < sel.options.length; i++) {
+                    if (sel.options[i].value === val) { sel.selectedIndex = i; return; }
+                }
+            }
 
-    function resetFilters() {
-        document.getElementById('f-level').value = '';
-        document.getElementById('f-category').value = '';
-        document.getElementById('f-status').value = '';
-        filterRisks();
-    }
+            // --- Score preview ---
+            function calcLevel(score) {
+                if (score >= 16) return { label: 'Critical', cls: 'b-critical', ar: 'حرج' };
+                if (score >= 10) return { label: 'High', cls: 'b-high', ar: 'مرتفع' };
+                if (score >= 5) return { label: 'Medium', cls: 'b-medium', ar: 'متوسط' };
+                return { label: 'Low', cls: 'b-low', ar: 'منخفض' };
+            }
 
-    // --- Print ---
-    function fmtDate(d) { if (!d) return '-'; const dt = new Date(d); return dt.toLocaleDateString('en-GB'); }
+            function updateScorePreview() {
+                const l = parseInt(document.getElementById('risk-likelihood').value);
+                const s = parseInt(document.getElementById('risk-severity').value);
+                const score = l * s;
+                const level = calcLevel(score);
+                document.getElementById('score-preview').innerHTML =
+                    `المخاطرة: ${l} × ${s} = <strong>${score}</strong> → <span class="badge ${level.cls}">${level.label} (${level.ar})</span>`;
+            }
 
-    function printRisk(id) {
-        const r = risksData.find(x => x.id == id);
-        if (!r) return;
-        const level = calcLevel(r.risk_score);
-        const pa = document.getElementById('print-area');
-        pa.innerHTML = `
+            function updateReviewScore() {
+                const l = parseInt(document.getElementById('review-likelihood').value);
+                const s = parseInt(document.getElementById('review-severity').value);
+                const score = l * s;
+                const level = calcLevel(score);
+                document.getElementById('review-score-preview').innerHTML =
+                    `المخاطرة الجديدة: ${l} × ${s} = <strong>${score}</strong> → <span class="badge ${level.cls}">${level.label} (${level.ar})</span>`;
+            }
+
+            // --- Review modal ---
+            function openReviewModal(id, riskNum, curL, curS) {
+                document.getElementById('review-risk-id').value = id;
+                document.getElementById('review-risk-ref').textContent = riskNum;
+                document.getElementById('review-likelihood').value = curL;
+                document.getElementById('review-severity').value = curS;
+                updateReviewScore();
+                openModal('review-modal');
+            }
+
+            // --- Filters ---
+            function filterRisks() {
+                const fLevel = document.getElementById('f-level').value;
+                const fCat = document.getElementById('f-category').value;
+                const fStat = document.getElementById('f-status').value;
+                const rows = document.querySelectorAll('#risk-table tbody tr');
+                let shown = 0;
+                rows.forEach(row => {
+                    const level = row.dataset.level || '';
+                    const cat = row.dataset.category || '';
+                    const stat = row.dataset.status || '';
+                    const match = (!fLevel || level === fLevel) && (!fCat || cat === fCat) && (!fStat || stat === fStat);
+                    row.style.display = match ? '' : 'none';
+                    if (match && !row.classList.contains('review-row')) shown++;
+                });
+                document.getElementById('filter-count').textContent = (fLevel || fCat || fStat) ? `عرض ${shown} من ${<?= $total ?>}` : '';
+            }
+
+            function resetFilters() {
+                document.getElementById('f-level').value = '';
+                document.getElementById('f-category').value = '';
+                document.getElementById('f-status').value = '';
+                filterRisks();
+            }
+
+            // --- Print ---
+            function fmtDate(d) { if (!d) return '-'; const dt = new Date(d); return dt.toLocaleDateString('en-GB'); }
+
+            function printRisk(id) {
+                const r = risksData.find(x => x.id == id);
+                if (!r) return;
+                const level = calcLevel(r.risk_score);
+                const pa = document.getElementById('print-area');
+                pa.innerHTML = `
             <div class="print-header">
                 <div class="company">CANDYTEX<small>Garment Manufacturing — ISO 9001:2015</small></div>
                 <div class="doc-meta">
@@ -1401,9 +1524,10 @@ foreach ($risks as $r) {
             </div>
             <div class="print-footer">CANDYTEX — Quality Management System — ISO 9001:2015 — Confidential</div>
         `;
-        window.print();
-    }
-    </script>
+                window.print();
+            }
+        </script>
     </div>
 </body>
+
 </html>
