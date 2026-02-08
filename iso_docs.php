@@ -46,6 +46,71 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS `doc_revisions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 // ═══════════════════════════════════════════════════
+// AUTO-SEED: Populate with standard ISO 9001 documents
+// ═══════════════════════════════════════════════════
+$doc_count = $pdo->query("SELECT COUNT(*) FROM iso_documents")->fetchColumn();
+if ($doc_count == 0) {
+    $year = date('Y');
+    $review_date = date('Y-m-d', strtotime('+12 months'));
+    $seed_docs = [
+        // Quality Manual & Policies
+        ['Quality Manual', 'دليل الجودة', 'Manual', 'Quality', 'All / الكل', 'Quality Manager | مدير الجودة', 'ISO 9001:2015 Quality Management System Manual'],
+        ['Quality Policy', 'سياسة الجودة', 'Policy', 'Quality', 'All / الكل', 'Factory Director | مدير المصنع', 'Quality policy statement and objectives'],
+        ['HSE Policy', 'سياسة الصحة والسلامة', 'Policy', 'Safety', 'All / الكل', 'HSE Officer | مسؤول السلامة', 'Health, Safety & Environment policy'],
+
+        // Quality SOPs
+        ['Incoming Material Inspection', 'فحص المواد الواردة', 'SOP', 'Quality', 'Warehouse / المخزن', 'Quality Manager | مدير الجودة', 'Procedure for inspecting incoming raw materials'],
+        ['In-Process Quality Control', 'مراقبة الجودة أثناء الإنتاج', 'SOP', 'Quality', 'Sewing / الخياطة', 'Quality Controller | مراقب الجودة', 'In-line quality inspection procedure'],
+        ['Final Product Inspection', 'فحص المنتج النهائي', 'SOP', 'Quality', 'Finishing / التوضيب', 'Quality Controller | مراقب الجودة', 'Final inspection and acceptance criteria'],
+        ['Non-Conformance Control', 'ضبط عدم المطابقة', 'SOP', 'Quality', 'Quality / الجودة', 'Quality Manager | مدير الجودة', 'NCR identification, segregation and disposition'],
+        ['Corrective & Preventive Action', 'الإجراء التصحيحي والوقائي', 'SOP', 'Quality', 'Quality / الجودة', 'Quality Manager | مدير الجودة', 'CAPA procedure per ISO 9001:2015 §10.2'],
+
+        // Production SOPs
+        ['Cutting Procedure', 'إجراء القص', 'SOP', 'Production', 'Cutting / القص', 'Production Manager | مدير الإنتاج', 'Standard cutting operations procedure'],
+        ['Sewing Operations', 'عمليات الخياطة', 'SOP', 'Production', 'Sewing / الخياطة', 'Floor Manager | رئيس الورشة', 'Standard sewing operations procedure'],
+        ['Finishing & Packaging', 'التوضيب والتغليف', 'SOP', 'Production', 'Finishing / التوضيب', 'Production Manager | مدير الإنتاج', 'Finishing, ironing and packaging procedure'],
+        ['Production Planning', 'تخطيط الإنتاج', 'SOP', 'Production', 'Admin / الإدارة', 'Production Manager | مدير الإنتاج', 'Production scheduling and capacity planning'],
+
+        // Work Instructions
+        ['Sewing Machine Setup', 'إعداد ماكينة الخياطة', 'Work Instruction', 'Production', 'Sewing / الخياطة', 'Floor Manager | رئيس الورشة', 'Machine setup and thread tension calibration'],
+        ['Fabric Defect Classification', 'تصنيف عيوب القماش', 'Work Instruction', 'Quality', 'Quality / الجودة', 'Quality Controller | مراقب الجودة', 'Visual defect identification guide (AQL)'],
+        ['Emergency Evacuation', 'الإخلاء في حالة الطوارئ', 'Work Instruction', 'Safety', 'All / الكل', 'HSE Officer | مسؤول السلامة', 'Emergency evacuation routes and assembly points'],
+
+        // Maintenance
+        ['Preventive Maintenance Plan', 'خطة الصيانة الوقائية', 'SOP', 'Maintenance', 'Maintenance / الصيانة', 'Maintenance Manager | مدير الصيانة', 'Scheduled maintenance for all production equipment'],
+        ['Machine Breakdown Report', 'تقرير أعطال الماكينات', 'Form/Template', 'Maintenance', 'Maintenance / الصيانة', 'Maintenance Manager | مدير الصيانة', 'Template for recording machine failures'],
+
+        // HR & Admin
+        ['Employee Training Record', 'سجل تدريب الموظفين', 'Record', 'HR', 'HR / الموارد البشرية', 'HR Manager | مدير الموارد البشرية', 'Training needs, plans and completion records'],
+        ['New Employee Orientation', 'توجيه الموظف الجديد', 'SOP', 'HR', 'HR / الموارد البشرية', 'HR Manager | مدير الموارد البشرية', 'Induction and onboarding procedure'],
+
+        // Purchasing & Supply
+        ['Supplier Evaluation', 'تقييم الموردين', 'SOP', 'Purchasing', 'Warehouse / المخزن', 'Production Manager | مدير الإنتاج', 'Supplier qualification and performance monitoring'],
+        ['Purchase Order Procedure', 'إجراء أوامر الشراء', 'SOP', 'Purchasing', 'Admin / الإدارة', 'Production Manager | مدير الإنتاج', 'Purchase requisition to order process'],
+
+        // Management System
+        ['Internal Audit Procedure', 'إجراء التدقيق الداخلي', 'SOP', 'Quality', 'Quality / الجودة', 'Quality Manager | مدير الجودة', 'Planning and conducting internal audits per §9.2'],
+        ['Management Review', 'مراجعة الإدارة', 'SOP', 'Quality', 'Admin / الإدارة', 'Factory Director | مدير المصنع', 'Management review inputs, outputs and actions §9.3'],
+        ['Document Control Procedure', 'إجراء ضبط الوثائق', 'SOP', 'Quality', 'Quality / الجودة', 'Quality Manager | مدير الجودة', 'Document creation, approval, distribution and retention'],
+        ['Risk & Opportunity Assessment', 'تقييم المخاطر والفرص', 'SOP', 'Quality', 'Quality / الجودة', 'Quality Manager | مدير الجودة', 'Risk-based thinking methodology per §6.1'],
+    ];
+
+    $insert = $pdo->prepare("INSERT INTO iso_documents
+        (doc_number, title_en, title_ar, category, doc_type, department, current_revision, status, owner, next_review_date, description, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, '1.0', 'Active', ?, ?, ?, 'system')");
+
+    $rev_insert = $pdo->prepare("INSERT INTO doc_revisions
+        (doc_id, revision, change_description, approved_by, effective_date, created_by)
+        VALUES (?, '1.0', 'Initial release / إصدار أولي', 'System Admin', CURDATE(), 'system')");
+
+    foreach ($seed_docs as $i => $doc) {
+        $num = "DOC-$year-" . str_pad($i + 1, 3, '0', STR_PAD_LEFT);
+        $insert->execute([$num, $doc[0], $doc[1], $doc[2], $doc[3], $doc[4], $doc[5], $review_date, $doc[6]]);
+        $rev_insert->execute([$pdo->lastInsertId()]);
+    }
+}
+
+// ═══════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════
 function doc_next_number($pdo)
