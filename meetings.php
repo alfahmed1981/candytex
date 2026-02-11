@@ -68,7 +68,7 @@ if ($cnt == 0) {
 $departments = $pdo->query("SELECT name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
 $locations = $pdo->query("SELECT name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
 // Users for "called_by" and "attendee" selection
-$all_users = $pdo->query("SELECT cin, name, department FROM users WHERE status='approved' ORDER BY name")->fetchAll();
+$all_users = $pdo->query("SELECT cin, name, role, department FROM users WHERE status='active' ORDER BY name")->fetchAll();
 
 // ISO Predefined Lists
 $meeting_types = [
