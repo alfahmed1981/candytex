@@ -232,28 +232,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = "✅ تم حذف الاجتماع";
     }
 
-    if (isset($_POST['add_attendee'])) {
+    if (isset($_POST['add_attendees_bulk'])) {
         $mid = intval($_POST['meeting_id']);
-        $source = $_POST['att_source'] ?? 'manual';
-        if ($source === 'system' && !empty($_POST['att_user_cin'])) {
-            $u = $pdo->prepare("SELECT name, department FROM users WHERE cin = ?");
-            $u->execute([$_POST['att_user_cin']]);
-            $uf = $u->fetch();
+        $role = trim($_POST['bulk_role'] ?? 'عضو');
+        $selected = $_POST['selected_users'] ?? [];
+        $added = 0;
+        foreach ($selected as $cin) {
+            $u = $pdo->prepare("SELECT name, department FROM users WHERE cin = ?"); $u->execute([$cin]); $uf = $u->fetch();
             if ($uf) {
-                $name = $uf['name'];
-                $dept = $uf['department'] ?? '';
-                $role = trim($_POST['att_role'] ?? '');
-                $pdo->prepare("INSERT INTO meeting_attendees (meeting_id, name, role_title, department) VALUES (?,?,?,?)")
-                    ->execute([$mid, $name, $role, $dept]);
+                // Check not already added
+                $exists = $pdo->prepare("SELECT COUNT(*) FROM meeting_attendees WHERE meeting_id = ? AND name = ?");
+                $exists->execute([$mid, $uf['name']]); 
+                if ($exists->fetchColumn() == 0) {
+                    $pdo->prepare("INSERT INTO meeting_attendees (meeting_id, name, role_title, department) VALUES (?,?,?,?)")
+                        ->execute([$mid, $uf['name'], $role, $uf['department'] ?? '']);
+                    $added++;
+                }
             }
-        } else {
-            $name = trim($_POST['att_name'] ?? '');
-            $role = trim($_POST['att_role'] ?? '');
-            $dept = trim($_POST['att_dept'] ?? '');
-            if ($name) {
-                $pdo->prepare("INSERT INTO meeting_attendees (meeting_id, name, role_title, department) VALUES (?,?,?,?)")
-                    ->execute([$mid, $name, $role, $dept]);
-            }
+        }
+        $msg = "✅ تمت إضافة $added حاضر(ين)";
+    }
+
+    if (isset($_POST['add_attendee_manual'])) {
+        $mid = intval($_POST['meeting_id']);
+        $name = trim($_POST['att_name'] ?? '');
+        $role = trim($_POST['att_role'] ?? '');
+        $dept = trim($_POST['att_dept'] ?? '');
+        if ($name) {
+            $pdo->prepare("INSERT INTO meeting_attendees (meeting_id, name, role_title, department) VALUES (?,?,?,?)")
+                ->execute([$mid, $name, $role, $dept]);
         }
         $msg = "✅ تمت إضافة الحاضر";
     }
@@ -770,63 +777,74 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                         </form>
                     <?php endif; ?>
 
-                    <!-- Add Attendee (ISO) -->
-                    <form method="POST" style="margin-top:15px;background:#f8f9fa;padding:15px;border-radius:8px;">
+                    <!-- Add Attendees (ISO) -->
+                    <div class="tab-buttons" style="margin-top:15px;">
+                        <button type="button" class="tab-btn active" onclick="switchAttTab('system',this)">👤 اختيار من النظام</button>
+                        <button type="button" class="tab-btn" onclick="switchAttTab('manual',this)">✏️ إضافة خارجي</button>
+                    </div>
+
+                    <!-- System Users Checkbox Grid -->
+                    <form method="POST" id="att_system" style="background:#f8f9fa;padding:15px;border-radius:0 0 8px 8px;border:1px solid #ddd;border-top:none;">
                         <?= csrf_field() ?>
                         <input type="hidden" name="meeting_id" value="<?= $detail['id'] ?>">
-                        <strong>➕ إضافة مدعو: <span class="iso-badge">ISO</span></strong>
-
-                        <div class="tab-buttons" style="margin-top:10px;">
-                            <button type="button" class="tab-btn active" onclick="switchAttTab('system',this)">👤 من
-                                النظام</button>
-                            <button type="button" class="tab-btn" onclick="switchAttTab('manual',this)">✏️ يدوي</button>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                            <strong>👥 اختر الحاضرين من قائمة الموظفين: <span class="iso-badge">ISO</span></strong>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <select name="bulk_role" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;">
+                                    <?php foreach ($role_titles as $rt): ?>
+                                        <option value="<?= htmlspecialchars($rt) ?>" <?= $rt==='عضو'?'selected':'' ?>><?= htmlspecialchars($rt) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" onclick="selectAllUsers()" style="padding:5px 10px;background:#6c757d;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;">تحديد الكل</button>
+                                <button type="button" onclick="deselectAllUsers()" style="padding:5px 10px;background:#adb5bd;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;">إلغاء الكل</button>
+                            </div>
                         </div>
+                        <?php
+                        // Group users by department
+                        $existing_names = array_column($detail_attendees, 'name');
+                        $users_by_dept = [];
+                        foreach ($all_users as $u) { $d = $u['department'] ?? 'بدون قسم'; $users_by_dept[$d][] = $u; }
+                        ksort($users_by_dept);
+                        ?>
+                        <?php foreach ($users_by_dept as $dept_name => $dept_users): ?>
+                            <div style="margin-bottom:10px;">
+                                <div style="font-weight:bold;font-size:13px;color:#1a237e;margin-bottom:5px;padding:5px 10px;background:#e8eaf6;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+                                    <span>🏢 <?= htmlspecialchars($dept_name) ?> (<?= count($dept_users) ?>)</span>
+                                    <button type="button" onclick="toggleDept(this)" style="padding:2px 8px;background:#5c6bc0;color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer;">تحديد القسم</button>
+                                </div>
+                                <div class="agenda-check-grid dept-grid">
+                                    <?php foreach ($dept_users as $u):
+                                        $already = in_array($u['name'], $existing_names);
+                                    ?>
+                                        <label class="agenda-check-item" style="<?= $already ? 'opacity:.5;background:#e8f5e9;' : '' ?>">
+                                            <input type="checkbox" name="selected_users[]" value="<?= htmlspecialchars($u['cin']) ?>" <?= $already ? 'checked disabled' : '' ?>>
+                                            <?= htmlspecialchars($u['name']) ?>
+                                            <span style="font-size:10px;color:#888;margin-right:auto;"><?= htmlspecialchars($u['role'] ?? '') ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <button type="submit" name="add_attendees_bulk" style="background:#28a745;padding:10px 25px;border-radius:8px;margin-top:10px;font-weight:bold;">✅ إضافة المحددين</button>
+                    </form>
 
-                        <input type="hidden" name="att_source" id="att_source" value="system">
-
-                        <div id="att_system" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                            <select name="att_user_cin"
-                                style="flex:2;min-width:180px;padding:8px;border:1px solid #ddd;border-radius:6px;">
-                                <option value="">— اختر من موظفي النظام —</option>
-                                <?php foreach ($all_users as $u): ?>
-                                    <option value="<?= htmlspecialchars($u['cin']) ?>"><?= htmlspecialchars($u['name']) ?>
-                                        (<?= htmlspecialchars($u['department'] ?? '') ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                            <select name="att_role"
-                                style="flex:1;min-width:120px;padding:8px;border:1px solid #ddd;border-radius:6px;">
+                    <!-- Manual (External) -->
+                    <form method="POST" id="att_manual" style="display:none;background:#f8f9fa;padding:15px;border-radius:0 0 8px 8px;border:1px solid #ddd;border-top:none;">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="meeting_id" value="<?= $detail['id'] ?>">
+                        <strong>✏️ إضافة شخص خارجي:</strong>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                            <input type="text" name="att_name" placeholder="الاسم الكامل" required style="flex:2;min-width:120px;padding:8px;border:1px solid #ddd;border-radius:6px;">
+                            <select name="att_role" style="flex:1;min-width:100px;padding:8px;border:1px solid #ddd;border-radius:6px;">
                                 <option value="">— الصفة —</option>
                                 <?php foreach ($role_titles as $rt): ?>
                                     <option value="<?= htmlspecialchars($rt) ?>"><?= htmlspecialchars($rt) ?></option>
                                 <?php endforeach; ?>
+                                <option value="مستشار خارجي">مستشار خارجي</option>
+                                <option value="مندوب">مندوب</option>
                             </select>
-                            <button type="submit" name="add_attendee"
-                                style="background:#007bff;padding:8px 15px;border-radius:6px;white-space:nowrap;">➕
-                                إضافة</button>
-                        </div>
-
-                        <div id="att_manual" style="display:none;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                <input type="text" name="att_name" placeholder="الاسم الكامل"
-                                    style="flex:2;min-width:120px;padding:8px;border:1px solid #ddd;border-radius:6px;">
-                                <select name="att_role_manual"
-                                    style="flex:1;min-width:100px;padding:8px;border:1px solid #ddd;border-radius:6px;">
-                                    <option value="">— الصفة —</option>
-                                    <?php foreach ($role_titles as $rt): ?>
-                                        <option value="<?= htmlspecialchars($rt) ?>"><?= htmlspecialchars($rt) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <select name="att_dept"
-                                    style="flex:1;min-width:100px;padding:8px;border:1px solid #ddd;border-radius:6px;">
-                                    <option value="">— القسم —</option>
-                                    <?php foreach ($departments as $d): ?>
-                                        <option value="<?= htmlspecialchars($d) ?>"><?= htmlspecialchars($d) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="submit" name="add_attendee"
-                                    style="background:#007bff;padding:8px 15px;border-radius:6px;white-space:nowrap;">➕
-                                    إضافة</button>
-                            </div>
+                            <input type="text" name="att_dept" placeholder="الجهة / المؤسسة" style="flex:1;min-width:100px;padding:8px;border:1px solid #ddd;border-radius:6px;">
+                            <button type="submit" name="add_attendee_manual" style="background:#007bff;padding:8px 15px;border-radius:6px;white-space:nowrap;">➕ إضافة</button>
                         </div>
                     </form>
                 </div>
@@ -1096,11 +1114,26 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
 
         // Switch attendee tab (system vs manual)
         function switchAttTab(mode, btn) {
-            document.getElementById('att_source').value = mode;
-            document.getElementById('att_system').style.display = mode === 'system' ? 'flex' : 'none';
+            document.getElementById('att_system').style.display = mode === 'system' ? 'block' : 'none';
             document.getElementById('att_manual').style.display = mode === 'manual' ? 'block' : 'none';
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+        }
+
+        // Select/Deselect all users
+        function selectAllUsers() {
+            document.querySelectorAll('#att_system input[type="checkbox"]:not(:disabled)').forEach(c => c.checked = true);
+        }
+        function deselectAllUsers() {
+            document.querySelectorAll('#att_system input[type="checkbox"]:not(:disabled)').forEach(c => c.checked = false);
+        }
+
+        // Toggle all checkboxes in a department
+        function toggleDept(btn) {
+            var grid = btn.closest('div').nextElementSibling;
+            var boxes = grid.querySelectorAll('input[type="checkbox"]:not(:disabled)');
+            var allChecked = Array.from(boxes).every(c => c.checked);
+            boxes.forEach(c => c.checked = !allChecked);
         }
     </script>
 </body>
