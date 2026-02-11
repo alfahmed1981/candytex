@@ -408,6 +408,7 @@ foreach ($users as $u) {
             <a href="iso_ncr.php">📝 NCR</a>
             <a href="iso_risk.php">📋 مخاطر</a>
             <a href="iso_docs.php">📄 وثائق</a>
+            <a href="meetings.php">🗓️ اجتماعات</a>
             <a href="index.php?logout=1" class="logout">خروج</a>
         </div>
     </div>
@@ -422,6 +423,7 @@ foreach ($users as $u) {
         <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
         <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
         <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
+        <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
         <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 
@@ -440,6 +442,7 @@ foreach ($users as $u) {
                 <a href="iso_ncr.php" class="btn btn-blue" style="background:#0b3c5d;">🏭 ISO NCR/CAR</a>
                 <a href="iso_risk.php" class="btn btn-blue" style="background:#c0392b;">📋 Risk Register</a>
                 <a href="iso_docs.php" class="btn btn-blue" style="background:#2e7d32;">📄 Document Control</a>
+                <a href="meetings.php" class="btn btn-blue" style="background:#e65100;">🗓️ Meetings</a>
                 <a href="admin_backup.php" class="btn btn-blue" style="background:#455a64;">💾 Backup</a>
             </div>
 

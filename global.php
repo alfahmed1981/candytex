@@ -217,6 +217,7 @@ if ($is_admin) {
             <a href="iso_ncr.php">📝 NCR</a>
             <a href="iso_risk.php">📋 مخاطر</a>
             <a href="iso_docs.php">📄 وثائق</a>
+            <a href="meetings.php">🗓️ اجتماعات</a>
             <a href="admin.php">⚙️ إدارة</a>
             <a href="index.php?logout=1" class="logout">خروج</a>
         </div>
@@ -244,6 +245,7 @@ if ($is_admin) {
             </form>
         </div>
         <a href="index.php" class="logout-btn" style="background:#007bff;">📊 Board</a>
+        <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
         <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 
