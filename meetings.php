@@ -2,6 +2,7 @@
 session_start();
 require 'db.php';
 require 'includes/auth.php';
+require_once 'includes/smtp_send.php';
 
 if (!isset($_SESSION['user_cin'])) {
     header("Location: index.php");
@@ -40,6 +41,17 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS `meeting_attendees` (
     FOREIGN KEY (`meeting_id`) REFERENCES `meetings`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+// ═══ AUTO-CREATE NOTIFICATIONS TABLE ═══
+$pdo->exec("CREATE TABLE IF NOT EXISTS `notifications` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_cin` VARCHAR(20) NOT NULL,
+    `title` VARCHAR(255) NOT NULL,
+    `message` TEXT NOT NULL,
+    `link` VARCHAR(500) DEFAULT NULL,
+    `is_read` TINYINT(1) DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
 // ═══ SEED FIRST MEETING ═══
 $cnt = $pdo->query("SELECT COUNT(*) FROM meetings")->fetchColumn();
 if ($cnt == 0) {
@@ -68,7 +80,7 @@ if ($cnt == 0) {
 $departments = $pdo->query("SELECT name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
 $locations = $pdo->query("SELECT name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
 // Users for "called_by" and "attendee" selection
-$all_users = $pdo->query("SELECT cin, name, role, department FROM users WHERE status='active' ORDER BY name")->fetchAll();
+$all_users = $pdo->query("SELECT cin, name, role, department, email, phone, whatsapp FROM users WHERE status='active' ORDER BY name")->fetchAll();
 
 // ISO Predefined Lists
 $meeting_types = [
@@ -280,6 +292,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE meeting_attendees SET attended = ? WHERE id = ?")->execute([$val, $a['id']]);
         }
         $msg = "✅ تم تسجيل الحضور";
+    }
+
+    // ═══ SEND INVITATIONS ═══
+    if (isset($_POST['send_invite_email'])) {
+        $mid = intval($_POST['meeting_id']);
+        $m = $pdo->prepare("SELECT * FROM meetings WHERE id = ?"); $m->execute([$mid]); $meeting = $m->fetch();
+        if ($meeting) {
+            $agenda = json_decode($meeting['agenda_items'] ?: '[]', true) ?: [];
+            $target = $_POST['invite_target'] ?? 'all';
+            $att_stmt = $pdo->prepare("SELECT ma.*, u.email, u.phone, u.whatsapp, u.cin as user_cin FROM meeting_attendees ma LEFT JOIN users u ON u.name = ma.name WHERE ma.meeting_id = ?");
+            $att_stmt->execute([$mid]);
+            $attendees = $att_stmt->fetchAll();
+
+            $subject = "استدعاء لحضور اجتماع: " . $meeting['title'];
+            $body  = "السلام عليكم ورحمة الله تعالى وبركاته،\n\n";
+            $body .= "يشرفنا دعوتكم لحضور اجتماع: " . $meeting['title'] . "\n\n";
+            $body .= "📅 التاريخ: " . $meeting['meeting_date'] . "\n";
+            $body .= "🕐 الوقت: " . substr($meeting['meeting_time'],0,5) . "\n";
+            if ($meeting['location']) $body .= "📍 المكان: " . $meeting['location'] . "\n";
+            if ($meeting['committee']) $body .= "🏛️ اللجنة: " . $meeting['committee'] . "\n";
+            if ($agenda) {
+                $body .= "\n📋 جدول الأعمال:\n";
+                foreach ($agenda as $i => $item) { $body .= ($i+1) . ". " . $item . "\n"; }
+            }
+            $body .= "\nمع فائق التقدير والاحترام\nCandy Tex";
+
+            $sent = 0; $failed = 0;
+            foreach ($attendees as $a) {
+                if ($target !== 'all' && $a['name'] !== $target) continue;
+                $email = $a['email'] ?? '';
+                if ($email) {
+                    $result = send_smtp_email($pdo, $email, $subject, $body);
+                    if ($result === true) $sent++; else $failed++;
+                }
+            }
+            $msg = "📧 تم إرسال $sent بريد إلكتروني" . ($failed ? " (فشل: $failed)" : "");
+            if ($sent == 0 && $failed == 0) $msg = "⚠️ لا يوجد بريد إلكتروني لأي من المدعوين";
+        }
+    }
+
+    if (isset($_POST['send_invite_app'])) {
+        $mid = intval($_POST['meeting_id']);
+        $m = $pdo->prepare("SELECT * FROM meetings WHERE id = ?"); $m->execute([$mid]); $meeting = $m->fetch();
+        if ($meeting) {
+            $target = $_POST['invite_target'] ?? 'all';
+            $att_stmt = $pdo->prepare("SELECT ma.*, u.cin as user_cin FROM meeting_attendees ma LEFT JOIN users u ON u.name = ma.name WHERE ma.meeting_id = ?");
+            $att_stmt->execute([$mid]);
+            $attendees = $att_stmt->fetchAll();
+
+            $notif_title = "📩 استدعاء اجتماع: " . $meeting['title'];
+            $notif_msg = "تم استدعاؤكم لحضور اجتماع " . $meeting['title'] . " يوم " . $meeting['meeting_date'] . " الساعة " . substr($meeting['meeting_time'],0,5);
+            if ($meeting['location']) $notif_msg .= " في " . $meeting['location'];
+            $link = "meetings.php?id=" . $mid;
+
+            $sent = 0;
+            $ins = $pdo->prepare("INSERT INTO notifications (user_cin, title, message, link) VALUES (?,?,?,?)");
+            foreach ($attendees as $a) {
+                if ($target !== 'all' && $a['name'] !== $target) continue;
+                if (!empty($a['user_cin'])) {
+                    $ins->execute([$a['user_cin'], $notif_title, $notif_msg, $link]);
+                    $sent++;
+                }
+            }
+            $msg = "🔔 تم إرسال $sent إشعار عبر التطبيق";
+        }
     }
 }
 
@@ -684,6 +761,36 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                             <a href="?print=attendance&id=<?= $detail['id'] ?>" style="background:#6a1b9a;"
                                 target="_blank">👥 لائحة الحضور</a>
                         </div>
+
+                        <!-- ═══ INVITATION CHANNELS ═══ -->
+                        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                            <span style="font-size:13px;font-weight:bold;color:#555;">📨 إرسال الاستدعاء:</span>
+                            <form method="POST" style="display:inline;">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="meeting_id" value="<?= $detail['id'] ?>">
+                                <input type="hidden" name="invite_target" value="all">
+                                <button type="submit" name="send_invite_email" style="background:#d93025;color:#fff;padding:7px 14px;border:none;border-radius:8px;font-size:12px;cursor:pointer;">📧 بريد الكل</button>
+                            </form>
+                            <form method="POST" style="display:inline;">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="meeting_id" value="<?= $detail['id'] ?>">
+                                <input type="hidden" name="invite_target" value="all">
+                                <button type="submit" name="send_invite_app" style="background:#ff6f00;color:#fff;padding:7px 14px;border:none;border-radius:8px;font-size:12px;cursor:pointer;">🔔 إشعار الكل</button>
+                            </form>
+                            <?php
+                            $wa_agenda = json_decode($detail['agenda_items'] ?: '[]', true) ?: [];
+                            $wa_text = "السلام عليكم ورحمة الله،\nاستدعاء لحضور اجتماع: " . $detail['title'] . "\n";
+                            $wa_text .= "📅 " . $detail['meeting_date'] . " 🕐 " . substr($detail['meeting_time'],0,5) . "\n";
+                            if ($detail['location']) $wa_text .= "📍 " . $detail['location'] . "\n";
+                            if ($wa_agenda) {
+                                $wa_text .= "\n📋 جدول الأعمال:\n";
+                                foreach ($wa_agenda as $i => $item) { $wa_text .= ($i+1) . ". " . $item . "\n"; }
+                            }
+                            $wa_text .= "\nنرجو الحضور في الموعد. شكرا";
+                            $wa_encoded = urlencode($wa_text);
+                            ?>
+                            <button onclick="sendWhatsAppAll()" style="background:#25D366;color:#fff;padding:7px 14px;border:none;border-radius:8px;font-size:12px;cursor:pointer;">📱 واتساب الكل</button>
+                        </div>
                     </div>
 
                     <div class="detail-meta">
@@ -732,17 +839,52 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                                         <th>الصفة</th>
                                         <th>القسم</th>
                                         <th>الحضور</th>
+                                        <th>استدعاء</th>
                                         <th>إجراء</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($detail_attendees as $i => $a): ?>
+                                    <?php foreach ($detail_attendees as $i => $a):
+                                        // Get user contact info
+                                        $u_info = $pdo->prepare("SELECT cin, email, phone, whatsapp FROM users WHERE name = ? LIMIT 1");
+                                        $u_info->execute([$a['name']]); $u_contact = $u_info->fetch();
+                                        $has_email = !empty($u_contact['email']);
+                                        $has_phone = !empty($u_contact['whatsapp'] ?: $u_contact['phone']);
+                                        $has_cin = !empty($u_contact['cin']);
+                                        $phone_raw = $u_contact['whatsapp'] ?? $u_contact['phone'] ?? '';
+                                        $clean_phone = preg_replace('/[^0-9]/', '', $phone_raw);
+                                        if (substr($clean_phone, 0, 1) === '0') $clean_phone = '212' . substr($clean_phone, 1);
+                                    ?>
                                         <tr>
                                             <td><?= $i + 1 ?></td>
                                             <td><strong><?= htmlspecialchars($a['name']) ?></strong></td>
                                             <td><?= htmlspecialchars($a['role_title'] ?: '—') ?></td>
                                             <td><?= htmlspecialchars($a['department'] ?: '—') ?></td>
                                             <td><?= $a['attended'] === null ? '—' : ($a['attended'] ? '✅' : '❌') ?></td>
+                                            <td style="white-space:nowrap;">
+                                                <?php if ($has_email): ?>
+                                                    <form method="POST" style="display:inline;">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="meeting_id" value="<?= $detail['id'] ?>">
+                                                        <input type="hidden" name="invite_target" value="<?= htmlspecialchars($a['name']) ?>">
+                                                        <button type="submit" name="send_invite_email" title="بريد إلكتروني" style="padding:2px 6px;background:#d93025;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">📧</button>
+                                                    </form>
+                                                <?php endif; ?>
+                                                <?php if ($has_phone): ?>
+                                                    <a href="https://wa.me/<?= $clean_phone ?>?text=<?= $wa_encoded ?>" target="_blank" title="واتساب" style="padding:2px 6px;background:#25D366;color:#fff;border:none;border-radius:4px;font-size:11px;text-decoration:none;display:inline-block;">📱</a>
+                                                <?php endif; ?>
+                                                <?php if ($has_cin): ?>
+                                                    <form method="POST" style="display:inline;">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="meeting_id" value="<?= $detail['id'] ?>">
+                                                        <input type="hidden" name="invite_target" value="<?= htmlspecialchars($a['name']) ?>">
+                                                        <button type="submit" name="send_invite_app" title="إشعار عبر التطبيق" style="padding:2px 6px;background:#ff6f00;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">🔔</button>
+                                                    </form>
+                                                <?php endif; ?>
+                                                <?php if (!$has_email && !$has_phone && !$has_cin): ?>
+                                                    <span style="color:#999;font-size:11px;">—</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td>
                                                 <form method="POST" style="display:inline;"
                                                     onsubmit="return confirm('حذف هذا الحاضر؟')">
@@ -1134,6 +1276,16 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
             var boxes = grid.querySelectorAll('input[type="checkbox"]:not(:disabled)');
             var allChecked = Array.from(boxes).every(c => c.checked);
             boxes.forEach(c => c.checked = !allChecked);
+        }
+
+        // Send WhatsApp to all attendees
+        function sendWhatsAppAll() {
+            var links = document.querySelectorAll('.att-table a[href*="wa.me"]');
+            if (links.length === 0) { alert('لا يوجد أرقام واتساب للمدعوين'); return; }
+            if (!confirm('سيتم فتح ' + links.length + ' محادثة واتساب. متابعة؟')) return;
+            links.forEach(function(link, i) {
+                setTimeout(function() { window.open(link.href, '_blank'); }, i * 1500);
+            });
         }
     </script>
 </body>
