@@ -174,6 +174,11 @@ if (isset($_GET['print']) && isset($_GET['id'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
 
+    // Only admins can manage meetings
+    if (!$is_admin) {
+        $msg = "⛔ ليس لديك صلاحية لإدارة الاجتماعات";
+    } else {
+
     if (isset($_POST['create_meeting'])) {
         $title = trim($_POST['title']);
         if ($title === 'أخرى' && !empty(trim($_POST['title_other'] ?? ''))) {
@@ -358,6 +363,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = "🔔 تم إرسال $sent إشعار عبر التطبيق";
         }
     }
+} // end admin else
 }
 
 // ═══ FETCH MEETINGS ═══
@@ -762,6 +768,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                                 target="_blank">👥 لائحة الحضور</a>
                         </div>
 
+                        <?php if ($is_admin): ?>
                         <!-- ═══ INVITATION CHANNELS ═══ -->
                         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                             <span style="font-size:13px;font-weight:bold;color:#555;">📨 إرسال الاستدعاء:</span>
@@ -791,6 +798,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                             ?>
                             <button onclick="sendWhatsAppAll()" style="background:#25D366;color:#fff;padding:7px 14px;border:none;border-radius:8px;font-size:12px;cursor:pointer;">📱 واتساب الكل</button>
                         </div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="detail-meta">
@@ -839,8 +847,10 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                                         <th>الصفة</th>
                                         <th>القسم</th>
                                         <th>الحضور</th>
+                                        <?php if ($is_admin): ?>
                                         <th>استدعاء</th>
                                         <th>إجراء</th>
+                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -861,6 +871,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                                             <td><?= htmlspecialchars($a['role_title'] ?: '—') ?></td>
                                             <td><?= htmlspecialchars($a['department'] ?: '—') ?></td>
                                             <td><?= $a['attended'] === null ? '—' : ($a['attended'] ? '✅' : '❌') ?></td>
+                                            <?php if ($is_admin): ?>
                                             <td style="white-space:nowrap;">
                                                 <?php if ($has_email): ?>
                                                     <form method="POST" style="display:inline;">
@@ -894,6 +905,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                                                         style="padding:3px 8px;font-size:11px;">🗑️</button>
                                                 </form>
                                             </td>
+                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -901,6 +913,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                         </div>
 
                         <!-- Mark Attendance -->
+                        <?php if ($is_admin): ?>
                         <form method="POST" style="margin-top:15px;background:#f0f7ff;padding:15px;border-radius:8px;">
                             <?= csrf_field() ?>
                             <input type="hidden" name="meeting_id" value="<?= $detail['id'] ?>">
@@ -917,8 +930,10 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                             <button type="submit" name="mark_attendance"
                                 style="background:#28a745;padding:8px 20px;border-radius:8px;">✅ حفظ الحضور</button>
                         </form>
+                        <?php endif; ?>
                     <?php endif; ?>
 
+                    <?php if ($is_admin): ?>
                     <!-- Add Attendees (ISO) -->
                     <div class="tab-buttons" style="margin-top:15px;">
                         <button type="button" class="tab-btn active" onclick="switchAttTab('system',this)">👤 اختيار من النظام</button>
@@ -990,7 +1005,9 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                         </div>
                     </form>
                 </div>
+                <?php endif; ?>
 
+                <?php if ($is_admin): ?>
                 <!-- Edit Meeting (ISO) -->
                 <div class="detail-panel">
                     <div class="section-title">✏️ تعديل الاجتماع <span class="iso-badge">ISO</span></div>
@@ -1104,6 +1121,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                         </div>
                     </form>
                 </div>
+                <?php endif; ?>
 
             <?php else: ?>
                 <!-- ═══ LIST VIEW ═══ -->
@@ -1126,11 +1144,14 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                         <a href="meetings.php"
                             style="padding:8px 15px;background:#6c757d;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;">إعادة</a>
                     </form>
+                    <?php if ($is_admin): ?>
                     <button
                         onclick="document.getElementById('newMeetingForm').style.display=document.getElementById('newMeetingForm').style.display==='none'?'block':'none'"
                         style="background:#28a745;padding:10px 20px;border-radius:8px;width:auto;">➕ اجتماع جديد</button>
+                    <?php endif; ?>
                 </div>
 
+                <?php if ($is_admin): ?>
                 <!-- New Meeting Form (ISO) -->
                 <div id="newMeetingForm"
                     style="display:none;background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);margin-bottom:20px;">
@@ -1207,6 +1228,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
                             الاجتماع</button>
                     </form>
                 </div>
+                <?php endif; ?>
 
                 <!-- Meetings List -->
                 <?php if (empty($meetings)): ?>
