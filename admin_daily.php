@@ -301,6 +301,8 @@ function mask_cin($cin)
                     (<?= $unfilled_count ?>)</button>
             <?php endif; ?>
             <button type="button" onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
+            <button type="button" onclick="printDiscipline()" class="btn btn-secondary"
+                style="background:#17a2b8; color:white;">🏆 طباعة ترتيب الانضباط</button>
         </form>
 
         <div class="stats-container" style="display:flex; gap:20px; margin-bottom:20px; flex-wrap:wrap;">
@@ -566,6 +568,110 @@ function mask_cin($cin)
             <p style="text-align:center; padding:20px; color:#666;">No managers found.</p>
         <?php endif; ?>
 
+        <!-- ===================== -->
+        <!-- DISCIPLINE RANKING (Print Only) -->
+        <!-- ===================== -->
+        <div id="disciplineRanking" style="display:none;">
+            <!-- Print Header -->
+            <div class="print-header">
+                <div class="print-logo">
+                    🏭 CANDYTEX S.A.R.L<br>
+                    <small style="font-size:10pt; font-weight:normal;">Excellence in Textiles</small>
+                </div>
+                <div style="text-align:center;">
+                    <h2 style="margin:0;">🏆 ترتيب انضباط التوقيت / Classement Ponctualité</h2>
+                    <p style="margin:5px 0;">Discipline Ranking Report</p>
+                    <b>Date: <?= $selected_date ?></b>
+                </div>
+                <div class="doc-info">
+                    <b>Ref:</b> OP-SQDC-005<br>
+                    <b>Rev:</b> 1.0 (2026)<br>
+                    <b>Type:</b> Motivational
+                </div>
+            </div>
+
+            <?php
+            // Build ranking: only managers who filled, sorted by fill time (earliest first)
+            $ranking = [];
+            foreach ($managers as $m) {
+                $cin = $m['cin'];
+                $ft = $fill_times[$cin] ?? null;
+                if ($ft) {
+                    $fill_dt = new DateTime($ft);
+                    $total_min = (int) $fill_dt->format('H') * 60 + (int) $fill_dt->format('i');
+                    $ranking[] = [
+                        'name' => mask_name($m['name']),
+                        'cin' => mask_cin($cin),
+                        'department' => $m['department'] ?? '-',
+                        'location' => $m['location'] ?? '-',
+                        'fill_time' => $fill_dt->format('H:i'),
+                        'total_min' => $total_min,
+                    ];
+                }
+            }
+            // Sort by fill time (earliest first)
+            usort($ranking, function ($a, $b) {
+                return $a['total_min'] - $b['total_min'];
+            });
+            ?>
+
+            <table class="data-table" style="margin-top:20px;">
+                <thead>
+                    <tr>
+                        <th style="width:50px; text-align:center;">🏅 المرتبة</th>
+                        <th>👤 الاسم</th>
+                        <th>🏭 القسم</th>
+                        <th>📍 الموقع</th>
+                        <th style="text-align:center;">⏰ وقت التعبئة</th>
+                        <th style="text-align:center;">📊 الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($ranking as $i => $r):
+                        $rank = $i + 1;
+                        if ($r['total_min'] <= 510) {
+                            $tc = 'time-early';
+                            $tl = '✅ منضبط';
+                        } elseif ($r['total_min'] <= 600) {
+                            $tc = 'time-late';
+                            $tl = '⚠️ متأخر';
+                        } else {
+                            $tc = 'time-very-late';
+                            $tl = '🔴 متأخر جداً';
+                        }
+                        // Medal for top 3
+                        $medal = '';
+                        if ($rank === 1)
+                            $medal = '🥇';
+                        elseif ($rank === 2)
+                            $medal = '🥈';
+                        elseif ($rank === 3)
+                            $medal = '🥉';
+                        ?>
+                        <tr>
+                            <td style="text-align:center; font-weight:bold; font-size:16px;">
+                                <?= $medal ?: $rank ?>
+                            </td>
+                            <td>
+                                <strong><?= htmlspecialchars($r['name']) ?></strong><br>
+                                <small style="color:#666;"><?= htmlspecialchars($r['cin']) ?></small>
+                            </td>
+                            <td><?= htmlspecialchars($r['department']) ?></td>
+                            <td><?= htmlspecialchars($r['location']) ?></td>
+                            <td style="text-align:center;">
+                                <span class="time-badge <?= $tc ?>"><?= $r['fill_time'] ?></span>
+                            </td>
+                            <td style="text-align:center;"><?= $tl ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <div style="text-align:center; margin-top:15px; font-size:12px; color:#666;">
+                📊 المجموع: <?= count($ranking) ?> مشارك | تاريخ الطباعة: <?= date('Y-m-d H:i') ?>
+            </div>
+        </div>
+
         <!-- PRINT LEGEND -->
         <div class="print-legend">
             <strong>Key / المفتاح:</strong> &nbsp;
@@ -694,6 +800,34 @@ function mask_cin($cin)
                 }
                 openNext();
             }
+        }
+
+        // Print Discipline Ranking - hides main table, shows ranking, prints, then restores
+        function printDiscipline() {
+            const mainTable = document.querySelector('.data-table');
+            const statsContainer = document.querySelector('.stats-container');
+            const legend = document.querySelector('.print-legend');
+            const ranking = document.getElementById('disciplineRanking');
+            const h1 = document.querySelector('h1.no-print');
+
+            // Hide main content
+            mainTable.style.display = 'none';
+            statsContainer.style.display = 'none';
+            if (legend) legend.style.display = 'none';
+
+            // Show ranking
+            ranking.style.display = 'block';
+
+            // Print
+            window.print();
+
+            // Restore after print
+            setTimeout(() => {
+                mainTable.style.display = '';
+                statsContainer.style.display = '';
+                if (legend) legend.style.display = '';
+                ranking.style.display = 'none';
+            }, 500);
         }
     </script>
 </body>
