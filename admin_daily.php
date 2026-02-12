@@ -33,15 +33,21 @@ $stmt = $pdo->prepare($sql_users);
 $stmt->execute();
 $managers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// B. Fetch All Logs for Date
-$stmt_logs = $pdo->prepare("SELECT user_cin, category, status FROM sqdc_daily WHERE day_date = ?");
+// B. Fetch All Logs for Date (including updated_at for fill time tracking)
+$stmt_logs = $pdo->prepare("SELECT user_cin, category, status, updated_at FROM sqdc_daily WHERE day_date = ?");
 $stmt_logs->execute([$selected_date]);
 $logs_raw = $stmt_logs->fetchAll(PDO::FETCH_ASSOC);
 
 // Re-map logs: [cin][category] = status
+// Also track fill time: latest updated_at per user
 $daily_data = [];
+$fill_times = []; // [cin] => latest updated_at
 foreach ($logs_raw as $l) {
     $daily_data[$l['user_cin']][$l['category']] = $l['status'];
+    $ts = $l['updated_at'];
+    if ($ts && (!isset($fill_times[$l['user_cin']]) || $ts > $fill_times[$l['user_cin']])) {
+        $fill_times[$l['user_cin']] = $ts;
+    }
 }
 
 // C. Fetch Issues (Countermeasures) for Date
@@ -159,6 +165,28 @@ sort($locations);
         .bg-gray {
             background: #e9ecef;
             color: #ccc;
+        }
+
+        /* Fill Time Discipline Badges */
+        .time-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+            display: inline-block;
+        }
+
+        .time-early {
+            background: #28a745;
+        }
+
+        .time-late {
+            background: #fd7e14;
+        }
+
+        .time-very-late {
+            background: #dc3545;
         }
 
         .issue-count {
@@ -350,6 +378,7 @@ sort($locations);
                         </th>
                     <?php endforeach; ?>
 
+                    <th style="text-align:center;">⏰ وقت التعبئة</th>
                     <th>⚠️ Issues</th>
                     <th class="no-print">📱 تذكير</th>
                 </tr>
@@ -392,6 +421,16 @@ sort($locations);
                             </select>
                         </td>
                     <?php endforeach; ?>
+                    <td style="padding:5px; text-align:center;">
+                        <select id="filterTime" onchange="filterTable()"
+                            style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
+                            <option value="">All</option>
+                            <option value="early" style="background:#28a745; color:white;">✅ منضبط</option>
+                            <option value="late" style="background:#fd7e14; color:white;">⚠️ متأخر</option>
+                            <option value="very-late" style="background:#dc3545; color:white;">🔴 متأخر جداً</option>
+                            <option value="none" style="background:#e9ecef; color:#333;">❌ لم يملأ</option>
+                        </select>
+                    </td>
                     <td style="padding:5px;">
                         <select id="filterIssues" onchange="filterTable()"
                             style="width:100%; padding:5px; border:1px solid #ccc; border-radius:4px;">
@@ -435,6 +474,41 @@ sort($locations);
                                 </span>
                             </td>
                         <?php endforeach; ?>
+
+                        <!-- Fill Time Column -->
+                        <td style="text-align:center;">
+                            <?php
+                            $ft = $fill_times[$cin] ?? null;
+                            if ($ft) {
+                                $fill_dt = new DateTime($ft);
+                                $fill_hour = (int) $fill_dt->format('H');
+                                $fill_min = (int) $fill_dt->format('i');
+                                $fill_time_str = $fill_dt->format('H:i');
+                                $total_minutes = $fill_hour * 60 + $fill_min;
+
+                                // Discipline: before 8:30 = early, before 10:00 = late, after = very late
+                                if ($total_minutes <= 510) { // 8:30
+                                    $time_class = 'time-early';
+                                    $time_label = 'منضبط';
+                                    $time_data = 'early';
+                                } elseif ($total_minutes <= 600) { // 10:00
+                                    $time_class = 'time-late';
+                                    $time_label = 'متأخر';
+                                    $time_data = 'late';
+                                } else {
+                                    $time_class = 'time-very-late';
+                                    $time_label = 'متأخر جداً';
+                                    $time_data = 'very-late';
+                                }
+                                ?>
+                                <span class="time-badge <?= $time_class ?>" data-discipline="<?= $time_data ?>"
+                                    title="<?= $time_label ?>">
+                                    <?= $fill_time_str ?>
+                                </span>
+                            <?php } else { ?>
+                                <span class="time-badge" data-discipline="none" style="background:#e9ecef; color:#999;">—</span>
+                            <?php } ?>
+                        </td>
 
                         <td style="text-align:center;">
                             <?php if (isset($issues_map[$cin])): ?>
@@ -520,7 +594,7 @@ sort($locations);
 
             for (let i = 0; i < rows.length; i++) {
                 const cells = rows[i].getElementsByTagName('td');
-                if (cells.length < 9) continue;
+                if (cells.length < 10) continue;
 
                 // 1. Name/CIN (Index 0)
                 const nameText = cells[0].textContent || cells[0].innerText;
@@ -534,14 +608,20 @@ sort($locations);
                 const locText = cells[2].textContent || cells[2].innerText;
                 const showLoc = locFilter === "" || locText.toUpperCase().indexOf(locFilter) > -1;
 
-                // 4. Issues (Index 8)
-                const issueText = cells[8].textContent || cells[8].innerText;
-                const hasIssues = issueText.trim() !== '-' && issueText.trim() !== '';
+                // 4. Fill Time filter (Index 8)
+                const timeFilter = document.getElementById('filterTime').value;
+                const timeBadge = cells[8].querySelector('.time-badge');
+                const timeDiscipline = timeBadge ? timeBadge.getAttribute('data-discipline') : 'none';
+                const showTime = timeFilter === "" || timeDiscipline === timeFilter;
+
+                // 5. Issues (Index 9)
+                const issueText = cells[9].textContent || cells[9].innerText;
+                const hasIssues = issueText.trim() !== '-' && issueText.trim() !== '' && issueText.trim() !== '—';
                 const showIssues = issueFilter === "" || (issueFilter === "yes" && hasIssues);
 
                 // 5. KPIs
                 let showKPIsClass = true;
-                const kpiIndices = { 'S': 3, 'Q': 4, 'D': 5, '5S': 6, 'C': 7 };
+                const kpiIndices = { 'S': 3, 'Q': 4, 'D': 5, '5S': 6, 'C': 7 }; // 8=time, 9=issues, 10=remind
 
                 for (const [key, filterVal] of Object.entries(kpiFilters)) {
                     if (filterVal !== "") {
@@ -562,7 +642,7 @@ sort($locations);
                     }
                 }
 
-                if (showName && showDept && showLoc && showIssues && showKPIsClass) {
+                if (showName && showDept && showLoc && showTime && showIssues && showKPIsClass) {
                     rows[i].style.display = "";
                 } else {
                     rows[i].style.display = "none";
