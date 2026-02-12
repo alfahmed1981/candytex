@@ -79,6 +79,24 @@ $departments = array_unique(array_column($managers, 'department'));
 $locations = array_unique(array_column($managers, 'location'));
 sort($departments);
 sort($locations);
+
+// Helper: Mask name (show first word + first letter of second word + ***)
+function mask_name($name)
+{
+    $parts = explode(' ', trim($name));
+    if (count($parts) >= 2) {
+        return $parts[0] . ' ' . mb_substr($parts[1], 0, 1) . '***';
+    }
+    return mb_substr($name, 0, 4) . '***';
+}
+
+// Helper: Mask CIN (show first 3 chars + ****)
+function mask_cin($cin)
+{
+    if (mb_strlen($cin) <= 3)
+        return $cin;
+    return mb_substr($cin, 0, 3) . str_repeat('*', mb_strlen($cin) - 3);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -449,10 +467,12 @@ sort($locations);
                     <tr>
                         <td>
                             <strong>
-                                <?= htmlspecialchars($m['name']) ?>
+                                <span class="screen-only"><?= htmlspecialchars($m['name']) ?></span>
+                                <span class="print-only"><?= htmlspecialchars(mask_name($m['name'])) ?></span>
                             </strong><br>
                             <small style="color:#666;">
-                                <?= htmlspecialchars($cin) ?>
+                                <span class="screen-only"><?= htmlspecialchars($cin) ?></span>
+                                <span class="print-only"><?= htmlspecialchars(mask_cin($cin)) ?></span>
                             </small>
                         </td>
                         <td>
