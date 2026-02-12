@@ -301,8 +301,9 @@ function mask_cin($cin)
                     (<?= $unfilled_count ?>)</button>
             <?php endif; ?>
             <button type="button" onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
-            <button type="button" onclick="printDiscipline()" class="btn btn-secondary"
-                style="background:#17a2b8; color:white;">🏆 طباعة ترتيب الانضباط</button>
+            <a href="admin_discipline.php?date=<?= $selected_date ?>" class="btn btn-secondary"
+                style="background:#17a2b8; color:white; text-decoration:none; padding:10px 20px; border-radius:8px; font-weight:bold;">🏆
+                ترتيب الانضباط</a>
         </form>
 
         <div class="stats-container" style="display:flex; gap:20px; margin-bottom:20px; flex-wrap:wrap;">
