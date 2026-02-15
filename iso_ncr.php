@@ -1928,9 +1928,11 @@ foreach ($ncrs as $ncr) {
                 <input type="hidden" name="ncr_id" id="car-ncr-id">
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>تحليل السبب الجذري <small>/ Root Cause Analysis</small></label>
+                        <label>🔎 تحليل السبب الجذري <small>/ Root Cause Analysis</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ لماذا حدثت
+                            المشكلة أصلاً؟ اختر السبب الجذري الذي أدى لها</small>
                         <select name="root_cause" id="car-root-cause" onchange="syncCarCause(this)">
-                            <option value="">-- اختر السبب / Select Cause --</option>
+                            <option value="">-- 🔎 اختر السبب / Select Cause --</option>
                             <optgroup label="👤 العامل / Man">
                                 <option value="Operator Lack of Skill / Training">Operator Lack of Skill / Training |
                                     نقص في مهارة / تدريب العامل</option>
@@ -1970,23 +1972,25 @@ foreach ($ncrs as $ncr) {
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>الإجراء التصحيحي <small>/ Corrective Action</small> <span id="car-ca-hint"
+                        <label>🛠️ الإجراء التصحيحي <small>/ Corrective Action</small> <span id="car-ca-hint"
                                 style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ماذا سنفعل لحل
+                            المشكلة الحالية؟</small>
                         <select name="corrective_action" id="car-corrective">
-                            <option value="">-- اختر الإجراء / Select Action --</option>
-                            <option value="Operator Retraining / Briefing | إعادة تدريب / توجيه العامل">إعادة تدريب /
+                            <option value="">-- 🛠️ اختر الإجراء / Select Action --</option>
+                            <option value="Operator Retraining / Briefing | إعادة تدريب / توجيه العامل">🎓 إعادة تدريب /
                                 توجيه العامل — Retraining</option>
-                            <option value="Machine Repair / Parts Replacement | إصلاح الماكينة / استبدال قطع الغيار">
+                            <option value="Machine Repair / Parts Replacement | إصلاح الماكينة / استبدال قطع الغيار">🔧
                                 إصلاح الماكينة / استبدال قطع — Machine Repair</option>
-                            <option value="Calibration / Setting Adjustment | معايرة / ضبط الإعدادات">معايرة / ضبط
+                            <option value="Calibration / Setting Adjustment | معايرة / ضبط الإعدادات">⚙️ معايرة / ضبط
                                 الإعدادات — Calibration</option>
-                            <option value="Update Tech Pack / Pattern | تعديل الملف التقني / الباترون">تعديل الملف
+                            <option value="Update Tech Pack / Pattern | تعديل الملف التقني / الباترون">📝 تعديل الملف
                                 التقني — Update Tech Pack</option>
-                            <option value="Supplier Complaint Issued | إصدار شكوى رسمية للمورد">إصدار شكوى للمورد —
+                            <option value="Supplier Complaint Issued | إصدار شكوى رسمية للمورد">📨 إصدار شكوى للمورد —
                                 Supplier Complaint</option>
-                            <option value="Material Exchange | استبدال المواد المعيبة">استبدال المواد المعيبة — Material
-                                Exchange</option>
-                            <option value="Process Audit Conducted | إجراء تدقيق فوري للعملية">إجراء تدقيق فوري —
+                            <option value="Material Exchange | استبدال المواد المعيبة">🔄 استبدال المواد المعيبة —
+                                Material Exchange</option>
+                            <option value="Process Audit Conducted | إجراء تدقيق فوري للعملية">🔍 إجراء تدقيق فوري —
                                 Process Audit</option>
                         </select>
                         <textarea id="car-corrective-custom" name="corrective_action_custom" rows="2"
@@ -1995,23 +1999,25 @@ foreach ($ncrs as $ncr) {
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>الإجراء الوقائي <small>/ Preventive Action</small> <span id="car-pa-hint"
+                        <label>🛡️ الإجراء الوقائي <small>/ Preventive Action</small> <span id="car-pa-hint"
                                 style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ كيف نمنع تكرار
+                            هذه المشكلة مستقبلاً؟</small>
                         <select name="preventive_action" id="car-preventive">
-                            <option value="">-- اختر الإجراء / Select Action --</option>
-                            <option value="Update SOP / Work Instructions | تحديث إجراءات العمل القياسية">تحديث إجراءات
-                                العمل (SOP) — Update SOP</option>
-                            <option value="Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة">إضافة نقطة تفتيش جودة — QC
-                                Checkpoint</option>
-                            <option value="Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ">نظام منع الخطأ
-                                (Poka-Yoke)</option>
-                            <option value="Update Maintenance Schedule | تعديل جدول الصيانة الوقائية">تعديل جدول الصيانة
-                                الوقائية — Maintenance</option>
-                            <option value="Change Supplier / Vendor | تغيير المورد">تغيير المورد — Change Supplier
+                            <option value="">-- 🛡️ اختر الإجراء / Select Action --</option>
+                            <option value="Update SOP / Work Instructions | تحديث إجراءات العمل القياسية">📝 تحديث
+                                إجراءات العمل (SOP) — Update SOP</option>
+                            <option value="Add QC Checkpoint / Gate | إضافة نقطة تفتيش جودة">✅ إضافة نقطة تفتيش جودة —
+                                QC Checkpoint</option>
+                            <option value="Implement Poka-Yoke (Error Proofing) | تركيب نظام منع الخطأ">🛡️ نظام منع
+                                الخطأ (Poka-Yoke)</option>
+                            <option value="Update Maintenance Schedule | تعديل جدول الصيانة الوقائية">🔧 تعديل جدول
+                                الصيانة الوقائية — Maintenance</option>
+                            <option value="Change Supplier / Vendor | تغيير المورد">🚚 تغيير المورد — Change Supplier
                             </option>
-                            <option value="Modify Training Matrix | تعديل مصفوفة التدريب">تعديل مصفوفة التدريب
+                            <option value="Modify Training Matrix | تعديل مصفوفة التدريب">🎓 تعديل مصفوفة التدريب
                                 (Polyvalence)</option>
-                            <option value="Install Better Lighting / Tools | تحسين الإضاءة / أدوات">تحسين الإضاءة /
+                            <option value="Install Better Lighting / Tools | تحسين الإضاءة / أدوات">💡 تحسين الإضاءة /
                                 الأدوات — Lighting/Tools</option>
                         </select>
                         <textarea id="car-preventive-custom" name="preventive_action_custom" rows="2"
@@ -2020,9 +2026,11 @@ foreach ($ncrs as $ncr) {
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>المسؤول <small>/ Responsible</small></label>
+                        <label>👤 المسؤول <small>/ Responsible</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ من سينفذ الإجراء
+                            التصحيحي ويتابعه؟</small>
                         <select name="car_responsible" id="car-responsible-sel">
-                            <option value="">-- اختر المسؤول / Select --</option>
+                            <option value="">-- 👤 اختر المسؤول / Select --</option>
                             <optgroup label="🏭 الإنتاج / Production">
                                 <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج
                                 </option>
@@ -2056,7 +2064,9 @@ foreach ($ncrs as $ncr) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>الموعد النهائي <small>/ Deadline</small></label>
+                        <label>📅 الموعد النهائي <small>/ Deadline</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ آخر موعد لتنفيذ
+                            الإجراء التصحيحي</small>
                         <input type="date" name="car_deadline">
                     </div>
                 </div>
