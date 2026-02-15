@@ -319,6 +319,87 @@ $cm_sql = "SELECT * FROM countermeasures WHERE user_cin = ? ORDER BY created_at 
 $cm_stmt = $pdo->prepare($cm_sql);
 $cm_stmt->execute([$user_cin]);
 $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
+
+// --- DISCIPLINE NOTIFICATION DATA ---
+$today = date('Y-m-d');
+$notif_key = 'discipline_notif_' . $today;
+$show_discipline_notif = !isset($_SESSION[$notif_key]);
+
+$discipline_data = null;
+if ($show_discipline_notif) {
+    $_SESSION[$notif_key] = true;
+
+    // Get all fill times for today
+    $stmt_today = $pdo->prepare("
+        SELECT user_cin, MAX(updated_at) as last_fill 
+        FROM sqdc_daily WHERE day_date = ? 
+        GROUP BY user_cin 
+        ORDER BY MAX(updated_at) ASC
+    ");
+    $stmt_today->execute([$today]);
+    $today_fills = $stmt_today->fetchAll(PDO::FETCH_ASSOC);
+
+    // Find current user's position
+    $my_rank = 0;
+    $my_fill_time = null;
+    $my_total_min = null;
+    $total_filled = count($today_fills);
+
+    foreach ($today_fills as $i => $fill) {
+        if ($fill['user_cin'] === $user_cin) {
+            $my_rank = $i + 1;
+            $my_fill_time = $fill['last_fill'];
+            $dt = new DateTime($fill['last_fill']);
+            $my_total_min = (int) $dt->format('H') * 60 + (int) $dt->format('i');
+            break;
+        }
+    }
+
+    // Classify discipline
+    if ($my_fill_time) {
+        $fill_formatted = (new DateTime($my_fill_time))->format('H:i');
+        if ($my_total_min <= 510) {
+            $discipline_status = 'early';
+            $discipline_label = '✅ منضبط - Ponctuel';
+            $discipline_icon = 'success';
+        } elseif ($my_total_min <= 600) {
+            $discipline_status = 'late';
+            $discipline_label = '⚠️ متأخر - En retard';
+            $discipline_icon = 'warning';
+        } else {
+            $discipline_status = 'very-late';
+            $discipline_label = '🔴 متأخر جداً - Très en retard';
+            $discipline_icon = 'error';
+        }
+
+        // Medal
+        $medal = '';
+        if ($my_rank === 1)
+            $medal = '🥇';
+        elseif ($my_rank === 2)
+            $medal = '🥈';
+        elseif ($my_rank === 3)
+            $medal = '🥉';
+
+        $discipline_data = [
+            'filled' => true,
+            'rank' => $my_rank,
+            'total' => $total_filled,
+            'time' => $fill_formatted,
+            'status' => $discipline_status,
+            'label' => $discipline_label,
+            'icon' => $discipline_icon,
+            'medal' => $medal,
+        ];
+    } else {
+        // Not filled yet
+        $now_hour = (int) date('H');
+        $discipline_data = [
+            'filled' => false,
+            'total_filled' => $total_filled,
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -517,6 +598,67 @@ $sqdc_data['countermeasures'] = $cm_stmt->fetchAll();
         updateClock();
         setInterval(updateClock, 1000);
     </script>
+
+    <!-- Discipline Notification -->
+    <?php if ($show_discipline_notif && $discipline_data): ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const data = <?= json_encode($discipline_data) ?>;
+
+                if (data.filled) {
+                    // User has filled today
+                    const rankText = data.medal ? data.medal : '#' + data.rank;
+                    const colors = {
+                        'early': { bg: '#d4edda', border: '#28a745', text: '#155724' },
+                        'late': { bg: '#fff3cd', border: '#fd7e14', text: '#856404' },
+                        'very-late': { bg: '#f8d7da', border: '#dc3545', text: '#721c24' }
+                    };
+                    const c = colors[data.status];
+
+                    Swal.fire({
+                        icon: data.icon,
+                        title: '🏆 ترتيب الانضباط اليوم',
+                        html: `
+                        <div style="text-align:center; font-size:15px;">
+                            <div style="font-size:48px; margin:10px 0;">${rankText}</div>
+                            <div style="font-size:18px; font-weight:bold; margin:5px 0;">المرتبة ${data.rank} من ${data.total}</div>
+                            <div style="background:${c.bg}; border:2px solid ${c.border}; color:${c.text}; padding:10px 15px; border-radius:10px; margin:10px 0; font-weight:bold;">
+                                ${data.label}
+                            </div>
+                            <div style="color:#666; font-size:13px;">⏰ وقت التعبئة: <strong>${data.time}</strong></div>
+                        </div>
+                    `,
+                        confirmButtonText: 'حسناً 👍',
+                        confirmButtonColor: c.border,
+                        timer: 8000,
+                        timerProgressBar: true,
+                        showClass: { popup: 'swal2-show' },
+                        hideClass: { popup: 'swal2-hide' }
+                    });
+                } else {
+                    // User has NOT filled today
+                    Swal.fire({
+                        icon: 'info',
+                        title: '📋 تذكير بالتعبئة اليومية',
+                        html: `
+                        <div style="text-align:center; font-size:15px;">
+                            <div style="font-size:48px; margin:10px 0;">📝</div>
+                            <div style="font-weight:bold; margin:5px 0; color:#dc3545;">لم تقم بملء لوحة SQD+C اليوم بعد!</div>
+                            <div style="background:#fff3cd; padding:10px; border-radius:8px; margin:10px 0; color:#856404;">
+                                ⏰ يرجى التعبئة قبل الساعة <strong>08:30</strong> لتكون في قائمة المنضبطين
+                            </div>
+                            <div style="color:#666; font-size:13px;">${data.total_filled} مسؤول قاموا بالتعبئة حتى الآن</div>
+                        </div>
+                    `,
+                        confirmButtonText: 'فهمت ✅',
+                        confirmButtonColor: '#007bff',
+                        timer: 10000,
+                        timerProgressBar: true
+                    });
+                }
+            });
+        </script>
+    <?php endif; ?>
 </body>
 
 </html>
