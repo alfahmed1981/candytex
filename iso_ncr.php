@@ -1680,51 +1680,61 @@ foreach ($ncrs as $ncr) {
                 <?= csrf_field() ?>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>الفئة <small>/ Category</small></label>
+                        <label>📂 الفئة <small>/ Category</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ نوع المشكلة: هل
+                            هي في المنتج أم العملية أم المادة؟</small>
                         <select name="category">
-                            <option value="Product">منتج / Product</option>
-                            <option value="Process">عملية / Process</option>
-                            <option value="Material">مادة / Material</option>
-                            <option value="Supplier">مورد / Supplier</option>
-                            <option value="Other">أخرى / Other</option>
+                            <option value="Product">📦 منتج / Product — مشكلة في المنتج النهائي</option>
+                            <option value="Process">⚙️ عملية / Process — خلل في طريقة العمل</option>
+                            <option value="Material">🧵 مادة / Material — عيب في المواد الخام</option>
+                            <option value="Supplier">🚚 مورد / Supplier — مشكلة من المورد</option>
+                            <option value="Other">📝 أخرى / Other</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>الشدة <small>/ Severity</small></label>
+                        <label>⚡ الشدة <small>/ Severity</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ مدى خطورة
+                            المشكلة المكتشفة</small>
                         <select name="severity">
-                            <option value="Minor">ثانوية / Minor</option>
-                            <option value="Major">رئيسية / Major</option>
-                            <option value="Critical">حرجة / Critical</option>
+                            <option value="Minor">📌 ثانوية / Minor — عيب صغير لا يؤثر على الوظيفة</option>
+                            <option value="Major">⚠️ رئيسية / Major — عيب واضح يؤثر على الجودة</option>
+                            <option value="Critical">🚨 حرجة / Critical — خطر على المنتج أو السلامة</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>المصدر <small>/ Source</small></label>
+                        <label>🔍 المصدر <small>/ Source</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ أين تم اكتشاف
+                            المشكلة؟</small>
                         <select name="source">
-                            <option value="Production">الإنتاج / Production</option>
-                            <option value="Internal Audit">تدقيق داخلي / Internal Audit</option>
-                            <option value="Incoming">استلام / Incoming</option>
-                            <option value="Customer">زبون / Customer</option>
-                            <option value="Supplier">مورد / Supplier</option>
+                            <option value="Production">🏭 الإنتاج / Production — أثناء التصنيع</option>
+                            <option value="Internal Audit">🔎 تدقيق داخلي / Internal Audit — أثناء التفتيش</option>
+                            <option value="Incoming">📥 استلام / Incoming — عند وصول المواد</option>
+                            <option value="Customer">👤 زبون / Customer — شكوى زبون</option>
+                            <option value="Supplier">🚚 مورد / Supplier — إبلاغ من المورد</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>القرار <small>/ Disposition</small></label>
+                        <label>⚖️ القرار <small>/ Disposition</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ماذا سنفعل
+                            بالمنتج غير المطابق؟</small>
                         <select name="disposition">
-                            <option value="Pending">معلق / Pending</option>
-                            <option value="Rework">إعادة تشغيل / Rework</option>
-                            <option value="Use As-Is">استعمال كما هو</option>
-                            <option value="Scrap">إتلاف / Scrap</option>
-                            <option value="Return to Supplier">إرجاع للمورد</option>
+                            <option value="Pending">⏳ معلق / Pending — لم يُتخذ قرار بعد</option>
+                            <option value="Rework">🔧 إعادة تشغيل / Rework — إصلاح المنتج</option>
+                            <option value="Use As-Is">✅ استعمال كما هو — قبول رغم العيب</option>
+                            <option value="Scrap">🗑️ إتلاف / Scrap — التخلص النهائي</option>
+                            <option value="Return to Supplier">↩️ إرجاع للمورد — إعادة المواد</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>الموقع <small>/ Location</small></label>
+                        <label>📍 الموقع <small>/ Location</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ أين وقعت المشكلة
+                            في المصنع؟</small>
                         <select name="location">
-                            <option value="">-- اختر --</option>
+                            <option value="">-- 📍 اختر الموقع --</option>
                             <?php foreach ($locations as $loc): ?>
                                 <option value="<?= htmlspecialchars($loc) ?>">
                                     <?= htmlspecialchars($loc) ?>
@@ -1733,9 +1743,11 @@ foreach ($ncrs as $ncr) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>القسم <small>/ Department</small></label>
+                        <label>🏢 القسم <small>/ Department</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ القسم المعني
+                            بالمشكلة</small>
                         <select name="department">
-                            <option value="">-- اختر --</option>
+                            <option value="">-- 🏢 اختر القسم --</option>
                             <?php foreach ($departments as $dept): ?>
                                 <option value="<?= htmlspecialchars($dept) ?>">
                                     <?= htmlspecialchars($dept) ?>
@@ -1746,7 +1758,9 @@ foreach ($ncrs as $ncr) {
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>وصف عدم المطابقة <small>/ Description (EN ↔ AR auto-sync)</small></label>
+                        <label>📋 وصف عدم المطابقة <small>/ Description (EN ↔ AR auto-sync)</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ اختر نوع المشكلة
+                            من القائمة، أو اكتب وصفاً يدوياً في الأسفل</small>
                         <select name="description_en" id="ncr-desc-select" onchange="syncNcrDesc(this)">
                             <option value="">-- اختر نوع المشكلة / Select Issue --</option>
                             <optgroup label="🧵 المواد الأولية / Raw Materials & Fabric">
@@ -1826,30 +1840,35 @@ foreach ($ncrs as $ncr) {
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
-                        <label>الإجراء الفوري <small>/ Immediate Action</small></label>
+                        <label>🚑 الإجراء الفوري <small>/ Immediate Action</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ما هو أول إجراء
+                            تم اتخاذه فوراً بعد اكتشاف المشكلة؟</small>
                         <select name="immediate_action" id="ncr-action-select">
-                            <option value="">-- اختر الإجراء / Select Action --</option>
-                            <option value="Rework / Repair | إعادة العمل / إصلاح">إعادة العمل / إصلاح — Rework / Repair
+                            <option value="">-- 🚑 اختر الإجراء الفوري / Select Action --</option>
+                            <option value="Rework / Repair | إعادة العمل / إصلاح">🔧 إعادة العمل / إصلاح — Rework /
+                                Repair</option>
+                            <option value="Scrap / Reject | إتلاف / رفض نهائي">🗑️ إتلاف / رفض نهائي — Scrap / Reject
                             </option>
-                            <option value="Scrap / Reject | إتلاف / رفض نهائي">إتلاف / رفض نهائي — Scrap / Reject
+                            <option value="100% Sorting / Inspection | فرز شامل 100%">🔍 فرز شامل 100% — 100% Sorting
                             </option>
-                            <option value="100% Sorting / Inspection | فرز شامل 100%">فرز شامل 100% — 100% Sorting
+                            <option value="Quarantine / Isolate | حجز / عزل الكمية">🔒 حجز / عزل الكمية — Quarantine
                             </option>
-                            <option value="Quarantine / Isolate | حجز / عزل الكمية">حجز / عزل الكمية — Quarantine
+                            <option value="Concession / Special Release | قبول استثنائي">✅ قبول استثنائي — Concession
                             </option>
-                            <option value="Concession / Special Release | قبول استثنائي">قبول استثنائي — Concession
+                            <option value="Return to Supplier | إرجاع للمورد">↩️ إرجاع للمورد — Return to Supplier
                             </option>
-                            <option value="Return to Supplier | إرجاع للمورد">إرجاع للمورد — Return to Supplier</option>
-                            <option value="Machine Adjustment | تعديل/ضبط الماكينة">تعديل / ضبط الماكينة — Machine
+                            <option value="Machine Adjustment | تعديل/ضبط الماكينة">⚙️ تعديل / ضبط الماكينة — Machine
                                 Adjustment</option>
-                            <option value="Clean / Spot Removal | تنظيف / إزالة البقع">تنظيف / إزالة البقع — Spot
+                            <option value="Clean / Spot Removal | تنظيف / إزالة البقع">🧹 تنظيف / إزالة البقع — Spot
                                 Removal</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>المسؤول <small>/ Assigned To</small></label>
+                        <label>👤 المسؤول <small>/ Assigned To</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ من سيتولى متابعة
+                            حل هذه المشكلة؟</small>
                         <select name="assigned_to">
                             <option value="">-- اختر المسؤول / Select --</option>
                             <optgroup label="🏭 الإنتاج / Production">
@@ -1885,7 +1904,9 @@ foreach ($ncrs as $ncr) {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>الموعد النهائي <small>/ Due Date</small></label>
+                        <label>📅 الموعد النهائي <small>/ Due Date</small></label>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ آخر موعد لحل
+                            المشكلة</small>
                         <input type="date" name="due_date">
                     </div>
                 </div>
