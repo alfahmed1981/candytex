@@ -435,18 +435,115 @@ usort($monthly_ranking, fn($a, $b) => $b['score'] - $a['score'] ?: $a['avg_min']
 
         @media print {
 
+            @page {
+                size: A4 portrait;
+                margin: 8mm;
+            }
+
             .tabs,
             .controls-bar,
             .top-nav,
-            .btn-print {
+            .btn-print,
+            .no-print {
                 display: none !important;
             }
 
+            /* Only show the ACTIVE tab, not all tabs */
             .tab-content {
+                display: none !important;
+            }
+
+            .tab-content.active {
                 display: block !important;
             }
 
-            .time-badge,
+            /* Compact sizing for A4 */
+            body {
+                margin: 0;
+                padding: 0;
+                font-size: 11px;
+            }
+
+            .container {
+                box-shadow: none;
+                margin: 0;
+                padding: 5px;
+                max-width: 100%;
+            }
+
+            .print-header {
+                display: flex !important;
+                margin-bottom: 8px;
+            }
+
+            /* Summary cards compact */
+            .summary-cards {
+                gap: 8px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .s-card {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                padding: 8px !important;
+            }
+
+            .s-card h4 {
+                font-size: 10px !important;
+                margin: 0 0 3px !important;
+            }
+
+            .s-card .val {
+                font-size: 18px !important;
+            }
+
+            /* Period label compact */
+            .period-label {
+                font-size: 11px !important;
+                padding: 4px 10px !important;
+                margin-bottom: 8px !important;
+            }
+
+            /* Table compact */
+            .rank-table {
+                font-size: 10px !important;
+            }
+
+            .rank-table th {
+                padding: 5px 6px !important;
+                font-size: 9px !important;
+                background: #333 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .rank-table td {
+                padding: 4px 6px !important;
+                font-size: 10px !important;
+            }
+
+            .rank-table tbody tr {
+                page-break-inside: avoid;
+            }
+
+            /* Medals & rank compact */
+            .medal {
+                font-size: 16px !important;
+            }
+
+            .rank-num {
+                font-size: 12px !important;
+            }
+
+            /* Time badge compact */
+            .time-badge {
+                font-size: 9px !important;
+                padding: 2px 6px !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
             .time-early,
             .time-late,
             .time-very-late {
@@ -454,7 +551,12 @@ usort($monthly_ranking, fn($a, $b) => $b['score'] - $a['score'] ?: $a['avg_min']
                 print-color-adjust: exact;
             }
 
-            .score-bar,
+            /* Score bar compact */
+            .score-bar {
+                height: 6px !important;
+                min-width: 60px !important;
+            }
+
             .score-bar .early,
             .score-bar .late,
             .score-bar .vlate {
@@ -462,16 +564,9 @@ usort($monthly_ranking, fn($a, $b) => $b['score'] - $a['score'] ?: $a['avg_min']
                 print-color-adjust: exact;
             }
 
-            .rank-table th {
-                background: #333 !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .s-card {
-                box-shadow: none;
-                border: 1px solid #ccc;
+            /* Print footer */
+            .print-footer {
+                font-size: 9px !important;
             }
         }
     </style>
@@ -521,7 +616,7 @@ usort($monthly_ranking, fn($a, $b) => $b['score'] - $a['score'] ?: $a['avg_min']
                 <label>التاريخ:</label>
                 <input type="date" value="<?= $selected_date ?>" onchange="location.href='?tab=daily&date='+this.value">
                 <span style="flex-grow:1;"></span>
-                <button class="btn-print" onclick="window.print()">🖨️ طباعة</button>
+                <button class="btn-print" onclick="printActiveTab()">🖨️ طباعة</button>
             </div>
 
             <div class="period-label">📅 يوم
@@ -856,6 +951,43 @@ usort($monthly_ranking, fn($a, $b) => $b['score'] - $a['score'] ?: $a['avg_min']
             const url = new URL(window.location);
             url.searchParams.set('tab', tab);
             window.location.href = url.toString();
+        }
+
+        function printActiveTab() {
+            // Ensure only the active tab shows in print
+            const tabs = document.querySelectorAll('.tab-content');
+            const activeTab = document.querySelector('.tab-content.active');
+
+            if (!activeTab) {
+                alert('لا يوجد تبويب نشط للطباعة');
+                return;
+            }
+
+            // Hide all inactive tabs explicitly
+            tabs.forEach(t => {
+                if (t !== activeTab) {
+                    t.setAttribute('data-was-display', t.style.display || '');
+                    t.style.display = 'none';
+                }
+            });
+
+            window.print();
+
+            // Restore after print
+            const cleanup = () => {
+                tabs.forEach(t => {
+                    if (t !== activeTab && t.hasAttribute('data-was-display')) {
+                        t.style.display = t.getAttribute('data-was-display');
+                        t.removeAttribute('data-was-display');
+                    }
+                });
+            };
+
+            if (window.onafterprint !== undefined) {
+                window.addEventListener('afterprint', cleanup, { once: true });
+            } else {
+                setTimeout(cleanup, 1000);
+            }
         }
     </script>
 </body>
