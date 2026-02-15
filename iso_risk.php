@@ -1175,46 +1175,54 @@ foreach ($risks as $r) {
                     <?= csrf_field() ?>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>الفئة <small>/ Category</small></label>
+                            <label>📂 الفئة <small>/ Category</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ نوع الخطر:
+                                هل يتعلق بالعمليات أم المعدات أم المواد؟</small>
                             <select name="category">
-                                <option value="Process">🏭 Process / عمليات</option>
-                                <option value="Machine">⚙️ Machine / ماكينات</option>
-                                <option value="Material">🧵 Material / مواد</option>
-                                <option value="Human">👷 Human / بشرية</option>
-                                <option value="Quality">🔍 Quality / جودة</option>
-                                <option value="Supply Chain">📦 Supply Chain / إمداد</option>
-                                <option value="Customer">🤝 Customer / عملاء</option>
-                                <option value="Compliance">📜 Compliance / امتثال</option>
-                                <option value="Environment">🌿 Environment / بيئة وسلامة</option>
+                                <option value="Process">🏭 Process / عمليات — خطر في طريقة العمل</option>
+                                <option value="Machine">⚙️ Machine / ماكينات — خطر عطل معدات</option>
+                                <option value="Material">🧵 Material / مواد — خطر في المواد الخام</option>
+                                <option value="Human">👷 Human / بشرية — خطر بشري / مهارات</option>
+                                <option value="Quality">🔍 Quality / جودة — خطر على الجودة</option>
+                                <option value="Supply Chain">📦 Supply Chain / إمداد — خطر في سلسلة التوريد</option>
+                                <option value="Customer">🤝 Customer / عملاء — خطر فقدان العميل</option>
+                                <option value="Compliance">📜 Compliance / امتثال — خطر عدم الامتثال</option>
+                                <option value="Environment">🌿 Environment / بيئة وسلامة — خطر بيئي</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>المصدر <small>/ Source</small></label>
+                            <label>📡 المصدر <small>/ Source</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ كيف تم
+                                اكتشاف الخطر؟</small>
                             <select name="source">
-                                <option>Process Observation</option>
-                                <option>Internal Audit</option>
-                                <option>NCR Analysis</option>
-                                <option>Customer Complaint</option>
-                                <option>Management Review</option>
-                                <option>External Audit Finding</option>
-                                <option>Incident Report</option>
+                                <option>🏭 Process Observation — ملاحظة أثناء العمل</option>
+                                <option>🔎 Internal Audit — تدقيق داخلي</option>
+                                <option>📊 NCR Analysis — تحليل تقارير عدم المطابقة</option>
+                                <option>👤 Customer Complaint — شكوى زبون</option>
+                                <option>💼 Management Review — مراجعة إدارية</option>
+                                <option>🌐 External Audit Finding — نتائج تدقيق خارجي</option>
+                                <option>🚨 Incident Report — تقرير حادث</option>
                             </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>الموقع <small>/ Location</small></label>
+                            <label>📍 الموقع <small>/ Location</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ أين يوجد
+                                الخطر في المصنع؟</small>
                             <select name="location">
-                                <option value="">-- اختر --</option>
+                                <option value="">-- 📍 اختر الموقع --</option>
                                 <?php foreach ($locations as $loc): ?>
                                     <option value="<?= htmlspecialchars($loc) ?>"><?= htmlspecialchars($loc) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>القسم <small>/ Department</small></label>
+                            <label>🏢 القسم <small>/ Department</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ القسم المعني
+                                بالخطر</small>
                             <select name="department">
-                                <option value="">-- اختر --</option>
+                                <option value="">-- 🏢 اختر القسم --</option>
                                 <?php foreach ($departments as $dep): ?>
                                     <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
                                 <?php endforeach; ?>
@@ -1223,9 +1231,11 @@ foreach ($risks as $r) {
                     </div>
                     <div class="form-row">
                         <div class="form-group" style="min-width:100%">
-                            <label>وصف الخطر <small>/ Risk Description</small></label>
+                            <label>📋 وصف الخطر <small>/ Risk Description</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ اختر نوع
+                                الخطر من القائمة، أو اكتب وصفاً يدوياً</small>
                             <select name="description_en" id="risk-desc-sel" onchange="syncRiskDesc(this)">
-                                <option value="">-- اختر الخطر --</option>
+                                <option value="">-- 📋 اختر الخطر --</option>
                                 <optgroup label="🏭 Process / عمليات">
                                     <option>Production Line Stoppage</option>
                                     <option>Inconsistent Stitching Quality</option>
@@ -1275,10 +1285,12 @@ foreach ($risks as $r) {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>الضوابط الحالية <small>/ Existing Controls</small></label>
+                            <label>🛡️ الضوابط الحالية <small>/ Existing Controls</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ما هي
+                                الإجراءات الموجودة حالياً للتحكم في هذا الخطر؟</small>
                             <select name="existing_controls" id="risk-controls"
                                 onchange="toggleCustom(this,'ctrl-custom')">
-                                <option value="">-- اختر --</option>
+                                <option value="">-- 🛡️ اختر الضوابط --</option>
                                 <option value="SOPs & Work Instructions | إجراءات العمل القياسية">📋 SOPs & Work
                                     Instructions | إجراءات العمل القياسية</option>
                                 <option value="Preventive Maintenance Plan | جدول الصيانة الوقائية">🔧 Preventive
@@ -1307,23 +1319,27 @@ foreach ($risks as $r) {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>الاحتمالية <small>/ Likelihood (1-5)</small></label>
+                            <label>🎲 الاحتمالية <small>/ Likelihood (1-5)</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ما احتمال
+                                حدوث هذا الخطر؟ (1=نادر → 5=شبه مؤكد)</small>
                             <select name="likelihood" id="risk-likelihood" onchange="updateScorePreview()">
-                                <option value="1">1 — نادر (Rare)</option>
-                                <option value="2">2 — غير مرجح (Unlikely)</option>
-                                <option value="3" selected>3 — ممكن (Possible)</option>
-                                <option value="4">4 — مرجح (Likely)</option>
-                                <option value="5">5 — شبه مؤكد (Almost Certain)</option>
+                                <option value="1">1 — 🟢 نادر (Rare)</option>
+                                <option value="2">2 — 🟡 غير مرجح (Unlikely)</option>
+                                <option value="3" selected>3 — 🟠 ممكن (Possible)</option>
+                                <option value="4">4 — 🟠 مرجح (Likely)</option>
+                                <option value="5">5 — 🔴 شبه مؤكد (Almost Certain)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>الشدة <small>/ Severity (1-5)</small></label>
+                            <label>⚡ الشدة <small>/ Severity (1-5)</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ما مدى تأثير
+                                الخطر إذا حدث؟ (1=ضئيل → 5=كارثي)</small>
                             <select name="severity_risk" id="risk-severity" onchange="updateScorePreview()">
-                                <option value="1">1 — ضئيل (Negligible)</option>
-                                <option value="2">2 — طفيف (Minor)</option>
-                                <option value="3" selected>3 — معتدل (Moderate)</option>
-                                <option value="4">4 — كبير (Major)</option>
-                                <option value="5">5 — كارثي (Catastrophic)</option>
+                                <option value="1">1 — 🟢 ضئيل (Negligible)</option>
+                                <option value="2">2 — 🟡 طفيف (Minor)</option>
+                                <option value="3" selected>3 — 🟠 معتدل (Moderate)</option>
+                                <option value="4">4 — 🟠 كبير (Major)</option>
+                                <option value="5">5 — 🔴 كارثي (Catastrophic)</option>
                             </select>
                         </div>
                     </div>
@@ -1332,10 +1348,12 @@ foreach ($risks as $r) {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>إجراء التخفيف <small>/ Mitigation Action</small></label>
+                            <label>🛠️ إجراء التخفيف <small>/ Mitigation Action</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ماذا سنفعل
+                                لتقليل احتمال أو تأثير هذا الخطر؟</small>
                             <select name="mitigation_action" id="risk-mitigation"
                                 onchange="toggleCustom(this,'mit-custom')">
-                                <option value="">-- اختر --</option>
+                                <option value="">-- 🛠️ اختر إجراء التخفيف --</option>
                                 <option value="Increase Inspection Frequency | زيادة وتيرة الفحص">🔍 Increase Inspection
                                     Frequency | زيادة وتيرة الفحص</option>
                                 <option value="Conduct Refresher Training | إعادة تدريب الموظفين">🎓 Conduct Refresher
@@ -1362,9 +1380,11 @@ foreach ($risks as $r) {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>المسؤول <small>/ Responsible</small></label>
+                            <label>👤 المسؤول <small>/ Responsible</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ من سيتولى
+                                متابعة وتخفيف هذا الخطر؟</small>
                             <select name="responsible">
-                                <option value="">-- اختر المسؤول --</option>
+                                <option value="">-- 👤 اختر المسؤول --</option>
                                 <optgroup label="🏭 الإنتاج / Production">
                                     <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج
                                     </option>
@@ -1400,13 +1420,17 @@ foreach ($risks as $r) {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>الموعد النهائي <small>/ Deadline</small></label>
+                            <label>📅 الموعد النهائي <small>/ Deadline</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ آخر موعد
+                                لتنفيذ إجراء التخفيف</small>
                             <input type="date" name="deadline">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>🔗 ربط NCR <small>/ Link to NCR (optional)</small></label>
+                            <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ إذا كان
+                                الخطر مرتبط بتقرير عدم مطابقة سابق</small>
                             <select name="related_ncr">
                                 <option value="">-- بدون ربط --</option>
                                 <?php foreach ($ncr_list as $ncr): ?>
