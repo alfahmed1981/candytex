@@ -1367,14 +1367,14 @@ foreach ($ncrs as $ncr) {
 
         <!-- Alerts -->
         <?php if ($msg): ?>
-                    <div class="alert alert-success">
-                        <?= $msg ?>
-                    </div>
+            <div class="alert alert-success">
+                <?= $msg ?>
+            </div>
         <?php endif; ?>
         <?php if ($error): ?>
-                    <div class="alert alert-error">
-                        <?= $error ?>
-                    </div>
+            <div class="alert alert-error">
+                <?= $error ?>
+            </div>
         <?php endif; ?>
 
         <!-- Statistics -->
@@ -1437,15 +1437,15 @@ foreach ($ncrs as $ncr) {
         <div class="filters-bar">
             <label>🔍 تصفية:</label>
             <?php if ($is_admin): ?>
-                        <select id="f-reporter" onchange="filterByReporter(this.value)"
-                            style="border:2px solid #0b3c5d; font-weight:600;">
-                            <option value="">👥 كل رؤساء الفرق</option>
-                            <?php foreach ($reporters as $rep): ?>
-                                        <option value="<?= htmlspecialchars($rep['reported_by']) ?>" <?= ($filter_reporter === $rep['reported_by']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($rep['name'] ?? $rep['reported_by']) ?>
-                                        </option>
-                            <?php endforeach; ?>
-                        </select>
+                <select id="f-reporter" onchange="filterByReporter(this.value)"
+                    style="border:2px solid #0b3c5d; font-weight:600;">
+                    <option value="">👥 كل رؤساء الفرق</option>
+                    <?php foreach ($reporters as $rep): ?>
+                        <option value="<?= htmlspecialchars($rep['reported_by']) ?>" <?= ($filter_reporter === $rep['reported_by']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($rep['name'] ?? $rep['reported_by']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             <?php endif; ?>
             <select id="f-status" onchange="filterTable()">
                 <option value="">كل الحالات</option>
@@ -1487,7 +1487,7 @@ foreach ($ncrs as $ncr) {
                     <tr>
                         <th>الرقم</th>
                         <?php if ($is_admin): ?>
-                                    <th>المُبلِّغ</th><?php endif; ?>
+                            <th>المُبلِّغ</th><?php endif; ?>
                         <th>الفئة</th>
                         <th>الشدة</th>
                         <th>المصدر</th>
@@ -1503,176 +1503,176 @@ foreach ($ncrs as $ncr) {
                 </thead>
                 <tbody>
                     <?php foreach ($ncrs as $ncr): ?>
-                                <?php
-                                $statusClass = match ($ncr['status']) {
-                                    'Open' => 'open',
-                                    'Under Review' => 'review',
-                                    'CAR Issued' => 'car-issued',
-                                    'Closed' => 'closed',
-                                    default => 'open'
-                                };
-                                $sevClass = strtolower($ncr['severity'] ?? 'minor');
-                                $car_count = count($cars_by_ncr[$ncr['id']] ?? []);
-                                ?>
-                                <tr data-status="<?= $ncr['status'] ?>" data-severity="<?= $ncr['severity'] ?>"
-                                    data-category="<?= $ncr['category'] ?>"
-                                    data-date="<?= $ncr['created_at'] ? date('Y-m-d', strtotime($ncr['created_at'])) : '' ?>"
-                                    data-reporter="<?= htmlspecialchars($ncr['reported_by'] ?? '') ?>">
-                                    <td>
-                                        <strong style="color:#0b3c5d;">
-                                            <?= htmlspecialchars($ncr['ncr_number']) ?>
-                                        </strong>
-                                        <?php if ($car_count > 0): ?>
-                                                    <br><span class="toggle-car" onclick="toggleCar(<?= $ncr['id'] ?>)">
-                                                        <span class="count-badge">
-                                                            <?= $car_count ?>
-                                                        </span>CAR
-                                                    </span>
+                        <?php
+                        $statusClass = match ($ncr['status']) {
+                            'Open' => 'open',
+                            'Under Review' => 'review',
+                            'CAR Issued' => 'car-issued',
+                            'Closed' => 'closed',
+                            default => 'open'
+                        };
+                        $sevClass = strtolower($ncr['severity'] ?? 'minor');
+                        $car_count = count($cars_by_ncr[$ncr['id']] ?? []);
+                        ?>
+                        <tr data-status="<?= $ncr['status'] ?>" data-severity="<?= $ncr['severity'] ?>"
+                            data-category="<?= $ncr['category'] ?>"
+                            data-date="<?= $ncr['created_at'] ? date('Y-m-d', strtotime($ncr['created_at'])) : '' ?>"
+                            data-reporter="<?= htmlspecialchars($ncr['reported_by'] ?? '') ?>">
+                            <td>
+                                <strong style="color:#0b3c5d;">
+                                    <?= htmlspecialchars($ncr['ncr_number']) ?>
+                                </strong>
+                                <?php if ($car_count > 0): ?>
+                                    <br><span class="toggle-car" onclick="toggleCar(<?= $ncr['id'] ?>)">
+                                        <span class="count-badge">
+                                            <?= $car_count ?>
+                                        </span>CAR
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <?php if ($is_admin): ?>
+                                <td>
+                                    <span style="font-size:0.85em; color:#555;">
+                                        <?= htmlspecialchars($ncr['reporter_name'] ?? $ncr['reported_by'] ?? '—') ?>
+                                    </span>
+                                </td>
+                            <?php endif; ?>
+                            <td>
+                                <?= htmlspecialchars($ncr['category']) ?>
+                            </td>
+                            <td><span class="sev-badge <?= $sevClass ?>">
+                                    <?= htmlspecialchars($ncr['severity']) ?>
+                                </span></td>
+                            <td style="font-size:0.85em;">
+                                <?= htmlspecialchars($ncr['source']) ?>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <?= htmlspecialchars($ncr['location'] ?? '-') ?>
+                            </td>
+                            <td style="max-width:180px; font-size:0.85em;">
+                                <?= htmlspecialchars(mb_strimwidth($ncr['description_en'] ?: $ncr['description_ar'], 0, 80, '...')) ?>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <?= htmlspecialchars($ncr['disposition'] ?? '-') ?>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <div style="font-weight:600;">
+                                    <?= htmlspecialchars($ncr['assigned_to'] ?: '-') ?>
+                                </div>
+                                <div style="color:#888; font-size:0.9em;">👤
+                                    <?= htmlspecialchars($ncr['reporter_name'] ?? $ncr['reported_by']) ?>
+                                </div>
+                            </td>
+                            <td style="font-size:0.85em;">
+                                <?= $ncr['due_date'] ? date('d/m', strtotime($ncr['due_date'])) : '-' ?>
+                            </td>
+                            <td style="font-size:0.8em; color:#666;">
+                                <?= $ncr['created_at'] ? date('d/m/y H:i', strtotime($ncr['created_at'])) : '-' ?>
+                            </td>
+                            <td><span class="badge <?= $statusClass ?>">
+                                    <?= $ncr['status'] ?>
+                                </span></td>
+                            <td>
+                                <form method="POST" class="action-form">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="ncr_id" value="<?= $ncr['id'] ?>">
+                                    <?php if ($ncr['status'] !== 'Closed'): ?>
+                                        <?php if ($is_admin): ?>
+                                            <select name="new_status">
+                                                <?php foreach (['Open', 'Under Review', 'CAR Issued', 'Closed'] as $s): ?>
+                                                    <option value="<?= $s ?>" <?= $ncr['status'] === $s ? 'selected' : '' ?>>
+                                                        <?= $s ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" name="update_ncr_status" class="btn-save" title="حفظ">💾</button>
                                         <?php endif; ?>
-                                    </td>
-                                    <?php if ($is_admin): ?>
-                                                <td>
-                                                    <span style="font-size:0.85em; color:#555;">
-                                                        <?= htmlspecialchars($ncr['reporter_name'] ?? $ncr['reported_by'] ?? '—') ?>
-                                                    </span>
-                                                </td>
+                                        <button type="button" class="btn-car" title="إنشاء CAR"
+                                            onclick="openCarModal(<?= $ncr['id'] ?>, '<?= htmlspecialchars($ncr['ncr_number']) ?>')">🔁</button>
+                                    <?php else: ?>
+                                        <span style="color:#28a745; font-weight:600;">✅</span>
                                     <?php endif; ?>
-                                    <td>
-                                        <?= htmlspecialchars($ncr['category']) ?>
-                                    </td>
-                                    <td><span class="sev-badge <?= $sevClass ?>">
-                                            <?= htmlspecialchars($ncr['severity']) ?>
-                                        </span></td>
-                                    <td style="font-size:0.85em;">
-                                        <?= htmlspecialchars($ncr['source']) ?>
-                                    </td>
-                                    <td style="font-size:0.85em;">
-                                        <?= htmlspecialchars($ncr['location'] ?? '-') ?>
-                                    </td>
-                                    <td style="max-width:180px; font-size:0.85em;">
-                                        <?= htmlspecialchars(mb_strimwidth($ncr['description_en'] ?: $ncr['description_ar'], 0, 80, '...')) ?>
-                                    </td>
-                                    <td style="font-size:0.85em;">
-                                        <?= htmlspecialchars($ncr['disposition'] ?? '-') ?>
-                                    </td>
-                                    <td style="font-size:0.85em;">
-                                        <div style="font-weight:600;">
-                                            <?= htmlspecialchars($ncr['assigned_to'] ?: '-') ?>
-                                        </div>
-                                        <div style="color:#888; font-size:0.9em;">👤
-                                            <?= htmlspecialchars($ncr['reporter_name'] ?? $ncr['reported_by']) ?>
-                                        </div>
-                                    </td>
-                                    <td style="font-size:0.85em;">
-                                        <?= $ncr['due_date'] ? date('d/m', strtotime($ncr['due_date'])) : '-' ?>
-                                    </td>
-                                    <td style="font-size:0.8em; color:#666;">
-                                        <?= $ncr['created_at'] ? date('d/m/y H:i', strtotime($ncr['created_at'])) : '-' ?>
-                                    </td>
-                                    <td><span class="badge <?= $statusClass ?>">
-                                            <?= $ncr['status'] ?>
-                                        </span></td>
-                                    <td>
-                                        <form method="POST" class="action-form">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="ncr_id" value="<?= $ncr['id'] ?>">
-                                            <?php if ($ncr['status'] !== 'Closed'): ?>
-                                                        <?php if ($is_admin): ?>
-                                                                    <select name="new_status">
-                                                                        <?php foreach (['Open', 'Under Review', 'CAR Issued', 'Closed'] as $s): ?>
-                                                                                    <option value="<?= $s ?>" <?= $ncr['status'] === $s ? 'selected' : '' ?>>
-                                                                                        <?= $s ?>
-                                                                                    </option>
-                                                                        <?php endforeach; ?>
-                                                                    </select>
-                                                                    <button type="submit" name="update_ncr_status" class="btn-save" title="حفظ">💾</button>
-                                                                    <button type="button" class="btn-car" title="إنشاء CAR"
-                                                                        onclick="openCarModal(<?= $ncr['id'] ?>, '<?= htmlspecialchars($ncr['ncr_number']) ?>')">🔁</button>
-                                                        <?php endif; ?>
+                                    <?php if ($is_admin): ?>
+                                        <button type="submit" name="delete_ncr" class="btn-del" title="حذف"
+                                            onclick="return confirm('هل تريد حذف هذا التقرير نهائياً؟')">🗑️</button>
+                                    <?php endif; ?>
+                                    <button type="button" class="btn-print" title="طباعة NCR"
+                                        onclick="printNCR(<?= $ncr['id'] ?>)">🖨️</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <!-- CAR rows (hidden by default) -->
+                        <?php if (!empty($cars_by_ncr[$ncr['id']])): ?>
+                            <?php foreach ($cars_by_ncr[$ncr['id']] as $car): ?>
+                                <tr class="car-row" id="car-row-<?= $ncr['id'] ?>" style="display:none;">
+                                    <td colspan="12">
+                                        <div class="car-box">
+                                            <h4>🔁
+                                                <?= htmlspecialchars($car['car_number']) ?> — إجراء تصحيحي / Corrective Action
+                                            </h4>
+                                            <p><span class="car-label">السبب الجذري:</span>
+                                                <?= htmlspecialchars($car['root_cause'] ?: '-') ?>
+                                            </p>
+                                            <p><span class="car-label">الإجراء التصحيحي:</span>
+                                                <?= htmlspecialchars($car['corrective_action'] ?: '-') ?>
+                                            </p>
+                                            <p><span class="car-label">الإجراء الوقائي:</span>
+                                                <?= htmlspecialchars($car['preventive_action'] ?: '-') ?>
+                                            </p>
+                                            <p><span class="car-label">المسؤول:</span>
+                                                <?= htmlspecialchars($car['responsible'] ?: '-') ?>
+                                                | <span class="car-label">الموعد:</span>
+                                                <?= $car['deadline'] ? date('d/m/Y', strtotime($car['deadline'])) : '-' ?>
+                                                | <span class="car-label">الحالة:</span>
+                                                <span
+                                                    class="badge <?= match ($car['status']) { 'Open' => 'open', 'In Progress' => 'review', 'Verification' => 'car-issued', 'Closed' => 'closed', default => 'open'} ?>">
+                                                    <?= $car['status'] ?>
+                                                </span>
+                                            </p>
+                                            <?php if ($car['status'] !== 'Closed'): ?>
+                                                <?php if ($is_admin): ?>
+                                                    <form method="POST" class="action-form" style="margin-top:8px;">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="car_id" value="<?= $car['id'] ?>">
+                                                        <select name="car_status">
+                                                            <?php foreach (['Open', 'In Progress', 'Verification', 'Closed'] as $cs): ?>
+                                                                <option value="<?= $cs ?>" <?= $car['status'] === $cs ? 'selected' : '' ?>>
+                                                                    <?= $cs ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <label style="font-size:0.85em; display:flex; align-items:center; gap:4px;">
+                                                            <input type="checkbox" name="effectiveness_ok" value="1"
+                                                                <?= $car['effectiveness_ok'] ? 'checked' : '' ?>>
+                                                            فعّال ✅
+                                                        </label>
+                                                        <button type="submit" name="update_car_status" class="btn-save">💾 حفظ</button>
+                                                    </form>
+                                                <?php endif; ?>
                                             <?php else: ?>
-                                                        <span style="color:#28a745; font-weight:600;">✅</span>
+                                                <p style="color:#28a745; font-weight:600;">
+                                                    ✅ مغلق
+                                                    <?= $car['effectiveness_ok'] ? '— فعّال' : '' ?>
+                                                    <?= $car['verified_by'] ? "— تحقق: {$car['verified_by']}" : '' ?>
+                                                </p>
                                             <?php endif; ?>
-                                            <?php if ($is_admin): ?>
-                                                        <button type="submit" name="delete_ncr" class="btn-del" title="حذف"
-                                                            onclick="return confirm('هل تريد حذف هذا التقرير نهائياً؟')">🗑️</button>
-                                            <?php endif; ?>
-                                            <button type="button" class="btn-print" title="طباعة NCR"
-                                                onclick="printNCR(<?= $ncr['id'] ?>)">🖨️</button>
-                                        </form>
+                                            <button type="button" class="btn-print" style="margin-top:6px;" title="طباعة CAR"
+                                                onclick="printCAR('<?= htmlspecialchars($car['car_number']) ?>', <?= $ncr['id'] ?>)">🖨️
+                                                طباعة CAR</button>
+                                        </div>
                                     </td>
                                 </tr>
-                                <!-- CAR rows (hidden by default) -->
-                                <?php if (!empty($cars_by_ncr[$ncr['id']])): ?>
-                                            <?php foreach ($cars_by_ncr[$ncr['id']] as $car): ?>
-                                                        <tr class="car-row" id="car-row-<?= $ncr['id'] ?>" style="display:none;">
-                                                            <td colspan="12">
-                                                                <div class="car-box">
-                                                                    <h4>🔁
-                                                                        <?= htmlspecialchars($car['car_number']) ?> — إجراء تصحيحي / Corrective Action
-                                                                    </h4>
-                                                                    <p><span class="car-label">السبب الجذري:</span>
-                                                                        <?= htmlspecialchars($car['root_cause'] ?: '-') ?>
-                                                                    </p>
-                                                                    <p><span class="car-label">الإجراء التصحيحي:</span>
-                                                                        <?= htmlspecialchars($car['corrective_action'] ?: '-') ?>
-                                                                    </p>
-                                                                    <p><span class="car-label">الإجراء الوقائي:</span>
-                                                                        <?= htmlspecialchars($car['preventive_action'] ?: '-') ?>
-                                                                    </p>
-                                                                    <p><span class="car-label">المسؤول:</span>
-                                                                        <?= htmlspecialchars($car['responsible'] ?: '-') ?>
-                                                                        | <span class="car-label">الموعد:</span>
-                                                                        <?= $car['deadline'] ? date('d/m/Y', strtotime($car['deadline'])) : '-' ?>
-                                                                        | <span class="car-label">الحالة:</span>
-                                                                        <span
-                                                                            class="badge <?= match ($car['status']) { 'Open' => 'open', 'In Progress' => 'review', 'Verification' => 'car-issued', 'Closed' => 'closed', default => 'open'} ?>">
-                                                                            <?= $car['status'] ?>
-                                                                        </span>
-                                                                    </p>
-                                                                    <?php if ($car['status'] !== 'Closed'): ?>
-                                                                                <?php if ($is_admin): ?>
-                                                                                        <form method="POST" class="action-form" style="margin-top:8px;">
-                                                                                            <?= csrf_field() ?>
-                                                                                            <input type="hidden" name="car_id" value="<?= $car['id'] ?>">
-                                                                                            <select name="car_status">
-                                                                                                <?php foreach (['Open', 'In Progress', 'Verification', 'Closed'] as $cs): ?>
-                                                                                                            <option value="<?= $cs ?>" <?= $car['status'] === $cs ? 'selected' : '' ?>>
-                                                                                                                <?= $cs ?>
-                                                                                                            </option>
-                                                                                                <?php endforeach; ?>
-                                                                                            </select>
-                                                                                            <label style="font-size:0.85em; display:flex; align-items:center; gap:4px;">
-                                                                                                <input type="checkbox" name="effectiveness_ok" value="1"
-                                                                                                    <?= $car['effectiveness_ok'] ? 'checked' : '' ?>>
-                                                                                                فعّال ✅
-                                                                                            </label>
-                                                                                            <button type="submit" name="update_car_status" class="btn-save">💾 حفظ</button>
-                                                                                        </form>
-                                                                                <?php endif; ?>
-                                                                    <?php else: ?>
-                                                                                <p style="color:#28a745; font-weight:600;">
-                                                                                    ✅ مغلق
-                                                                                    <?= $car['effectiveness_ok'] ? '— فعّال' : '' ?>
-                                                                                    <?= $car['verified_by'] ? "— تحقق: {$car['verified_by']}" : '' ?>
-                                                                                </p>
-                                                                    <?php endif; ?>
-                                                                    <button type="button" class="btn-print" style="margin-top:6px;" title="طباعة CAR"
-                                                                        onclick="printCAR('<?= htmlspecialchars($car['car_number']) ?>', <?= $ncr['id'] ?>)">🖨️
-                                                                        طباعة CAR</button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                            <?php endforeach; ?>
-                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     <?php endforeach; ?>
 
                     <?php if (empty($ncrs)): ?>
-                                <tr>
-                                    <td colspan="12" style="text-align:center; padding:40px; color:#888;">
-                                        📭 لا توجد تقارير عدم مطابقة حالياً<br>
-                                        <small>No NCR reports yet — Click the button above to create one</small>
-                                    </td>
-                                </tr>
+                        <tr>
+                            <td colspan="12" style="text-align:center; padding:40px; color:#888;">
+                                📭 لا توجد تقارير عدم مطابقة حالياً<br>
+                                <small>No NCR reports yet — Click the button above to create one</small>
+                            </td>
+                        </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -1743,9 +1743,9 @@ foreach ($ncrs as $ncr) {
                         <select name="location">
                             <option value="">-- 📍 اختر الموقع --</option>
                             <?php foreach ($locations as $loc): ?>
-                                        <option value="<?= htmlspecialchars($loc) ?>">
-                                            <?= htmlspecialchars($loc) ?>
-                                        </option>
+                                <option value="<?= htmlspecialchars($loc) ?>">
+                                    <?= htmlspecialchars($loc) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1756,9 +1756,9 @@ foreach ($ncrs as $ncr) {
                         <select name="department">
                             <option value="">-- 🏢 اختر القسم --</option>
                             <?php foreach ($departments as $dept): ?>
-                                        <option value="<?= htmlspecialchars($dept) ?>">
-                                            <?= htmlspecialchars($dept) ?>
-                                        </option>
+                                <option value="<?= htmlspecialchars($dept) ?>">
+                                    <?= htmlspecialchars($dept) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -2079,7 +2079,7 @@ foreach ($ncrs as $ncr) {
                 </div>
                 <div class="modal-btns">
                     <button type="button" class="btn-cancel" onclick="closeModal('car-modal')">إلغاء</button>
-                    <button type="submit" name="create_car" class="btn-submit">✅ إنشاء CAR</button>
+                    <button type="button" class="btn-submit" onclick="confirmCARSubmit(this)">✅ إنشاء CAR</button>
                 </div>
             </form>
         </div>
@@ -2602,6 +2602,55 @@ foreach ($ncrs as $ncr) {
                     const hidden = document.createElement('input');
                     hidden.type = 'hidden';
                     hidden.name = 'create_ncr';
+                    hidden.value = '1';
+                    form.appendChild(hidden);
+                    form.submit();
+                }
+            });
+        }
+    // ═══════ Confirmation before CAR Create ═══════
+        function confirmCARSubmit(btn) {
+            const form = btn.closest('form');
+            const getSelText = (name) => {
+                const el = form.querySelector(`[name="${name}"]`);
+                if (!el) return '-';
+                if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '-';
+                return el.value || '-';
+            };
+
+            const rootCause = getSelText('root_cause');
+            const corrective = getSelText('corrective_action');
+            const preventive = getSelText('preventive_action');
+            const responsible = getSelText('car_responsible');
+            const deadline = form.querySelector('[name="car_deadline"]')?.value || 'غير محدد';
+            const ncrRef = document.getElementById('car-ncr-ref')?.textContent || '-';
+
+            Swal.fire({
+                title: 'تأكيد بيانات الإجراء التصحيحي قبل الإرسال',
+                html: `
+                    <div style="text-align:right; direction:rtl; font-size:0.95em; line-height:2;">
+                        <p>⚠️ <strong style="color:#c0392b;">لا يمكن التعديل بعد الإرسال</strong> — يرجى التأكد من المعلومات:</p>
+                        <hr>
+                        <p>🔗 <strong>مرتبط بـ:</strong> ${ncrRef}</p>
+                        <p>🔎 <strong>السبب الجذري:</strong> ${rootCause}</p>
+                        <p>🛠️ <strong>الإجراء التصحيحي:</strong> ${corrective}</p>
+                        <p>🛡️ <strong>الإجراء الوقائي:</strong> ${preventive}</p>
+                        <p>👤 <strong>المسؤول:</strong> ${responsible}</p>
+                        <p>📅 <strong>الموعد:</strong> ${deadline}</p>
+                    </div>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '✅ تأكيد الإرسال',
+                cancelButtonText: '✏️ مراجعة',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                width: '550px',
+                customClass: { popup: 'swal-rtl' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'create_car';
                     hidden.value = '1';
                     form.appendChild(hidden);
                     form.submit();
