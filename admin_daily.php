@@ -11,6 +11,17 @@ if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
 // 1. Get Date (Default Today)
 $selected_date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
+// Calculate prev/next dates for navigation
+$prev_date = date('Y-m-d', strtotime($selected_date . ' -1 day'));
+$next_date = date('Y-m-d', strtotime($selected_date . ' +1 day'));
+$today_date = date('Y-m-d');
+$is_today = ($selected_date === $today_date);
+
+// Arabic day names
+$arabic_days = ['Sunday' => 'الأحد', 'Monday' => 'الإثنين', 'Tuesday' => 'الثلاثاء', 'Wednesday' => 'الأربعاء', 'Thursday' => 'الخميس', 'Friday' => 'الجمعة', 'Saturday' => 'السبت'];
+$day_name_en = date('l', strtotime($selected_date));
+$day_name_ar = $arabic_days[$day_name_en] ?? $day_name_en;
+
 // 2. Sorting Logic
 $valid_sorts = ['name', 'department', 'location', 's_status', 'q_status', 'd_status', '5s_status', 'c_status'];
 $sort_by = isset($_GET['sort']) && in_array($_GET['sort'], $valid_sorts) ? $_GET['sort'] : 'department';
@@ -247,6 +258,213 @@ function mask_cin($cin)
         .btn-wa-bulk:hover {
             background: #1da851;
         }
+
+        /* Day Navigation */
+        .day-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .day-nav .nav-arrow {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .day-nav .nav-arrow:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .day-nav .nav-today {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .day-nav .nav-today:hover {
+            background: #1e7e34;
+        }
+
+        .day-nav .nav-today.active {
+            background: #6c757d;
+            cursor: default;
+        }
+
+        .day-nav .day-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            padding: 0 10px;
+        }
+
+        .day-nav .day-label small {
+            font-weight: normal;
+            color: #777;
+            font-size: 13px;
+        }
+
+        .day-nav .nav-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-print-ranking {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-print-ranking:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+        }
+
+        /* ========= A4 Print Styles ========= */
+        @media print {
+            .no-print,
+            .top-nav,
+            .day-nav {
+                display: none !important;
+            }
+
+            .print-header {
+                display: flex !important;
+            }
+
+            .screen-only {
+                display: none !important;
+            }
+
+            .print-only {
+                display: inline !important;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+
+            .container {
+                box-shadow: none;
+                margin: 0;
+                padding: 10px;
+                max-width: 100%;
+            }
+
+            .badge,
+            .bg-green,
+            .bg-orange,
+            .bg-red,
+            .bg-blue,
+            .bg-gray,
+            .time-badge,
+            .time-early,
+            .time-late,
+            .time-very-late {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .data-table th {
+                background: #333 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        /* Print Ranking Only Mode */
+        @media print {
+            body.print-ranking-mode {
+                margin: 0;
+                padding: 0;
+            }
+
+            body.print-ranking-mode .stats-container,
+            body.print-ranking-mode > .container > .data-table,
+            body.print-ranking-mode > .container > h1,
+            body.print-ranking-mode .print-legend,
+            body.print-ranking-mode .print-footer {
+                display: none !important;
+            }
+
+            body.print-ranking-mode #disciplineRanking {
+                display: block !important;
+            }
+
+            body.print-ranking-mode #disciplineRanking .print-header {
+                display: flex !important;
+                margin-bottom: 10px;
+            }
+
+            body.print-ranking-mode #disciplineRanking .data-table {
+                display: table !important;
+                font-size: 11px;
+            }
+
+            body.print-ranking-mode #disciplineRanking .data-table th {
+                padding: 6px 8px;
+                font-size: 11px;
+                background: #333 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            body.print-ranking-mode #disciplineRanking .data-table td {
+                padding: 5px 8px;
+                font-size: 11px;
+            }
+
+            body.print-ranking-mode #disciplineRanking .time-badge {
+                font-size: 10px;
+                padding: 2px 8px;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            body.print-ranking-mode #disciplineRanking .time-early,
+            body.print-ranking-mode #disciplineRanking .time-late,
+            body.print-ranking-mode #disciplineRanking .time-very-late {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+        }
     </style>
 </head>
 
@@ -284,27 +502,44 @@ function mask_cin($cin)
 
         <h1 class="no-print">📸 Daily Overview / نظرة يومية</h1>
 
-        <form class="controls no-print">
-            <label>Start Date:</label>
-            <input type="date" name="date" value="<?= $selected_date ?>" onchange="this.form.submit()"
-                style="padding: 5px;">
-            <span style="flex-grow:1;"></span>
-            <?php
-            // Count managers who haven't filled
-            $unfilled_managers = array_filter($managers, function ($m) use ($daily_data) {
-                return empty($daily_data[$m['cin']]);
-            });
-            $unfilled_count = count($unfilled_managers);
-            ?>
-            <?php if ($unfilled_count > 0): ?>
-                <button type="button" onclick="remindAll()" class="btn-wa-bulk no-print">📱 تذكير الكل
-                    (<?= $unfilled_count ?>)</button>
+        <?php
+        // Count managers who haven't filled
+        $unfilled_managers = array_filter($managers, function ($m) use ($daily_data) {
+            return empty($daily_data[$m['cin']]);
+        });
+        $unfilled_count = count($unfilled_managers);
+        ?>
+
+        <!-- Day Navigation -->
+        <div class="day-nav no-print">
+            <a href="?date=<?= $prev_date ?>" class="nav-arrow" title="اليوم السابق">◀</a>
+
+            <div class="day-label">
+                <?= $day_name_ar ?> &nbsp; <?= $selected_date ?>
+                <br><small>
+                    <input type="date" value="<?= $selected_date ?>" onchange="location.href='?date='+this.value" style="padding:3px 6px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
+                </small>
+            </div>
+
+            <a href="?date=<?= $next_date ?>" class="nav-arrow" title="اليوم التالي">▶</a>
+
+            <?php if (!$is_today): ?>
+                <a href="?date=<?= $today_date ?>" class="nav-today" title="العودة لليوم">📅 اليوم</a>
+            <?php else: ?>
+                <span class="nav-today active">📅 اليوم</span>
             <?php endif; ?>
-            <button type="button" onclick="window.print()" class="btn btn-secondary">🖨️ Print</button>
-            <a href="admin_discipline.php?date=<?= $selected_date ?>" class="btn btn-secondary"
-                style="background:#17a2b8; color:white; text-decoration:none; padding:10px 20px; border-radius:8px; font-weight:bold;">🏆
-                ترتيب الانضباط</a>
-        </form>
+
+            <div class="nav-actions">
+                <?php if ($unfilled_count > 0): ?>
+                    <button type="button" onclick="remindAll()" class="btn-wa-bulk" style="margin:0; padding:8px 14px; font-size:13px;">📱 تذكير (<?= $unfilled_count ?>)</button>
+                <?php endif; ?>
+                <button type="button" onclick="window.print()" class="btn btn-secondary" style="padding:8px 14px;">🖨️ Print</button>
+                <button type="button" onclick="printDiscipline()" class="btn-print-ranking">🏆 طباعة الترتيب</button>
+                <a href="admin_discipline.php?date=<?= $selected_date ?>" class="btn btn-secondary"
+                    style="background:#17a2b8; color:white; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px;">🏆
+                    ترتيب الانضباط</a>
+            </div>
+        </div>
 
         <div class="stats-container" style="display:flex; gap:20px; margin-bottom:20px; flex-wrap:wrap;">
             <?php
@@ -803,32 +1038,26 @@ function mask_cin($cin)
             }
         }
 
-        // Print Discipline Ranking - hides main table, shows ranking, prints, then restores
+        // Print Discipline Ranking - uses CSS class to show only ranking in print
         function printDiscipline() {
-            const mainTable = document.querySelector('.data-table');
-            const statsContainer = document.querySelector('.stats-container');
-            const legend = document.querySelector('.print-legend');
+            document.body.classList.add('print-ranking-mode');
             const ranking = document.getElementById('disciplineRanking');
-            const h1 = document.querySelector('h1.no-print');
-
-            // Hide main content
-            mainTable.style.display = 'none';
-            statsContainer.style.display = 'none';
-            if (legend) legend.style.display = 'none';
-
-            // Show ranking
             ranking.style.display = 'block';
 
             // Print
             window.print();
 
             // Restore after print
-            setTimeout(() => {
-                mainTable.style.display = '';
-                statsContainer.style.display = '';
-                if (legend) legend.style.display = '';
+            const cleanup = () => {
+                document.body.classList.remove('print-ranking-mode');
                 ranking.style.display = 'none';
-            }, 500);
+            };
+
+            if (window.onafterprint !== undefined) {
+                window.addEventListener('afterprint', cleanup, { once: true });
+            } else {
+                setTimeout(cleanup, 1000);
+            }
         }
     </script>
 </body>
