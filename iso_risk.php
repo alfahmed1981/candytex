@@ -222,8 +222,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // UPDATE RISK STATUS
-    if (isset($_POST['update_risk_status'])) {
+    // UPDATE RISK STATUS (Admin only)
+    if (isset($_POST['update_risk_status']) && $is_admin) {
         $rid = intval($_POST['risk_id']);
         $new_status = trim($_POST['new_status']);
         $pdo->prepare("UPDATE risk_register SET status = ? WHERE id = ?")->execute([$new_status, $rid]);
@@ -231,8 +231,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log($pdo, 'risk_update', "Updated Risk #$rid status → $new_status");
     }
 
-    // ADD REVIEW
-    if (isset($_POST['add_review'])) {
+    // ADD REVIEW (Admin only)
+    if (isset($_POST['add_review']) && $is_admin) {
         $rid = intval($_POST['risk_id']);
         $new_l = intval($_POST['new_likelihood'] ?? 1);
         $new_s = intval($_POST['new_severity'] ?? 1);
@@ -258,8 +258,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log($pdo, 'risk_review', "Reviewed Risk #$rid → $new_level (score: $new_score)");
     }
 
-    // DELETE RISK
-    if (isset($_POST['delete_risk'])) {
+    // DELETE RISK (Admin only)
+    if (isset($_POST['delete_risk']) && $is_admin) {
         $rid = intval($_POST['risk_id']);
         $pdo->prepare("DELETE FROM risk_reviews WHERE risk_id = ?")->execute([$rid]);
         $pdo->prepare("DELETE FROM risk_register WHERE id = ?")->execute([$rid]);
@@ -352,6 +352,7 @@ foreach ($risks as $r) {
     <title>سجل المخاطر — Risk Register | CANDYTEX ISO 9001</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .risk-cards {
             display: flex;
@@ -1124,22 +1125,26 @@ foreach ($risks as $r) {
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="risk_id" value="<?= $r['id'] ?>">
                                         <?php if ($r['status'] !== 'Closed'): ?>
-                                            <select name="new_status" style="font-size:.75em;padding:3px">
-                                                <?php foreach (['Identified', 'Under Assessment', 'Mitigated', 'Monitoring', 'Closed'] as $st): ?>
-                                                    <option value="<?= $st ?>" <?= $r['status'] === $st ? 'selected' : '' ?>><?= $st ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <button type="submit" name="update_risk_status" class="btn-save" title="حفظ">💾</button>
-                                            <button type="button" class="btn-review" title="مراجعة"
-                                                onclick="openReviewModal(<?= $r['id'] ?>, '<?= htmlspecialchars($r['risk_number']) ?>', <?= $r['likelihood'] ?>, <?= $r['severity'] ?>)">🔄</button>
+                                            <?php if ($is_admin): ?>
+                                                <select name="new_status" style="font-size:.75em;padding:3px">
+                                                    <?php foreach (['Identified', 'Under Assessment', 'Mitigated', 'Monitoring', 'Closed'] as $st): ?>
+                                                        <option value="<?= $st ?>" <?= $r['status'] === $st ? 'selected' : '' ?>><?= $st ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="submit" name="update_risk_status" class="btn-save" title="حفظ">💾</button>
+                                                <button type="button" class="btn-review" title="مراجعة"
+                                                    onclick="openReviewModal(<?= $r['id'] ?>, '<?= htmlspecialchars($r['risk_number']) ?>', <?= $r['likelihood'] ?>, <?= $r['severity'] ?>)">🔄</button>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <span style="color:#28a745;font-weight:600">✅</span>
                                         <?php endif; ?>
                                         <button type="button" class="btn-print" title="طباعة"
                                             onclick="printRisk(<?= $r['id'] ?>)">🖨️</button>
-                                        <button type="submit" name="delete_risk" class="btn-del" title="حذف"
-                                            onclick="return confirm('هل تريد حذف هذا الخطر نهائياً؟')">🗑️</button>
+                                        <?php if ($is_admin): ?>
+                                            <button type="submit" name="delete_risk" class="btn-del" title="حذف"
+                                                onclick="return confirm('هل تريد حذف هذا الخطر نهائياً؟')">🗑️</button>
+                                        <?php endif; ?>
                                     </form>
                                 </td>
                             </tr>
@@ -1444,7 +1449,7 @@ foreach ($risks as $r) {
                     </div>
                     <div class="modal-btns">
                         <button type="button" class="btn-cancel" onclick="closeModal('risk-modal')">إلغاء</button>
-                        <button type="submit" name="create_risk" class="btn-submit">📋 تسجيل الخطر</button>
+                        <button type="button" class="btn-submit" onclick="confirmRiskSubmit(this)">📋 تسجيل الخطر</button>
                     </div>
                 </form>
             </div>
@@ -1881,6 +1886,77 @@ foreach ($risks as $r) {
                     }
                 });
             });
+        </script>
+
+        <script>
+        // ═══════ Confirmation before Risk Create ═══════
+        function confirmRiskSubmit(btn) {
+            const form = btn.closest('form');
+            const getSelText = (name) => {
+                const el = form.querySelector(`[name="${name}"]`);
+                if (!el) return '-';
+                if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '-';
+                return el.value || '-';
+            };
+
+            const cat = getSelText('category');
+            const src = getSelText('source');
+            const loc = getSelText('location');
+            const dept = getSelText('department');
+            const desc = getSelText('description_en');
+            const controls = getSelText('existing_controls');
+            const likelihood = getSelText('likelihood');
+            const severity = getSelText('severity_risk');
+            const mitigation = getSelText('mitigation_action');
+            const responsible = getSelText('responsible');
+            const deadline = form.querySelector('[name="deadline"]')?.value || 'غير محدد';
+
+            // Calculate preview score
+            const lVal = parseInt(form.querySelector('[name="likelihood"]')?.value || 1);
+            const sVal = parseInt(form.querySelector('[name="severity_risk"]')?.value || 1);
+            const score = lVal * sVal;
+            const level = score >= 16 ? '🔴 Critical / حرج' : (score >= 10 ? '🟠 High / مرتفع' : (score >= 5 ? '🟡 Medium / متوسط' : '🟢 Low / منخفض'));
+
+            Swal.fire({
+                title: 'تأكيد بيانات الخطر قبل الإرسال',
+                html: `
+                    <div style="text-align:right; direction:rtl; font-size:0.9em; line-height:1.9;">
+                        <p>⚠️ <strong style="color:#c0392b;">لا يمكن التعديل بعد الإرسال</strong> — يرجى التأكد من المعلومات:</p>
+                        <hr>
+                        <p>📂 <strong>الفئة:</strong> ${cat}</p>
+                        <p>📡 <strong>المصدر:</strong> ${src}</p>
+                        <p>📍 <strong>الموقع:</strong> ${loc}</p>
+                        <p>🏢 <strong>القسم:</strong> ${dept}</p>
+                        <p>📋 <strong>الوصف:</strong> ${desc}</p>
+                        <p>🛡️ <strong>الضوابط:</strong> ${controls}</p>
+                        <p>🎲 <strong>الاحتمالية:</strong> ${likelihood}</p>
+                        <p>⚡ <strong>الشدة:</strong> ${severity}</p>
+                        <p style="font-size:1.1em; background:#f8f9fa; padding:8px; border-radius:8px; text-align:center;">
+                            <strong>النتيجة:</strong> ${lVal} × ${sVal} = <strong>${score}</strong> → ${level}
+                        </p>
+                        <p>🛠️ <strong>إجراء التخفيف:</strong> ${mitigation}</p>
+                        <p>👤 <strong>المسؤول:</strong> ${responsible}</p>
+                        <p>📅 <strong>الموعد:</strong> ${deadline}</p>
+                    </div>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '✅ تأكيد الإرسال',
+                cancelButtonText: '✏️ مراجعة',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                width: '600px',
+                customClass: { popup: 'swal-rtl' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'create_risk';
+                    hidden.value = '1';
+                    form.appendChild(hidden);
+                    form.submit();
+                }
+            });
+        }
         </script>
     </div>
 </body>

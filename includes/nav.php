@@ -32,9 +32,9 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <a href="guide.php" <?= $current_page === 'guide.php' ? 'class="active"' : '' ?>>📖 دليل</a>
         <a href="my_team.php" <?= $current_page === 'my_team.php' ? 'class="active"' : '' ?>>👥 فريقي</a>
         <a href="global.php" <?= $current_page === 'global.php' ? 'class="active"' : '' ?>>🏭 المصنع</a>
+        <a href="iso_ncr.php" <?= $current_page === 'iso_ncr.php' ? 'class="active"' : '' ?>>📝 NCR/CAR</a>
+        <a href="iso_risk.php" <?= $current_page === 'iso_risk.php' ? 'class="active"' : '' ?>>📋 مخاطر</a>
         <?php if ($nav_is_admin): ?>
-            <a href="iso_ncr.php" <?= $current_page === 'iso_ncr.php' ? 'class="active"' : '' ?>>📝 NCR/CAR</a>
-            <a href="iso_risk.php" <?= $current_page === 'iso_risk.php' ? 'class="active"' : '' ?>>📋 مخاطر</a>
             <a href="iso_docs.php" <?= $current_page === 'iso_docs.php' ? 'class="active"' : '' ?>>📄 وثائق</a>
             <a href="admin_issues.php" <?= $current_page === 'admin_issues.php' ? 'class="active"' : '' ?>>🛠️ مشاكل</a>
             <a href="admin.php" <?= $current_page === 'admin.php' ? 'class="active"' : '' ?>>⚙️ إدارة</a>
@@ -58,9 +58,9 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
     <a href="guide.php" class="logout-btn" style="background:#28a745;">📖 دليل الاستخدام</a>
     <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
     <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
+    <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
+    <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
     <?php if ($nav_is_admin): ?>
-        <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
-        <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
         <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
         <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
         <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
