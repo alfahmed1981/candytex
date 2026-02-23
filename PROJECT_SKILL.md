@@ -92,6 +92,7 @@ When modifying this system, AI agents MUST adhere to these security rules:
 
 ## 5. UI/UX Guidelines
 
+*   **Trilingual UI Requirement (CRITICAL):** ALWAYS include three languages (English, French, and Arabic) in all user-facing labels, buttons, and form inputs (e.g., `First Name / Prénom / الاسم الشخصي`). This is mandatory to accommodate all factory demographics.
 *   **Responsive Design:** Use CSS Flexbox and CSS Grid.
 *   **Color Palette:** Clean, professional. Primary: `#0b3c5d`, Secondary: `#1a6b8a`, Danger: `#dc3545`, Success: `#28a745`.
 *   **Modals:** Use the custom `.modal-overlay` and `.modal` classes for creating popups.

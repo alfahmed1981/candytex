@@ -368,10 +368,10 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="main-content">
         <div class="hr-header">
             <div>
-                <h2>👥 Advanced Human Resources / الموارد البشرية</h2>
-                <p>Employee Profiles, ISO & CNSS Data / ملفات الموظفين المفصلة</p>
+                <h2>👥 Human Resources / Ressources Humaines / الموارد البشرية</h2>
+                <p>Employee Profiles, ISO & CNSS / Profils des Employés / ملفات الموظفين المفصلة</p>
             </div>
-            <button class="btn-save" onclick="openAddModal()">➕ Add Employee Profile</button>
+            <button class="btn-save" onclick="openAddModal()">➕ Add / Ajouter / إضافة موظف</button>
         </div>
 
         <!-- Filters -->
@@ -439,7 +439,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="modal"
             style="background:white; padding:25px; border-radius:8px; width:95%; max-width:800px; max-height:95vh; overflow-y:auto;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 id="modalTitle" style="margin-top:0; color:#0b3c5d;">Add New Employee Profile</h3>
+                <h3 id="modalTitle" style="margin-top:0; color:#0b3c5d;">Add Profile / Ajouter / إضافة موظف</h3>
                 <button type="button" onclick="closeModal()"
                     style="background:none; border:none; font-size:1.5em; cursor:pointer;">&times;</button>
             </div>
@@ -451,73 +451,71 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <!-- Tabs Navigation -->
                 <div class="tab-buttons">
-                    <button type="button" class="tab-btn active-tab" onclick="openTab('tab-personal', this)">👤 Personal
-                        & Contact</button>
-                    <button type="button" class="tab-btn" onclick="openTab('tab-work', this)">💼 Work & Payroll</button>
-                    <button type="button" class="tab-btn" onclick="openTab('tab-safety', this)">🚑 ISO 45001
-                        Safety</button>
+                    <button type="button" class="tab-btn active-tab" onclick="openTab('tab-personal', this)">👤 Personal / Personnel / شخصي</button>
+                    <button type="button" class="tab-btn" onclick="openTab('tab-work', this)">💼 Work / Travail / مهني</button>
+                    <button type="button" class="tab-btn" onclick="openTab('tab-safety', this)">🚑 Safety / Sécurité / سلامة</button>
                 </div>
 
                 <!-- TAB 1: Personal & Contact -->
                 <div id="tab-personal" class="tab-content active">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Matricule / ID (Required)*</label>
+                            <label>Matricule / ID / الرقم الاستدلالي (Required)*</label>
                             <input type="text" name="matricule" id="m_matricule" required>
                         </div>
                         <div class="form-group">
-                            <label>CIN / رقم البطاقة المتنطية</label>
+                            <label>CIN / Carte d'Identité / رقم البطاقة</label>
                             <input type="text" name="cin" id="m_cin">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>First Name / الاسم الشخصي*</label>
+                            <label>First Name / Prénom / الاسم الشخصي*</label>
                             <input type="text" name="first_name" id="m_first" required>
                         </div>
                         <div class="form-group">
-                            <label>Last Name / الاسم العائلي*</label>
+                            <label>Last Name / Nom / الاسم العائلي*</label>
                             <input type="text" name="last_name" id="m_last" required>
                         </div>
                     </div>
 
                     <div class="form-row three">
                         <div class="form-group">
-                            <label>Date of Birth / تاريخ الازدياد</label>
+                            <label>Date of Birth / Date de Naissance / تاريخ الازدياد</label>
                             <input type="date" name="date_of_birth" id="m_dob">
                         </div>
                         <div class="form-group">
-                            <label>Gender / الجنس</label>
+                            <label>Gender / Sexe / الجنس</label>
                             <select name="gender" id="m_gender">
-                                <option value="Male">Male 👨</option>
-                                <option value="Female">Female 👩</option>
+                                <option value="Male">Male / Homme / ذكر 👨</option>
+                                <option value="Female">Female / Femme / أنثى 👩</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Marital / عائلي</label>
+                            <label>Marital Status / Situation / عائلي</label>
                             <select name="marital_status" id="m_marital">
-                                <option value="Single">Single (أعزب)</option>
-                                <option value="Married">Married (متزوج)</option>
-                                <option value="Divorced">Divorced (مطلق)</option>
-                                <option value="Widowed">Widowed (أرمل)</option>
+                                <option value="Single">Single / Célibataire / أعزب</option>
+                                <option value="Married">Married / Marié(e) / متزوج</option>
+                                <option value="Divorced">Divorced / Divorcé(e) / مطلق</option>
+                                <option value="Widowed">Widowed / Veuf(ve) / أرمل</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Children (CNSS logic) / عدد الأطفال</label>
+                            <label>Children / Enfants / عدد الأطفال (CNSS)</label>
                             <input type="number" name="children_count" id="m_children" value="0" min="0">
                         </div>
                         <div class="form-group">
-                            <label>Phone Number / رقم الهاتف</label>
+                            <label>Phone Number / N° Téléphone / رقم الهاتف</label>
                             <input type="text" name="phone_number" id="m_phone">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label>Home Address / العنوان</label>
+                        <label>Home Address / Adresse / العنوان</label>
                         <textarea name="address" id="m_address" rows="2"></textarea>
                     </div>
                 </div>
@@ -526,31 +524,31 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div id="tab-work" class="tab-content">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Function / الوظيفة (Excel: Fonction)</label>
+                            <label>Function / Fonction / الوظيفة</label>
                             <input type="text" name="function_title" id="m_function">
                         </div>
                         <div class="form-group">
-                            <label>Department / القسم</label>
+                            <label>Department / Département / القسم</label>
                             <input type="text" name="department" id="m_dept">
                         </div>
                     </div>
 
                     <div class="form-row three">
                         <div class="form-group">
-                            <label>Hire Date (D emb)</label>
+                            <label>Hire Date / D. embauche / التوظيف</label>
                             <input type="date" name="hire_date" id="m_hire">
                         </div>
                         <div class="form-group">
-                            <label>Contract Type / نوع العقد</label>
+                            <label>Contract Type / Contrat / نوع العقد</label>
                             <select name="contract_type" id="m_contract">
-                                <option value="CDI">CDI (لامحدود)</option>
-                                <option value="CDD">CDD (محدود)</option>
+                                <option value="CDI">CDI</option>
+                                <option value="CDD">CDD</option>
                                 <option value="ANAPEC">ANAPEC</option>
-                                <option value="Interim">Interim</option>
+                                <option value="Interim">Interim / موقت</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>CNSS Number</label>
+                            <label>CNSS / Identifiant / رقم الضمان</label>
                             <input type="text" name="cnss_number" id="m_cnss">
                         </div>
                     </div>
@@ -558,15 +556,15 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="form-row"
                         style="background:#f8f9fa; padding:15px; border-radius:4px; border:1px solid #ddd;">
                         <div class="form-group" style="margin-bottom:0;">
-                            <label style="color:#28a745;">Hourly Rate (Taux) MAD/h*</label>
+                            <label style="color:#28a745;">Hourly Rate / Taux / الأجر بالساعة (MAD/h)*</label>
                             <input type="number" step="0.01" name="hourly_rate" id="m_rate" value="9.00" required
                                 style="font-size:1.2em; font-weight:bold; color:#28a745;">
                         </div>
                         <div class="form-group" id="statusGroup" style="display:none; margin-bottom:0;">
-                            <label>Status / الحالة</label>
+                            <label>Status / Statut / الحالة</label>
                             <select name="status" id="m_status" style="font-weight:bold;">
-                                <option value="Active">Active 🟢</option>
-                                <option value="Inactive">Inactive 🔴</option>
+                                <option value="Active">Active / Actif / نشط 🟢</option>
+                                <option value="Inactive">Inactive / Inactif / غير نشط 🔴</option>
                             </select>
                         </div>
                     </div>
@@ -582,7 +580,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Blood Group / فصيلة الدم</label>
+                            <label>Blood Group / Groupe Sanguin / فصيلة الدم</label>
                             <select name="blood_group" id="m_blood">
                                 <option value="">Unknown</option>
                                 <option value="O+">O+</option>
@@ -599,11 +597,11 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Emergency Contact Name / اسم جهة اتصال الطوارئ</label>
+                            <label>Emergency Contact / Contact d'Urgence / اتصال الطوارئ</label>
                             <input type="text" name="emergency_contact" id="m_em_contact">
                         </div>
                         <div class="form-group">
-                            <label>Emergency Phone / هاتف الطوارئ</label>
+                            <label>Emergency Phone / Tél. d'Urgence / هاتف الطوارئ</label>
                             <input type="text" name="emergency_phone" id="m_em_phone">
                         </div>
                     </div>
@@ -616,7 +614,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div style="display:flex; gap:10px;">
                         <button type="button" class="btn-details" onclick="closeModal()">Cancel</button>
                         <button type="submit" class="btn-save" id="modalSubmitBtn"
-                            style="padding:10px 25px; font-size:1.1em;">💾 Save Profile</button>
+                            style="padding:10px 25px; font-size:1.1em;">💾 Save / Enregistrer / حفظ</button>
                     </div>
                 </div>
             </form>
@@ -632,12 +630,12 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         function openAddModal() {
-            document.getElementById('modalTitle').innerText = '➕ Add New Employee Profile';
+            document.getElementById('modalTitle').innerText = '➕ Add Profile / Ajouter / إضافة موظف';
             document.getElementById('empForm').reset();
             document.getElementById('emp_id').value = '';
             document.getElementById('form_action').name = 'add_emp';
             document.getElementById('statusGroup').style.display = 'none';
-            document.getElementById('modalSubmitBtn').innerText = '💾 Save Profile';
+            document.getElementById('modalSubmitBtn').innerText = '💾 Save / Enregistrer / حفظ';
 
             // Go to first tab
             openTab('tab-personal', document.querySelector('.tab-buttons .tab-btn:first-child'));
@@ -645,7 +643,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         function openEditModal(emp) {
-            document.getElementById('modalTitle').innerText = '✏️ Edit Profile: ' + emp.full_name;
+            document.getElementById('modalTitle').innerText = '✏️ Edit / Modifier / تعديل: ' + emp.full_name;
 
             // Hidden data
             document.getElementById('emp_id').value = emp.id;
@@ -680,7 +678,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('m_status').value = emp.status || 'Active';
             document.getElementById('statusGroup').style.display = 'block';
 
-            document.getElementById('modalSubmitBtn').innerText = '💾 Update Profile';
+            document.getElementById('modalSubmitBtn').innerText = '💾 Update / Modifier / تحديث';
 
             // Go to first tab
             openTab('tab-personal', document.querySelector('.tab-buttons .tab-btn:first-child'));
