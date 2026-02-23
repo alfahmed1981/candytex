@@ -13,7 +13,7 @@ try {
 
     let sql = "-- HR Employees Import Script\n";
     sql += "-- Generated from PAIE 12-2025 HORAIRE.xlsx\n\n";
-    sql += "INSERT INTO `hr_employees` (`matricule`, `full_name`, `first_name`, `last_name`, `function_title`, `cnss_number`, `hourly_rate`, `hire_date`) VALUES\n";
+    sql += "INSERT INTO `hr_employees` (`matricule`, `full_name`, `first_name`, `last_name`, `function_title`, `department`, `cnss_number`, `hourly_rate`, `hire_date`) VALUES\n";
 
     let values = [];
 
@@ -33,7 +33,7 @@ try {
         matricule = String(matricule).trim();
 
         let fonction = row[2] ? String(row[2]).trim() : '';
-        let cnss = row[3] ? String(row[3]).trim() : '';
+        let devAndCnss = row[3] ? String(row[3]).trim() : ''; // Excel column says CNSS, but contains Department codes like D25
         let d_emb = row[5]; // Hire date (serial number from excel)
         let taux = parseFloat(row[6]) || 0;
 
@@ -52,16 +52,17 @@ try {
 
         const esc = (str) => typeof str === 'string' ? `'${str.replace(/'/g, "''")}'` : 'NULL';
 
-        values.push(`(${esc(matricule)}, ${esc(fullName)}, ${esc(firstName)}, ${esc(lastName)}, ${esc(fonction)}, ${esc(cnss)}, ${taux}, ${hireDate})`);
+        // We use devAndCnss for both Department and CNSS Number to ensure it appears in the UI
+        values.push(`(${esc(matricule)}, ${esc(fullName)}, ${esc(firstName)}, ${esc(lastName)}, ${esc(fonction)}, ${esc(devAndCnss)}, ${esc(devAndCnss)}, ${taux}, ${hireDate})`);
     }
 
     if (values.length > 0) {
         sql += values.join(",\n") + "\nON DUPLICATE KEY UPDATE \n" +
             "full_name=VALUES(full_name), first_name=VALUES(first_name), last_name=VALUES(last_name), " +
-            "function_title=VALUES(function_title), cnss_number=VALUES(cnss_number), hourly_rate=VALUES(hourly_rate), hire_date=VALUES(hire_date);\n";
+            "function_title=VALUES(function_title), department=VALUES(department), cnss_number=VALUES(cnss_number), hourly_rate=VALUES(hourly_rate), hire_date=VALUES(hire_date);\n";
 
         fs.writeFileSync('import_hr_employees.sql', sql, 'utf8');
-        console.log(`Successfully generated import_hr_employees.sql with ${values.length} records.`);
+        console.log(`Successfully generated import_hr_employees.sql with ${values.length} records including departments.`);
     } else {
         console.log("No valid rows found to import.");
     }
