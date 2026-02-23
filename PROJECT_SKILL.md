@@ -92,3 +92,46 @@ When modifying this system, AI agents MUST adhere to these security rules:
 5.  Write the SQL SELECT queries to fetch data for the UI.
 6.  Write the HTML structure using the standard `.page-header` and `.container` classes.
 7.  Add links to the new module in `includes/nav.php`.
+
+## 7. Complete Project File Structure (PHP Pages)
+
+Here is a comprehensive list of all `.php` files in the project categorized by functionality:
+
+### Auth, Configuration & Components
+*   `db.php`: PDO database connection setup and `.env` variable loading.
+*   `global.php`: Global constants, utility functions, and shared configs.
+*   `includes/auth.php`: Core security file (Session guards, RBAC roles, CSRF protection, Audit logging).
+*   `includes/nav.php`: The main responsive sidebar/topbar navigation menu.
+*   `includes/smtp_send.php`: Email sending utility script (PHPMailer/native wrapper).
+
+### Public & User Profile
+*   `index.php`: The login page and entry point to the system.
+*   `edit_profile.php`: Allows logged-in users to update their personal information and passwords.
+*   `complete_profile.php`: Forces new/pending users to complete their info upon first login.
+*   `guide.php`: System guide, user manuals, and technical help.
+
+### Admin Dashboard & Management Tools
+*   `admin.php`: Main admin panel for user management, role assignments, and impersonation.
+*   `admin_advanced.php`: Advanced system settings and lookup data management (Locations, Departments).
+*   `admin_backup.php`: Interface for triggering and downloading database backups.
+*   `admin_daily.php`: Executive overview of daily SQDC inputs across all departments.
+*   `admin_discipline.php`: Interface to track HR/Disciplinary actions for staff.
+*   `admin_email.php`: Interface to manage SMTP configurations stored in the database.
+*   `admin_issues.php`: Centralized management of all countermeasures and pending issues.
+*   `admin_reports.php`: General reporting, data export (Excel/CSV), and analytics.
+
+### Quality & ISO 9001 Modules (Core)
+*   `iso_docs.php`: Main Document Control module (Revisions, Attachments, Status tracking).
+*   `iso_doc_print.php`: Clean, printable format of ISO document details.
+*   `iso_ncr.php`: Non-Conformity (NCR) & Corrective Action (CAR) tracking system.
+*   `iso_risk.php`: Risk Assessment form and mitigation strategy tracking.
+
+### Operations & Team Management
+*   `my_team.php`: Dashboard for Managers (Team Leaders) to see and manage their direct workers.
+*   `meetings.php`: SQDC Meeting agendas, minutes, and attendance tracking.
+*   `meetings_print.php`: Printable format for meeting minutes.
+
+### Utilities & Scripts
+*   `api.php`: Backend JSON API endpoints (typically used for Chart.js data or async requests).
+*   `fix_db.php`: Standalone script for emergency database migrations or structural fixes.
+*   `import_users.php`: Utility script for bulk-importing users via CSV.
