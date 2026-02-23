@@ -4,7 +4,10 @@ description: Master System Documentation (MD) and Architecture Skill for AI Agen
 
 # CandyTex ISO Dashboard - Master System Documentation
 
-This document serves as the **Master System Documentation (MD)** and a **Skill** file for AI agents working on the CandyTex ISO Dashboard. It outlines the system's architecture, core functionalities, database schema, security model, and UI/UX approach.
+## 🎯 Project Vision & Core Objective
+**"To control factory management, increase the efficiency, transparency, and security of manufacturing operations, with optimal readiness to obtain ISO 9001 certification."**
+
+This document serves as the **Master System Documentation (MD)** and a **Skill** file for AI agents working on the CandyTex ISO Dashboard. It outlines the system's architecture, core functionalities, database schema, security model, and UI/UX approach. All future developments must align with the core objective above.
 
 ## 1. System Architecture
 
