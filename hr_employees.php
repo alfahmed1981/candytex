@@ -169,12 +169,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // --- FETCH EMPLOYEES ---
 $search = $_GET['search'] ?? '';
 $status_filter = $_GET['status'] ?? 'Active';
+$dept_filter = $_GET['department'] ?? '';
+$func_filter = $_GET['function_title'] ?? '';
+$sort_by = $_GET['sort_by'] ?? 'id_desc';
 
 $query = "SELECT * FROM hr_employees WHERE 1=1";
 $params = [];
 
 if ($search) {
-    // Search by name, matricule, cin, or phone
     $query .= " AND (full_name LIKE ? OR matricule LIKE ? OR cin LIKE ? OR phone_number LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
@@ -185,11 +187,32 @@ if ($status_filter !== 'All') {
     $query .= " AND status = ?";
     $params[] = $status_filter;
 }
+if ($dept_filter) {
+    $query .= " AND department = ?";
+    $params[] = $dept_filter;
+}
+if ($func_filter) {
+    $query .= " AND function_title = ?";
+    $params[] = $func_filter;
+}
 
-$query .= " ORDER BY id DESC";
+switch ($sort_by) {
+    case 'name_asc': $query .= " ORDER BY full_name ASC"; break;
+    case 'name_desc': $query .= " ORDER BY full_name DESC"; break;
+    case 'rate_desc': $query .= " ORDER BY hourly_rate DESC"; break;
+    case 'rate_asc': $query .= " ORDER BY hourly_rate ASC"; break;
+    case 'id_asc': $query .= " ORDER BY id ASC"; break;
+    default: $query .= " ORDER BY id DESC"; break;
+}
+
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch distinct departments and functions for the dropdowns
+$depts = $pdo->query("SELECT DISTINCT department FROM hr_employees WHERE department IS NOT NULL AND department != '' ORDER BY department")->fetchAll(PDO::FETCH_COLUMN);
+$funcs = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE function_title IS NOT NULL AND function_title != '' ORDER BY function_title")->fetchAll(PDO::FETCH_COLUMN);
+
 
 ?>
 <!DOCTYPE html>
@@ -250,6 +273,26 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background: #f1f8ff;
             padding: 2px 6px;
             border-radius: 4px;
+        }
+
+        /* Classes for view toggling */
+        .field-cnss, .field-dept, .field-cin, .field-phone { display: none; } /* Hidden by default to avoid clutter */
+        
+        .toggle-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #eef2f5;
+            border-radius: 4px;
+            flex-wrap: wrap;
+            font-size: 0.9em;
+        }
+        .toggle-controls label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .emp-actions {
@@ -377,18 +420,68 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <!-- Filters -->
         <div class="filter-card"
             style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <form method="GET" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <input type="text" name="search" placeholder="Search Name, ID, CIN, or Phone..."
-                    value="<?= htmlspecialchars($search) ?>"
-                    style="flex:1; min-width: 250px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                <select name="status" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>🟢 Active Only</option>
-                    <option value="Inactive" <?= $status_filter == 'Inactive' ? 'selected' : '' ?>>🔴 Inactive Only
-                    </option>
-                    <option value="All" <?= $status_filter == 'All' ? 'selected' : '' ?>>🌍 All Employees</option>
-                </select>
-                <button type="submit" class="btn-save" style="background: #1a6b8a;">🔍 Search</button>
+            <form method="GET" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+                
+                <div style="flex:1; min-width:200px;">
+                    <label style="font-size:0.85em; font-weight:bold;">Search / Recherche</label>
+                    <input type="text" name="search" placeholder="Name, ID, CIN, Phone..." value="<?= htmlspecialchars($search) ?>" style="width:100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <div>
+                    <label style="font-size:0.85em; font-weight:bold;">Department / القسم</label>
+                    <select name="department" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="">-- All Depts --</option>
+                        <?php foreach($depts as $d): ?>
+                            <option value="<?= htmlspecialchars($d) ?>" <?= $dept_filter === $d ? 'selected' : '' ?>><?= htmlspecialchars($d) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size:0.85em; font-weight:bold;">Function / الوظيفة</label>
+                    <select name="function_title" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="">-- All Functions --</option>
+                        <?php foreach($funcs as $f): ?>
+                            <option value="<?= htmlspecialchars($f) ?>" <?= $func_filter === $f ? 'selected' : '' ?>><?= htmlspecialchars($f) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size:0.85em; font-weight:bold;">Status</label>
+                    <select name="status" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>🟢 Active</option>
+                        <option value="Inactive" <?= $status_filter == 'Inactive' ? 'selected' : '' ?>>🔴 Inactive</option>
+                        <option value="All" <?= $status_filter == 'All' ? 'selected' : '' ?>>🌍 All</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size:0.85em; font-weight:bold;">Sort By / ترتيب</label>
+                    <select name="sort_by" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="id_desc" <?= $sort_by == 'id_desc' ? 'selected' : '' ?>>Newest First</option>
+                        <option value="id_asc" <?= $sort_by == 'id_asc' ? 'selected' : '' ?>>Oldest First</option>
+                        <option value="name_asc" <?= $sort_by == 'name_asc' ? 'selected' : '' ?>>Name (A-Z)</option>
+                        <option value="name_desc" <?= $sort_by == 'name_desc' ? 'selected' : '' ?>>Name (Z-A)</option>
+                        <option value="rate_desc" <?= $sort_by == 'rate_desc' ? 'selected' : '' ?>>Highest Salary</option>
+                        <option value="rate_asc" <?= $sort_by == 'rate_asc' ? 'selected' : '' ?>>Lowest Salary</option>
+                    </select>
+                </div>
+
+                <div style="padding-bottom:1px;">
+                    <button type="submit" class="btn-save" style="background: #1a6b8a; height: 35px; line-height: 1;">🔍 Filter</button>
+                    <a href="hr_employees.php" class="btn-details" style="height: 35px; line-height: 1.2; display: inline-block; text-align: center;">Reset</a>
+                </div>
             </form>
+        </div>
+
+        <!-- Field Visibility Toggles -->
+        <div class="toggle-controls">
+            <strong>👁️ Show/Hide Columns:</strong>
+            <label><input type="checkbox" onchange="toggleField('cin', this)"> CIN</label>
+            <label><input type="checkbox" onchange="toggleField('phone', this)"> Phone</label>
+            <label><input type="checkbox" onchange="toggleField('dept', this)"> Department</label>
+            <label><input type="checkbox" onchange="toggleField('cnss', this)"> CNSS</label>
         </div>
 
         <!-- Employee List -->
@@ -406,13 +499,14 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <span class="badge <?= strtolower($emp['status']) ?>"><?= $emp['status'] ?></span>
                             </h4>
                             <div class="emp-meta">
-                                <span title="Matricule">🆔 <?= htmlspecialchars($emp['matricule']) ?></span>
-                                <?php if ($emp['cin']): ?><span title="CIN">💳
-                                        <?= htmlspecialchars($emp['cin']) ?></span><?php endif; ?>
-                                <?php if ($emp['phone_number']): ?><span title="Phone">📞
-                                        <?= htmlspecialchars($emp['phone_number']) ?></span><?php endif; ?>
-                                <span title="Function">💼 <?= htmlspecialchars($emp['function_title'] ?: 'N/A') ?></span>
-                                <span title="Hourly Rate">💰 <?= number_format($emp['hourly_rate'], 2) ?> MAD/h</span>
+                                <span title="Matricule" class="field-mat">🆔 <?= htmlspecialchars($emp['matricule']) ?></span>
+                                <span title="Function" class="field-func">💼 <?= htmlspecialchars($emp['function_title'] ?: 'N/A') ?></span>
+                                <span title="Department" class="field-dept">🏢 <?= htmlspecialchars($emp['department'] ?: 'N/A') ?></span>
+                                <span title="Hourly Rate" class="field-rate">💰 <?= number_format($emp['hourly_rate'], 2) ?> MAD/h</span>
+                                
+                                <?php if ($emp['cin']): ?><span title="CIN" class="field-cin">💳 <?= htmlspecialchars($emp['cin']) ?></span><?php endif; ?>
+                                <?php if ($emp['phone_number']): ?><span title="Phone" class="field-phone">📞 <?= htmlspecialchars($emp['phone_number']) ?></span><?php endif; ?>
+                                <?php if ($emp['cnss_number']): ?><span title="CNSS" class="field-cnss">🛡️ <?= htmlspecialchars($emp['cnss_number']) ?></span><?php endif; ?>
                             </div>
                         </div>
                         <div class="emp-actions">
@@ -688,6 +782,29 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function closeModal() {
             document.getElementById('empModal').style.display = 'none';
         }
+
+        // Field Toggle Logic
+        function toggleField(fieldClass, checkbox) {
+            const elements = document.querySelectorAll('.field-' + fieldClass);
+            elements.forEach(el => {
+                el.style.display = checkbox.checked ? 'flex' : 'none';
+            });
+            // Save preference to localStorage so it persists across refreshes
+            localStorage.setItem('hr_pref_' + fieldClass, checkbox.checked);
+        }
+
+        // Load preferences on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const toggles = ['cin', 'phone', 'dept', 'cnss'];
+            toggles.forEach(t => {
+                const isChecked = localStorage.getItem('hr_pref_' + t) === 'true';
+                const cb = document.querySelector(`input[onchange*="toggleField('${t}'"]`);
+                if (cb) {
+                    cb.checked = isChecked;
+                    if (isChecked) toggleField(t, cb); // apply state
+                }
+            });
+        });
     </script>
 </body>
 
