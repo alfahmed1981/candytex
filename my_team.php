@@ -14,9 +14,26 @@ $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
 // --- SELF-HEALING DATABASE MIGRATION ---
 try {
-    $pdo->exec(file_get_contents('hr_schema_v2.sql'));
-    $pdo->exec(file_get_contents('hr_schema_v3.sql'));
-    $pdo->exec(file_get_contents('hr_schema_v4.sql'));
+    function run_sql_file($pdo, $filename)
+    {
+        if (!file_exists($filename))
+            return;
+        $sql = file_get_contents($filename);
+        $queries = explode(';', $sql);
+        foreach ($queries as $query) {
+            $cleaned = trim($query);
+            if (!empty($cleaned)) {
+                try {
+                    $pdo->exec($cleaned);
+                } catch (PDOException $e) {
+                    // Ignore duplicate table/column errors gracefully
+                }
+            }
+        }
+    }
+    run_sql_file($pdo, 'hr_schema_v2.sql');
+    run_sql_file($pdo, 'hr_schema_v3.sql');
+    run_sql_file($pdo, 'hr_schema_v4.sql');
 } catch (Exception $e) {
 }
 
@@ -377,7 +394,7 @@ if ($view_cin !== $user_cin && $is_admin) {
                         <?php foreach ($my_team as $w):
                             $status = $w['today_status'] ?: 'Present';
                             ?>
-                                <tr>
+                            <tr>
                                 <td>
                                     <strong><?= htmlspecialchars($w['matricule']) ?> -
                                         <?= htmlspecialchars($w['full_name']) ?></strong><br>
