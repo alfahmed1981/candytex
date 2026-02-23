@@ -136,5 +136,4 @@ Here is a comprehensive list of all `.php` files in the project categorized by f
 
 ### Utilities & Scripts
 *   `api.php`: Backend JSON API endpoints (typically used for Chart.js data or async requests).
-*   `fix_db.php`: Standalone script for emergency database migrations or structural fixes.
 *   `import_users.php`: Utility script for bulk-importing users via CSV.
