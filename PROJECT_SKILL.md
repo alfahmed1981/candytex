@@ -1,0 +1,94 @@
+---
+description: Master System Documentation (MD) and Architecture Skill for AI Agents
+---
+
+# CandyTex ISO Dashboard - Master System Documentation
+
+This document serves as the **Master System Documentation (MD)** and a **Skill** file for AI agents working on the CandyTex ISO Dashboard. It outlines the system's architecture, core functionalities, database schema, security model, and UI/UX approach.
+
+## 1. System Architecture
+
+The CandyTex Dashboard is a monolithic web application built with:
+*   **Backend:** PHP 7.x+ (Procedural and PDO object-oriented).
+*   **Database:** MySQL / MariaDB.
+*   **Frontend:** HTML5, Vanilla CSS (`style.css`), and Vanilla JavaScript.
+*   **Libraries:** SweetAlert2 (for modals and confirmations), Chart.js (for analytics - if applicable).
+*   **Architecture Pattern:** Page-Controller pattern. Each module (e.g., `iso_docs.php`, `iso_ncr.php`, `sqdc_board.php`) acts as its own controller handling both the UI rendering and POST request processing (CRUD operations).
+
+## 2. Core Modules & Functionality
+
+The system is designed to manage factory production efficiency and ISO 9001 compliance.
+
+### a. User & Roles Management (`users.php`, `auth.php`, `my_team.php`)
+*   **Authentication:** Session-based login using `user_cin` (National ID) and `password`.
+*   **Roles (RBAC):**
+    *   `admin`: Full access to all modules, can delete records, change statuses, manage users.
+    *   `manager` (Team Leader): Can create records (SQDC, NCR, CAR), manage their assigned team (`my_team.php`), but cannot delete critical ISO records.
+    *   `viewer`: Read-only access to specific dashboards.
+*   **Impersonation:** Admins can "impersonate" managers to debug issues (`auth.php -> handle_impersonation()`).
+
+### b. SQDC Daily Management (`sqdc_board.php`, `sqdc_input.php`)
+*   Tracks Safety (S), Quality (Q), Delivery (D), 5S, and Cost/Custom (C) daily metrics.
+*   Color-coded statuses (Green = Good, Red = Bad, etc.).
+*   Managers log counter-measures (`countermeasures` table) for any red/orange statuses.
+
+### c. ISO Document Control (`iso_docs.php`)
+*   Manages the lifecycle of standard operating procedures, manuals, and records.
+*   **Fields:** Document Number, Titles (EN/AR), Category (SOP, WI, Policy), Status (Draft, Under Review, Active, Obsolete).
+*   **Revisions:** Tracks version history (`doc_revisions` table).
+
+### d. Non-Conformities & Corrective Actions (`iso_ncr.php`)
+*   **NCR (Non-Conformity Report):** Logs product/process defects. Includes dual-language descriptions, severity, and root source.
+*   **CAR (Corrective Action Report):** Linked to NCRs. Tracks Root Cause Analysis, Corrective Actions, and Preventive Actions. Admin/Quality team verifies effectiveness.
+*   Uses a "Smart UI" mapping generic English descriptions to Arabic translations automatically based on the selected defect type.
+
+## 3. Database Schema Overview
+
+The database uses InnoDB engine and `utf8mb4` encoding.
+
+*   **Core Tables:**
+    *   `users`: Staff records, credentials, roles.
+    *   `departments`, `locations`, `shifts`: Factory structure lookups.
+*   **SQDC Tables:**
+    *   `sqdc_daily`: Daily color status per user per category.
+    *   `countermeasures`: Action plans for issues.
+*   **ISO Tables:**
+    *   `iso_documents` & `doc_revisions`: Document control.
+    *   `ncr_reports`: Non-conformity tracking.
+    *   `car_reports`: Corrective action tracking.
+*   **System Tables:**
+    *   `audit_log`: Automatically records critical user actions (Creates, Updates, Deletes, Logins).
+
+## 4. Security & Best Practices
+
+When modifying this system, AI agents MUST adhere to these security rules:
+
+1.  **Authentication Guard:** At the top of every secured file, include:
+    ```php
+    session_start();
+    require 'db.php';
+    require 'includes/auth.php';
+    if (!isset($_SESSION['user_cin'])) { header("Location: index.php"); exit; }
+    ```
+2.  **CSRF Protection:** All forms modifying data MUST include `<?= csrf_token_field() ?>`. All POST handlers MUST begin with `require_csrf();`.
+3.  **SQL Injection Prevention:** ALWAYS use PDO prepared statements (`$pdo->prepare() -> execute()`). Never interpolate variables directly into SQL strings.
+4.  **Role Checks:** Use `$is_admin = ($_SESSION['role'] === 'admin');` to conditionally show UI buttons or allow backend deletes (`if (isset($_POST['delete']) && $is_admin) { ... }`).
+5.  **Audit Logging:** Whenever a critical insert/update/delete occurs, call `audit_log($pdo, 'action_name', 'Details');`.
+6.  **PHP Compatibility:** The deployment server runs **PHP 7.x**. Do NOT use PHP 8+ exclusive features such as `match()` expressions, Nullsafe operators (`?->`), or named arguments. Use classic `switch` statements and `if/elseif`.
+
+## 5. UI/UX Guidelines
+
+*   **Responsive Design:** Use CSS Flexbox and CSS Grid.
+*   **Color Palette:** Clean, professional. Primary: `#0b3c5d`, Secondary: `#1a6b8a`, Danger: `#dc3545`, Success: `#28a745`.
+*   **Modals:** Use the custom `.modal-overlay` and `.modal` classes for creating popups.
+*   **Interactions:** Prefer `SweetAlert2` (`Swal.fire`) for delete confirmations or success messages instead of native `window.confirm`.
+
+## 6. How to Build a New Module (Checklist for AI)
+
+1.  Create the database table in `schema.sql` (and add a self-healing `CREATE TABLE IF NOT EXISTS` at the top of the new PHP file).
+2.  Create the PHP file (e.g., `new_feature.php`) adopting the Page-Controller pattern.
+3.  Include security headers and role checks.
+4.  Write the POST handling logic at the top (under security checks), wrapped in `if ($_SERVER['REQUEST_METHOD'] === 'POST')`.
+5.  Write the SQL SELECT queries to fetch data for the UI.
+6.  Write the HTML structure using the standard `.page-header` and `.container` classes.
+7.  Add links to the new module in `includes/nav.php`.
