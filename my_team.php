@@ -12,6 +12,14 @@ if (!isset($_SESSION['user_cin'])) {
 $user_cin = $_SESSION['user_cin'];
 $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
+// --- SELF-HEALING DATABASE MIGRATION ---
+try {
+    $pdo->exec(file_get_contents('hr_schema_v2.sql'));
+    $pdo->exec(file_get_contents('hr_schema_v3.sql'));
+    $pdo->exec(file_get_contents('hr_schema_v4.sql'));
+} catch (Exception $e) {
+}
+
 // Handle Form Submission (Daily Pointage)
 $msg = "";
 $error = "";
@@ -73,13 +81,18 @@ if ($is_admin) {
 $filter_date = $_GET['date'] ?? date('Y-m-d');
 
 // Fetch Team from HR Employees (Based on View CIN)
-$stmt = $pdo->prepare("SELECT e.*, 
-        (SELECT status FROM hr_team_attendance a WHERE a.employee_id = e.id AND a.attendance_date = ?) as today_status
-        FROM hr_employees e 
-        WHERE e.manager_cin = ? 
-        ORDER BY e.first_name ASC");
-$stmt->execute([$filter_date, $view_cin]);
-$my_team = $stmt->fetchAll();
+$my_team = [];
+try {
+    $stmt = $pdo->prepare("SELECT e.*, 
+            (SELECT status FROM hr_team_attendance a WHERE a.employee_id = e.id AND a.attendance_date = ?) as today_status
+            FROM hr_employees e 
+            WHERE e.manager_cin = ? 
+            ORDER BY e.first_name ASC");
+    $stmt->execute([$filter_date, $view_cin]);
+    $my_team = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $error = "Database Error: " . $e->getMessage() . " Please ensure HR Schema V4 is loaded.";
+}
 
 // Get Name of current view
 $view_name = "My Team";
@@ -364,7 +377,7 @@ if ($view_cin !== $user_cin && $is_admin) {
                         <?php foreach ($my_team as $w):
                             $status = $w['today_status'] ?: 'Present';
                             ?>
-                            <tr>
+                                <tr>
                                 <td>
                                     <strong><?= htmlspecialchars($w['matricule']) ?> -
                                         <?= htmlspecialchars($w['full_name']) ?></strong><br>
