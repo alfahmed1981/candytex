@@ -4,12 +4,22 @@ description: Master System Documentation (MD) and Architecture Skill for AI Agen
 
 # CandyTex ISO Dashboard - Master System Documentation
 
-## 🎯 Project Vision & Core Objective
+## 1. Project Vision & Core Objective
 **"To control factory management, increase the efficiency, transparency, and security of manufacturing operations, with optimal readiness to obtain ISO 9001 certification."**
 
-This document serves as the **Master System Documentation (MD)** and a **Skill** file for AI agents working on the CandyTex ISO Dashboard. It outlines the system's architecture, core functionalities, database schema, security model, and UI/UX approach. All future developments must align with the core objective above.
+This document serves as the **Master System Documentation (MD)** and a **Skill** file for AI agents working on the CandyTex ISO Dashboard. All future developments must align with the core objective above.
 
-## 1. System Architecture
+**🏢 CRITICAL BUSINESS CONTEXT (MULTI-SITE):**
+While the project is named "CandyTex", the system is actually a multi-site ERP managing **two sister companies** owned by the same founders for the exact same purpose: **CandyTex** and **Flora Mode**. The system must seamlessly handle and distinguish operations across both entities.
+
+## 2. Factory Layout & Structure
+The system operates based on the following predefined factory structures:
+*   **📍 Locations / المواقع:** Candy 1, CANDY 1/2, CANDY 1/2 FLORA 1, Candy 2, Flora 1.
+*   **🏭 Departments / الأقسام:** Cutting, Echantillon, Emballage, Embroidery, Finishing, HR_Admin, Maintenance, Packing, Quality, Screen printing, Sewing, Warehouse.
+*   **⏰ Shifts / الورديات:** A (Shift A - Matin), B (Shift B - Après-midi), C (Shift C - Nuit), Normal (Normal Day).
+*   **👤 Roles / الأدوار:** Administrator (`admin`), Manager / Chef d'équipe (`manager`).
+
+## 3. System Architecture
 
 The CandyTex Dashboard is a monolithic web application built with:
 *   **Backend:** PHP 7.x+ (Procedural and PDO object-oriented).
@@ -18,7 +28,7 @@ The CandyTex Dashboard is a monolithic web application built with:
 *   **Libraries:** SweetAlert2 (for modals and confirmations), Chart.js (for analytics - if applicable).
 *   **Architecture Pattern:** Page-Controller pattern. Each module (e.g., `iso_docs.php`, `iso_ncr.php`, `sqdc_board.php`) acts as its own controller handling both the UI rendering and POST request processing (CRUD operations).
 
-## 2. Core Modules & Functionality
+## 4. Core Modules & Functionality
 
 The system is designed to manage factory production efficiency and ISO 9001 compliance.
 
@@ -52,7 +62,7 @@ The system is designed to manage factory production efficiency and ISO 9001 comp
     *   **Logic:** `BRUT = Hours * Rate`. `NET = BRUT - CNSS - Advances + Transport`.
     *   **Rounding:** The final `ARROND` Net Salary is automatically rounded to the nearest 10 MAD using `ceil(net / 10) * 10`.
 
-## 3. Database Schema Overview
+## 5. Database Schema Overview
 
 The database uses InnoDB engine and `utf8mb4` encoding.
 
@@ -73,7 +83,7 @@ The database uses InnoDB engine and `utf8mb4` encoding.
 *   **System Tables:**
     *   `audit_log`: Automatically records critical user actions (Creates, Updates, Deletes, Logins).
 
-## 4. Security & Best Practices
+## 6. Security & Best Practices
 
 When modifying this system, AI agents MUST adhere to these security rules:
 
@@ -90,7 +100,7 @@ When modifying this system, AI agents MUST adhere to these security rules:
 5.  **Audit Logging:** Whenever a critical insert/update/delete occurs, call `audit_log($pdo, 'action_name', 'Details');`.
 6.  **PHP Compatibility:** The deployment server runs **PHP 7.x**. Do NOT use PHP 8+ exclusive features such as `match()` expressions, Nullsafe operators (`?->`), or named arguments. Use classic `switch` statements and `if/elseif`.
 
-## 5. UI/UX Guidelines
+## 7. UI/UX Guidelines
 
 *   **Trilingual UI Requirement (CRITICAL):** ALWAYS include three languages (English, French, and Arabic) in all user-facing labels, buttons, and form inputs (e.g., `First Name / Prénom / الاسم الشخصي`). This is mandatory to accommodate all factory demographics.
 *   **Responsive Design:** Use CSS Flexbox and CSS Grid.
@@ -98,7 +108,7 @@ When modifying this system, AI agents MUST adhere to these security rules:
 *   **Modals:** Use the custom `.modal-overlay` and `.modal` classes for creating popups.
 *   **Interactions:** Prefer `SweetAlert2` (`Swal.fire`) for delete confirmations or success messages instead of native `window.confirm`.
 
-## 6. How to Build a New Module (Checklist for AI)
+## 8. How to Build a New Module (Checklist for AI)
 
 1.  Create the database table in `schema.sql` (and add a self-healing `CREATE TABLE IF NOT EXISTS` at the top of the new PHP file).
 2.  Create the PHP file (e.g., `new_feature.php`) adopting the Page-Controller pattern.
@@ -108,7 +118,7 @@ When modifying this system, AI agents MUST adhere to these security rules:
 6.  Write the HTML structure using the standard `.page-header` and `.container` classes.
 7.  Add links to the new module in `includes/nav.php`.
 
-## 7. Complete Project File Structure (PHP Pages)
+## 9. Complete Project File Structure (PHP Pages)
 
 Here is a comprehensive list of all `.php` files in the project categorized by functionality:
 
