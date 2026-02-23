@@ -424,6 +424,7 @@ foreach ($users as $u) {
         <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
         <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
         <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
+        <a href="hr_employees.php" class="logout-btn" style="background:#17a2b8;">👥 الموارد البشرية (HR)</a>
         <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
     </div>
 
@@ -439,6 +440,7 @@ foreach ($users as $u) {
                 <a href="admin_advanced.php" class="btn btn-blue" style="background:#6f42c1;">⚙️ Advanced</a>
                 <a href="admin_email.php" class="btn btn-blue" style="background:#e83e8c;">📧 Email Settings</a>
                 <a href="import_users.php" class="btn btn-blue" style="background:#17a2b8;">📥 Import CSV</a>
+                <a href="hr_employees.php" class="btn btn-blue" style="background:#20c997;">👥 HR Management</a>
                 <a href="iso_ncr.php" class="btn btn-blue" style="background:#0b3c5d;">🏭 ISO NCR/CAR</a>
                 <a href="iso_risk.php" class="btn btn-blue" style="background:#c0392b;">📋 Risk Register</a>
                 <a href="iso_docs.php" class="btn btn-blue" style="background:#2e7d32;">📄 Document Control</a>
