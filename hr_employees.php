@@ -41,6 +41,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
 try {
     $pdo->exec(file_get_contents('hr_schema_v2.sql'));
     $pdo->exec(file_get_contents('hr_schema_v3.sql'));
+    $pdo->exec(file_get_contents('hr_schema_v4.sql'));
 } catch (Exception $e) {}
 
 // --- HANDLE POST REQUESTS (CRUD) ---
@@ -70,6 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rate = floatval($_POST['hourly_rate']);
         $cnss = trim($_POST['cnss_number']);
         $contract = trim($_POST['contract_type']);
+        $manager_cin = !empty($_POST['manager_cin']) ? trim($_POST['manager_cin']) : null;
+        $current_shift = !empty($_POST['current_shift']) ? trim($_POST['current_shift']) : null;
 
         $blood = trim($_POST['blood_group']);
         $em_contact = trim($_POST['emergency_contact']);
@@ -78,9 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("INSERT INTO hr_employees 
                 (location_id, matricule, first_name, last_name, full_name, cin, date_of_birth, gender, marital_status, children_count, 
-                 phone_number, address, function_title, department, hire_date, hourly_rate, cnss_number, contract_type, 
+                 phone_number, address, function_title, department, manager_cin, current_shift, hire_date, hourly_rate, cnss_number, contract_type, 
                  blood_group, emergency_contact, emergency_phone) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmt->execute([
                 $location_id,
@@ -97,6 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $address,
                 $func,
                 $dept,
+                $manager_cin,
+                $current_shift,
                 $h_date,
                 $rate,
                 $cnss,
@@ -105,6 +110,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $em_contact,
                 $em_phone
             ]);
+            
+            $new_emp_id = $pdo->lastInsertId();
+            
+            // History Logging for Initial Assignment
+            if ($manager_cin) {
+                $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, new_value, changed_by_cin) VALUES (?, 'TEAM_TRANSFER', ?, ?)")
+                    ->execute([$new_emp_id, $manager_cin, $_SESSION['user_cin']]);
+            }
+            if ($func) {
+                $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, new_value, changed_by_cin) VALUES (?, 'FUNCTION_CHANGE', ?, ?)")
+                    ->execute([$new_emp_id, $func, $_SESSION['user_cin']]);
+            }
 
             audit_log($pdo, 'hr_add_employee', "Added Employee: $full_name ($mat)");
             $msg = "<script>Swal.fire('Success', 'Employee profile created successfully', 'success');</script>";
@@ -135,6 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $func = trim($_POST['function_title']);
         $dept = trim($_POST['department']);
         $location_id = !empty($_POST['location_id']) ? intval($_POST['location_id']) : null;
+        $manager_cin = !empty($_POST['manager_cin']) ? trim($_POST['manager_cin']) : null;
+        $current_shift = !empty($_POST['current_shift']) ? trim($_POST['current_shift']) : null;
+        
         $h_date = !empty($_POST['hire_date']) ? $_POST['hire_date'] : null;
         $rate = floatval($_POST['hourly_rate']);
         $cnss = trim($_POST['cnss_number']);
@@ -147,9 +167,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = $_POST['status'];
 
         try {
+            // Fetch old metrics to compare for history logging
+            $stmt_old = $pdo->prepare("SELECT function_title, department, manager_cin, current_shift FROM hr_employees WHERE id=?");
+            $stmt_old->execute([$id]);
+            $old_emp = $stmt_old->fetch();
+
             $stmt = $pdo->prepare("UPDATE hr_employees SET 
                 location_id=?, matricule=?, first_name=?, last_name=?, full_name=?, cin=?, date_of_birth=?, gender=?, marital_status=?, children_count=?, 
-                phone_number=?, address=?, function_title=?, department=?, hire_date=?, hourly_rate=?, cnss_number=?, contract_type=?, 
+                phone_number=?, address=?, function_title=?, department=?, manager_cin=?, current_shift=?, hire_date=?, hourly_rate=?, cnss_number=?, contract_type=?, 
                 blood_group=?, emergency_contact=?, emergency_phone=?, status=? 
                 WHERE id=?");
 
@@ -168,6 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $address,
                 $func,
                 $dept,
+                $manager_cin,
+                $current_shift,
                 $h_date,
                 $rate,
                 $cnss,
@@ -178,6 +205,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $status,
                 $id
             ]);
+
+            // Track Historial Changes
+            if ($old_emp) {
+                if ($old_emp['manager_cin'] !== $manager_cin) {
+                    $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, old_value, new_value, changed_by_cin) VALUES (?, 'TEAM_TRANSFER', ?, ?, ?)")
+                        ->execute([$id, $old_emp['manager_cin'], $manager_cin, $_SESSION['user_cin']]);
+                }
+                if ($old_emp['function_title'] !== $func) {
+                    $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, old_value, new_value, changed_by_cin) VALUES (?, 'FUNCTION_CHANGE', ?, ?, ?)")
+                        ->execute([$id, $old_emp['function_title'], $func, $_SESSION['user_cin']]);
+                }
+                if ($old_emp['department'] !== $dept) {
+                    $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, old_value, new_value, changed_by_cin) VALUES (?, 'DEPT_CHANGE', ?, ?, ?)")
+                        ->execute([$id, $old_emp['department'], $dept, $_SESSION['user_cin']]);
+                }
+                if ($old_emp['current_shift'] !== $current_shift) {
+                    $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, old_value, new_value, changed_by_cin) VALUES (?, 'SHIFT_CHANGE', ?, ?, ?)")
+                        ->execute([$id, $old_emp['current_shift'], $current_shift, $_SESSION['user_cin']]);
+                }
+            }
 
             audit_log($pdo, 'hr_edit_employee', "Updated Employee ID: $id ($full_name)");
             $msg = "<script>Swal.fire('Success', 'Employee profile updated successfully', 'success');</script>";
@@ -249,6 +296,20 @@ $funcs = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE fun
 // Fetch admin advanced dropdown data
 $all_locations = $pdo->query("SELECT * FROM locations ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$all_shifts = $pdo->query("SELECT * FROM shifts ORDER BY code")->fetchAll(PDO::FETCH_ASSOC);
+$all_managers = $pdo->query("SELECT * FROM users WHERE role IN ('manager', 'admin') ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// Batch Historical Logs
+$histories = [];
+try {
+    $hist = $pdo->query("SELECT h.*, u.name as acting_user 
+                         FROM hr_employee_history h 
+                         LEFT JOIN users u ON h.changed_by_cin = u.cin 
+                         ORDER BY h.changed_at DESC");
+    foreach($hist->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $histories[$row['employee_id']][] = $row;
+    }
+} catch (Exception $e) {}
 
 
 ?>
@@ -438,6 +499,52 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
             resize: vertical;
             min-height: 60px;
         }
+        .history-timeline {
+            position: relative;
+            padding-left: 20px;
+            margin-top: 20px;
+        }
+
+        .history-timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 2px;
+            background: #0984e3;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: -25px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #0984e3;
+        }
+
+        .timeline-date {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 
@@ -582,9 +689,10 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
 
                 <!-- Tabs Navigation -->
                 <div class="tab-buttons">
-                    <button type="button" class="tab-btn active-tab" onclick="openTab('tab-personal', this)">👤 Personal / Personnel / شخصي</button>
-                    <button type="button" class="tab-btn" onclick="openTab('tab-work', this)">💼 Work / Travail / مهني</button>
-                    <button type="button" class="tab-btn" onclick="openTab('tab-safety', this)">🚑 Safety / Sécurité / سلامة</button>
+                    <button type="button" class="tab-btn active-tab" onclick="openTab('tab-personal', this)">👤 Personal / Personnel</button>
+                    <button type="button" class="tab-btn" onclick="openTab('tab-work', this)">💼 Work / Travail</button>
+                    <button type="button" class="tab-btn" onclick="openTab('tab-safety', this)">🚑 ISO 45001</button>
+                    <button type="button" class="tab-btn" onclick="openTab('tab-history', this)" id="historyTabBtn" style="display:none;">📜 History / سجل الحركات</button>
                 </div>
 
                 <!-- TAB 1: Personal & Contact -->
@@ -689,6 +797,27 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
                         </div>
                     </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Team Leader / رئيس الفريق</label>
+                            <select name="manager_cin" id="m_manager">
+                                <option value="">-- No Direct Leader --</option>
+                                <?php foreach($all_managers as $mgr): ?>
+                                    <option value="<?= $mgr['cin'] ?>"><?= htmlspecialchars($mgr['name']) ?> (<?= $mgr['cin'] ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Shift / الفترة</label>
+                            <select name="current_shift" id="m_shift">
+                                <option value="">-- No Shift assigned --</option>
+                                <?php foreach($all_shifts as $sh): ?>
+                                    <option value="<?= $sh['code'] ?>"><?= htmlspecialchars($sh['name']) ?> (<?= $sh['code'] ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-row three">
                         <div class="form-group">
                             <label>Hire Date / D. embauche / التوظيف</label>
@@ -763,6 +892,17 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
                     </div>
                 </div>
 
+                <!-- TAB 4: History / Ségil -->
+                <div id="tab-history" class="tab-content">
+                    <div style="background:#fff3cd; padding:15px; border-radius:4px; margin-bottom:15px; color:#856404; font-size:0.9em;">
+                        <strong>Historical Log:</strong> This tab records function changes, team transfers, and shift alterations chronologically.
+                    </div>
+                    
+                    <div id="employeeHistoryContainer" class="history-timeline">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
                 <!-- Form Submit -->
                 <div
                     style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; border-top:1px solid #ddd; padding-top:15px;">
@@ -785,6 +925,9 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
             btnElem.classList.add('active-tab');
         }
 
+        // Full History Data embedded for JS
+        const employeeHistories = <?= json_encode($histories) ?>;
+
         function openAddModal() {
             document.getElementById('modalTitle').innerText = '➕ Add Profile / Ajouter / إضافة موظف';
             document.getElementById('empForm').reset();
@@ -792,6 +935,7 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
             document.getElementById('form_action').name = 'add_emp';
             document.getElementById('statusGroup').style.display = 'none';
             document.getElementById('modalSubmitBtn').innerText = '💾 Save / Enregistrer / حفظ';
+            document.getElementById('historyTabBtn').style.display = 'none'; // Hide history when adding
 
             // Go to first tab
             openTab('tab-personal', document.querySelector('.tab-buttons .tab-btn:first-child'));
@@ -821,6 +965,8 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
             document.getElementById('m_location').value = emp.location_id || '';
             document.getElementById('m_function').value = emp.function_title || '';
             document.getElementById('m_dept').value = emp.department || '';
+            document.getElementById('m_manager').value = emp.manager_cin || '';
+            document.getElementById('m_shift').value = emp.current_shift || '';
             document.getElementById('m_hire').value = emp.hire_date || '';
             document.getElementById('m_contract').value = emp.contract_type || 'CDI';
             document.getElementById('m_cnss').value = emp.cnss_number || '';
@@ -836,6 +982,28 @@ $all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetch
             document.getElementById('statusGroup').style.display = 'block';
 
             document.getElementById('modalSubmitBtn').innerText = '💾 Update / Modifier / تحديث';
+            
+            // Build History Timeline
+            document.getElementById('historyTabBtn').style.display = 'inline-block';
+            const histContainer = document.getElementById('employeeHistoryContainer');
+            histContainer.innerHTML = '';
+            
+            if (employeeHistories[emp.id] && employeeHistories[emp.id].length > 0) {
+                employeeHistories[emp.id].forEach(h => {
+                    let text = `Changed <b>${h.change_type}</b>`;
+                    if(h.old_value) text += ` from <i>${h.old_value}</i>`;
+                    if(h.new_value) text += ` to <b>${h.new_value}</b>`;
+                    
+                    histContainer.innerHTML += `
+                        <div class="timeline-item">
+                            <div class="timeline-date">🗓️ ${h.changed_at} - <small>By: ${h.acting_user}</small></div>
+                            <div class="timeline-content">${text}</div>
+                        </div>
+                    `;
+                });
+            } else {
+                histContainer.innerHTML = '<p style="color:#999;font-style:italic;">No historical records found for this employee yet.</p>';
+            }
 
             // Go to first tab
             openTab('tab-personal', document.querySelector('.tab-buttons .tab-btn:first-child'));

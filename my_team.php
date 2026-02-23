@@ -12,73 +12,47 @@ if (!isset($_SESSION['user_cin'])) {
 $user_cin = $_SESSION['user_cin'];
 $is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
-// Handle Form Submission (Add Worker)
+// Handle Form Submission (Daily Pointage)
 $msg = "";
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['add_worker'])) {
-        $w_cin = strtoupper(trim($_POST['cin'])); // Force Upper
-        $w_name = strtoupper(trim($_POST['name']));
-        $w_phone = trim($_POST['phone']);
-        $w_location = $_POST['location'];
-        $w_dept = $_POST['department'];
-        $w_job = trim($_POST['job_title']);
-        $w_shift = $_POST['shift'];
+    if (isset($_POST['save_pointage'])) {
+        $p_date = $_POST['attendance_date'];
 
-        // Target Manager (Who are we adding this worker for?)
-        // If Admin is viewing a specific manager, add to THAT manager? 
-        // Or always add to themselves? Usually "My Team" adds to ME.
-        // Let's assume Admin adds to THEMSELVES unless we want advanced "Add for others". 
-        // For simplicity and safety, keeps adding to Session User OR currently viewed manager?
-        // Prompt says "each team leader sees only his team". Admin sees all.
-        // Let's default to adding to the CURRENTLY VIEWED manager if Admin, or Session User.
+        try {
+            $pdo->beginTransaction();
+            foreach ($_POST['status'] as $emp_id => $emp_status) {
+                // Determine the employee's shift dynamically or fallback
+                $stmt_shift = $pdo->prepare("SELECT current_shift, manager_cin FROM hr_employees WHERE id = ?");
+                $stmt_shift->execute([$emp_id]);
+                $emp_data = $stmt_shift->fetch();
+                $shift_code = $emp_data['current_shift'] ?: 'Normal';
 
-        $target_manager = $user_cin;
-        if ($is_admin && isset($_POST['target_manager']) && !empty($_POST['target_manager'])) {
-            $target_manager = $_POST['target_manager'];
-        }
+                // Insert or Update Pointage for this day
+                $stmt = $pdo->prepare("
+                    INSERT INTO hr_team_attendance (employee_id, manager_cin, attendance_date, shift_code, status) 
+                    VALUES (?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE status = VALUES(status), manager_cin = VALUES(manager_cin)
+                ");
+                $stmt->execute([$emp_id, $emp_data['manager_cin'], $p_date, $shift_code, $emp_status]);
 
-        // Strict Validation
-        if (!preg_match('/^[a-zA-Z0-9]+$/', $w_cin)) {
-            $error = "❌ Security Alert: CIN must contain ONLY Latin letters and numbers.";
-        } else {
-            // GLOBAL UNIQUENESS CHECK
-            $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM workers WHERE cin = ?");
-            $stmt_check->execute([$w_cin]);
-            $exists_workers = $stmt_check->fetchColumn();
+                // Auto-Removal Logic if Transferred or Left
+                if ($emp_status === 'Transferred' || $emp_status === 'Left') {
+                    // Remove from team
+                    $pdo->prepare("UPDATE hr_employees SET manager_cin = NULL WHERE id = ?")->execute([$emp_id]);
 
-            // Also check Users table to be safe?
-            $stmt_check_users = $pdo->prepare("SELECT COUNT(*) FROM users WHERE cin = ?");
-            $stmt_check_users->execute([$w_cin]);
-            $exists_users = $stmt_check_users->fetchColumn();
-
-            if ($exists_workers > 0 || $exists_users > 0) {
-                $error = "⚠️ Error: This CIN ($w_cin) already exists in the system (Worker or User).";
-            } else {
-                try {
-                    $stmt = $pdo->prepare("INSERT INTO workers (cin, name, phone, location, department, job_title, shift, manager_cin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$w_cin, $w_name, $w_phone, $w_location, $w_dept, $w_job, $w_shift, $target_manager]);
-                    $msg = "✅ Worker added successfully to " . ($target_manager === $user_cin ? "your" : "selected") . " team!";
-                } catch (PDOException $e) {
-                    $error = "Database Error: " . $e->getMessage();
+                    // Log to history
+                    $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, old_value, new_value, changed_by_cin) VALUES (?, 'TEAM_TRANSFER', ?, 'REMOVED_VIA_POINTAGE', ?)")
+                        ->execute([$emp_id, $emp_data['manager_cin'], $user_cin]);
                 }
             }
+            $pdo->commit();
+            $msg = "✅ Daily Pointage saved successfully for " . htmlspecialchars($p_date);
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            $error = "Database Error: " . $e->getMessage();
         }
-    }
-
-    // Delete Worker
-    if (isset($_POST['delete_worker'])) {
-        $del_id = $_POST['worker_id'];
-        // Admin can delete anyone's worker. Manager only theirs.
-        if ($is_admin) {
-            $stmt = $pdo->prepare("DELETE FROM workers WHERE id = ?");
-            $stmt->execute([$del_id]);
-        } else {
-            $stmt = $pdo->prepare("DELETE FROM workers WHERE id = ? AND manager_cin = ?");
-            $stmt->execute([$del_id, $user_cin]);
-        }
-        $msg = "🗑️ Worker removed.";
     }
 }
 
@@ -86,8 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $view_cin = $user_cin;
 $all_managers = [];
 if ($is_admin) {
-    // Fetch all managers for dropdown
-    $stmt_m = $pdo->query("SELECT cin, name FROM users WHERE role = 'manager' ORDER BY name");
+    // Fetch all managers/admins for dropdown
+    $stmt_m = $pdo->query("SELECT cin, name FROM users WHERE role IN ('manager', 'admin') ORDER BY name");
     $all_managers = $stmt_m->fetchAll();
 
     if (isset($_GET['manager_cin']) && !empty($_GET['manager_cin'])) {
@@ -95,9 +69,16 @@ if ($is_admin) {
     }
 }
 
-// Fetch Team (Based on View CIN)
-$stmt = $pdo->prepare("SELECT * FROM workers WHERE manager_cin = ? ORDER BY name");
-$stmt->execute([$view_cin]);
+// Date Filter
+$filter_date = $_GET['date'] ?? date('Y-m-d');
+
+// Fetch Team from HR Employees (Based on View CIN)
+$stmt = $pdo->prepare("SELECT e.*, 
+        (SELECT status FROM hr_team_attendance a WHERE a.employee_id = e.id AND a.attendance_date = ?) as today_status
+        FROM hr_employees e 
+        WHERE e.manager_cin = ? 
+        ORDER BY e.first_name ASC");
+$stmt->execute([$filter_date, $view_cin]);
 $my_team = $stmt->fetchAll();
 
 // Get Name of current view
@@ -331,152 +312,96 @@ if ($view_cin !== $user_cin && $is_admin) {
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <input type="hidden" name="date" value="<?= htmlspecialchars($filter_date) ?>">
                     </form>
                 </div>
             <?php endif; ?>
-            <p style="color:#666; font-size:14px;">Manage your workforce. <br><small>إدارة فريق العمل / Gestion
-                    d'équipe</small></p>
 
-            <?php if ($error): ?>
-                <div class="alert alert-error">
-                    <?php echo $error; ?>
+            <div class="form-box" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h4 style="margin:0;">📅 Daily Pointage / الحضور اليومي</h4>
+                    <p style="margin:5px 0 0 0; font-size:13px; color:#666;">
+                        Note: Selecting "Transferred" or "Left" will permanently remove the worker from your team.
+                    </p>
                 </div>
-            <?php endif; ?>
-            <?php if ($msg): ?>
-                <div class="alert alert-success">
-                    <?php echo $msg; ?>
-                </div>
-            <?php endif; ?>
-
-            <div class="form-box">
-                <h4>+ Add New Worker to: <?= htmlspecialchars($view_name) ?></h4>
-                <form method="POST">
-                    <input type="hidden" name="target_manager" value="<?= htmlspecialchars($view_cin) ?>">
-                    <div class="form-grid">
-                        <!-- Row 1 -->
-                        <div class="form-group">
-                            <label>CIN (Unique ID)</label>
-                            <input type="text" name="cin" placeholder="AB12345" required pattern="[A-Za-z0-9]+"
-                                title="Letters and numbers only">
-                        </div>
-                        <div class="form-group">
-                            <label>Full Name / الاسم الكامل</label>
-                            <input type="text" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Phone / الهاتف</label>
-                            <input type="text" name="phone" placeholder="06XXXXXXXX">
-                        </div>
-
-                        <?php
-                        // Fetch Drops for Form
-                        $locs = $pdo->query("SELECT name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
-                        $depts = $pdo->query("SELECT name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
-                        $shifts = $pdo->query("SELECT code, name FROM shifts ORDER BY code")->fetchAll();
-                        ?>
-
-                        <!-- Row 2 -->
-                        <div class="form-group">
-                            <label>Site / موقع العمل</label>
-                            <select name="location">
-                                <?php foreach ($locs as $l): ?>
-                                    <option value="<?= htmlspecialchars($l) ?>"><?= htmlspecialchars($l) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Dept / القسم</label>
-                            <select name="department">
-                                <?php foreach ($depts as $d): ?>
-                                    <option value="<?= htmlspecialchars($d) ?>"><?= htmlspecialchars($d) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Job Title / الوظيفة</label>
-                            <input type="text" name="job_title" placeholder="Ex: Operator">
-                        </div>
-
-                        <!-- Row 3 -->
-                        <div class="form-group">
-                            <label>Shift / الفترة</label>
-                            <select name="shift">
-                                <?php foreach ($shifts as $s): ?>
-                                    <option value="<?= htmlspecialchars($s['code']) ?>"><?= htmlspecialchars($s['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group"></div>
-                        <div class="form-group">
-                            <label>&nbsp;</label>
-                            <button type="submit" name="add_worker" style="background:#28a745; cursor:pointer;">Save
-                                Worker / حفظ</button>
-                        </div>
-                    </div>
+                <form method="GET" style="display:flex; gap:10px;">
+                    <?php if ($is_admin): ?>
+                        <input type="hidden" name="manager_cin" value="<?= htmlspecialchars($view_cin) ?>">
+                    <?php endif; ?>
+                    <label style="align-self:center; font-weight:bold;">Date:</label>
+                    <input type="date" name="date" value="<?= htmlspecialchars($filter_date) ?>"
+                        onchange="this.form.submit()" style="padding:8px; border:1px solid #ccc; border-radius:4px;">
                 </form>
             </div>
 
-            <h3>📋 Team List</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Info</th>
-                        <th>Job / Location</th>
-                        <th>Shift</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (count($my_team) == 0): ?>
-                        <tr>
-                            <td colspan="4" style="text-align:center;">No workers added yet.</td>
-                        </tr>
-                    <?php endif; ?>
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?php echo $error; ?></div>
+            <?php endif; ?>
+            <?php if ($msg): ?>
+                <div class="alert alert-success"><?php echo $msg; ?></div>
+            <?php endif; ?>
 
-                    <?php foreach ($my_team as $w):
-                        $badgeClass = 'shift-N';
-                        if ($w['shift'] == 'A')
-                            $badgeClass = 'shift-A';
-                        if ($w['shift'] == 'B')
-                            $badgeClass = 'shift-B';
-                        if ($w['shift'] == 'C')
-                            $badgeClass = 'shift-C';
-                        ?>
+            <form method="POST">
+                <input type="hidden" name="attendance_date" value="<?= htmlspecialchars($filter_date) ?>">
+                <table>
+                    <thead>
                         <tr>
-                            <td>
-                                <strong>
-                                    <?php echo htmlspecialchars($w['name']); ?>
-                                </strong><br>
-                                <small class="text-muted">
-                                    <?php echo htmlspecialchars($w['cin']); ?>
-                                </small>
-                                <?php if ($w['phone']): ?><br><small>📞
-                                        <?php echo htmlspecialchars($w['phone']); ?>
-                                    </small><?php endif; ?>
-                            </td>
-                            <td>
-                                <?php echo htmlspecialchars($w['department']); ?> /
-                                <?php echo htmlspecialchars($w['location']); ?><br>
-                                <small style="color:#666;">
-                                    <?php echo htmlspecialchars($w['job_title']); ?>
-                                </small>
-                            </td>
-                            <td><span class="shift-badge <?php echo $badgeClass; ?>">
-                                    <?php echo $w['shift']; ?>
-                                </span></td>
-                            <td>
-                                <form method="POST" style="display:inline;"
-                                    onsubmit="return confirm('Remove this worker?');">
-                                    <input type="hidden" name="worker_id" value="<?php echo $w['id']; ?>">
-                                    <button type="submit" name="delete_worker"
-                                        style="background:none; color:red; border:none; cursor:pointer; font-size:16px;">🗑️</button>
-                                </form>
-                            </td>
+                            <th>Matricule / Name</th>
+                            <th>Function / Shift</th>
+                            <th>Pointage Status (حالة الحضور)</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php if (count($my_team) == 0): ?>
+                            <tr>
+                                <td colspan="3" style="text-align:center; padding:30px; color:#666;">
+                                    No employees assigned to this team currently.<br><br>
+                                    <small>أمين الموارد البشرية (HR Admin) هو المسؤول عن إضافة وتعيين العمال لفرقهم.</small>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+
+                        <?php foreach ($my_team as $w):
+                            $status = $w['today_status'] ?: 'Present';
+                            ?>
+                            <tr>
+                                <td>
+                                    <strong><?= htmlspecialchars($w['matricule']) ?> -
+                                        <?= htmlspecialchars($w['full_name']) ?></strong><br>
+                                    <small class="text-muted"><?= htmlspecialchars($w['cin']) ?></small>
+                                </td>
+                                <td>
+                                    <?= htmlspecialchars($w['function_title']) ?><br>
+                                    <span
+                                        class="shift-badge shift-<?= htmlspecialchars($w['current_shift']) ?>"><?= htmlspecialchars($w['current_shift'] ?: 'Normal') ?></span>
+                                </td>
+                                <td>
+                                    <select name="status[<?= $w['id'] ?>]"
+                                        style="padding:8px; width:100%; border-radius:4px; border:1px solid #ccc;">
+                                        <option value="Present" <?= $status == 'Present' ? 'selected' : '' ?>>🟢 Present / حاضر
+                                        </option>
+                                        <option value="Absent" <?= $status == 'Absent' ? 'selected' : '' ?>>🔴 Absent / غائب
+                                        </option>
+                                        <option value="Sick" <?= $status == 'Sick' ? 'selected' : '' ?>>🏥 Sick / مريض</option>
+                                        <option value="Transferred" <?= $status == 'Transferred' ? 'selected' : '' ?>>↪️
+                                            Transferred / تحول لقسم آخر</option>
+                                        <option value="Left" <?= $status == 'Left' ? 'selected' : '' ?>>🚪 Left / خرج</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <?php if (count($my_team) > 0): ?>
+                    <div style="margin-top:20px; text-align:right;">
+                        <button type="submit" name="save_pointage"
+                            style="background:#0984e3; color:white; padding:12px 25px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:16px;">
+                            💾 Save Pointage / حفظ الحضور
+                        </button>
+                    </div>
+                <?php endif; ?>
+            </form>
         </div>
     </div>
 
