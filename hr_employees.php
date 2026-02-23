@@ -6,13 +6,42 @@ require 'includes/auth.php';
 // HR Module access: Admins or dedicated HR role. For now, we restrict to Admin.
 require_admin();
 
+// --- AJAX: Kinship Check ---
+if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
+    header('Content-Type: application/json');
+    $lastName = trim($_POST['last_name'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $empId = intval($_POST['emp_id'] ?? 0);
+    
+    $warnings = [];
+    
+    if (mb_strlen($lastName) > 2) {
+        $stmt = $pdo->prepare("SELECT full_name FROM hr_employees WHERE last_name = ? AND id != ?");
+        $stmt->execute([$lastName, $empId]);
+        $matches = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if ($matches) {
+            $warnings[] = "⚠️ Familial kinship detected (same surname): " . implode(', ', $matches);
+        }
+    }
+    
+    if (mb_strlen($address) > 10) {
+        $stmt = $pdo->prepare("SELECT full_name FROM hr_employees WHERE address LIKE ? AND address != '' AND id != ?");
+        $stmt->execute(['%'.$address.'%', $empId]);
+        $matches = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if ($matches) {
+            $warnings[] = "⚠️ Possible same residence as: " . implode(', ', $matches);
+        }
+    }
+    
+    echo json_encode(['warnings' => $warnings]);
+    exit;
+}
+
 // --- SELF-HEALING DATABASE MIGRATION ---
 try {
-    // Try to run the v2 migration script to ensure the new columns exist
     $pdo->exec(file_get_contents('hr_schema_v2.sql'));
-} catch (Exception $e) {
-    // Ignore error if columns already exist
-}
+    $pdo->exec(file_get_contents('hr_schema_v3.sql'));
+} catch (Exception $e) {}
 
 // --- HANDLE POST REQUESTS (CRUD) ---
 $msg = '';
@@ -36,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $func = trim($_POST['function_title']);
         $dept = trim($_POST['department']);
+        $location_id = !empty($_POST['location_id']) ? intval($_POST['location_id']) : null;
         $h_date = !empty($_POST['hire_date']) ? $_POST['hire_date'] : null;
         $rate = floatval($_POST['hourly_rate']);
         $cnss = trim($_POST['cnss_number']);
@@ -47,12 +77,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             $stmt = $pdo->prepare("INSERT INTO hr_employees 
-                (matricule, first_name, last_name, full_name, cin, date_of_birth, gender, marital_status, children_count, 
+                (location_id, matricule, first_name, last_name, full_name, cin, date_of_birth, gender, marital_status, children_count, 
                  phone_number, address, function_title, department, hire_date, hourly_rate, cnss_number, contract_type, 
                  blood_group, emergency_contact, emergency_phone) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmt->execute([
+                $location_id,
                 $mat,
                 $fname,
                 $lname,
@@ -103,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $func = trim($_POST['function_title']);
         $dept = trim($_POST['department']);
+        $location_id = !empty($_POST['location_id']) ? intval($_POST['location_id']) : null;
         $h_date = !empty($_POST['hire_date']) ? $_POST['hire_date'] : null;
         $rate = floatval($_POST['hourly_rate']);
         $cnss = trim($_POST['cnss_number']);
@@ -116,12 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             $stmt = $pdo->prepare("UPDATE hr_employees SET 
-                matricule=?, first_name=?, last_name=?, full_name=?, cin=?, date_of_birth=?, gender=?, marital_status=?, children_count=?, 
+                location_id=?, matricule=?, first_name=?, last_name=?, full_name=?, cin=?, date_of_birth=?, gender=?, marital_status=?, children_count=?, 
                 phone_number=?, address=?, function_title=?, department=?, hire_date=?, hourly_rate=?, cnss_number=?, contract_type=?, 
                 blood_group=?, emergency_contact=?, emergency_phone=?, status=? 
                 WHERE id=?");
 
             $stmt->execute([
+                $location_id,
                 $mat,
                 $fname,
                 $lname,
@@ -212,6 +245,10 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Fetch distinct departments and functions for the dropdowns
 $depts = $pdo->query("SELECT DISTINCT department FROM hr_employees WHERE department IS NOT NULL AND department != '' ORDER BY department")->fetchAll(PDO::FETCH_COLUMN);
 $funcs = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE function_title IS NOT NULL AND function_title != '' ORDER BY function_title")->fetchAll(PDO::FETCH_COLUMN);
+
+// Fetch admin advanced dropdown data
+$all_locations = $pdo->query("SELECT * FROM locations ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$all_departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 
 ?>
@@ -573,6 +610,8 @@ $funcs = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE fun
                             <input type="text" name="last_name" id="m_last" required>
                         </div>
                     </div>
+                    
+                    <div id="kinshipWarning" style="display:none; color:#d63031; background:#fadbd8; padding:10px; border-radius:4px; margin-bottom:15px; font-weight:bold; font-size:0.9em;"></div>
 
                     <div class="form-row three">
                         <div class="form-group">
@@ -616,14 +655,37 @@ $funcs = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE fun
 
                 <!-- TAB 2: Work & Payroll -->
                 <div id="tab-work" class="tab-content">
+                    
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Location / Factory / المصنع</label>
+                            <select name="location_id" id="m_location">
+                                <option value="">-- Select Factory --</option>
+                                <?php foreach($all_locations as $loc): ?>
+                                    <option value="<?= $loc['id'] ?>"><?= htmlspecialchars($loc['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Function / Fonction / الوظيفة</label>
-                            <input type="text" name="function_title" id="m_function">
+                            <label>Function / Fonction / الوظيفة (Optional)</label>
+                            <input type="text" name="function_title" id="m_function" list="funcList" placeholder="Select or type a function...">
+                            <datalist id="funcList">
+                                <?php foreach($funcs as $f): ?>
+                                    <option value="<?= htmlspecialchars($f) ?>">
+                                <?php endforeach; ?>
+                            </datalist>
                         </div>
                         <div class="form-group">
                             <label>Department / Département / القسم</label>
-                            <input type="text" name="department" id="m_dept">
+                            <select name="department" id="m_dept">
+                                <option value="">-- Select Department --</option>
+                                <?php foreach($all_departments as $ad): ?>
+                                    <option value="<?= htmlspecialchars($ad['name']) ?>"><?= htmlspecialchars($ad['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
 
@@ -756,6 +818,7 @@ $funcs = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE fun
             document.getElementById('m_address').value = emp.address || '';
 
             // Work
+            document.getElementById('m_location').value = emp.location_id || '';
             document.getElementById('m_function').value = emp.function_title || '';
             document.getElementById('m_dept').value = emp.department || '';
             document.getElementById('m_hire').value = emp.hire_date || '';
@@ -804,6 +867,49 @@ $funcs = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE fun
                     if (isChecked) toggleField(t, cb); // apply state
                 }
             });
+            
+            // Kinship Check Triggers
+            const lnameInput = document.getElementById('m_last');
+            const addressInput = document.getElementById('m_address');
+            
+            let kinshipTimeout;
+            function runKinshipCheck() {
+                clearTimeout(kinshipTimeout);
+                kinshipTimeout = setTimeout(() => {
+                    const lname = lnameInput.value;
+                    const addr = addressInput.value;
+                    const empId = document.getElementById('emp_id').value;
+                    
+                    if (lname.trim().length > 2 || addr.trim().length > 10) {
+                        const formData = new FormData();
+                        formData.append('last_name', lname);
+                        formData.append('address', addr);
+                        formData.append('emp_id', empId);
+                        
+                        fetch('hr_employees.php?action=check_kinship', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            const warningDiv = document.getElementById('kinshipWarning');
+                            if (data.warnings && data.warnings.length > 0) {
+                                warningDiv.style.display = 'block';
+                                warningDiv.innerHTML = data.warnings.join('<br>');
+                            } else {
+                                warningDiv.style.display = 'none';
+                                warningDiv.innerHTML = '';
+                            }
+                        })
+                        .catch(err => console.error('Kinship check error:', err));
+                    } else {
+                        document.getElementById('kinshipWarning').style.display = 'none';
+                    }
+                }, 800);
+            }
+            
+            lnameInput.addEventListener('input', runKinshipCheck);
+            addressInput.addEventListener('input', runKinshipCheck);
         });
     </script>
 </body>
