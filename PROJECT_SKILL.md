@@ -45,6 +45,13 @@ The system is designed to manage factory production efficiency and ISO 9001 comp
 *   **CAR (Corrective Action Report):** Linked to NCRs. Tracks Root Cause Analysis, Corrective Actions, and Preventive Actions. Admin/Quality team verifies effectiveness.
 *   Uses a "Smart UI" mapping generic English descriptions to Arabic translations automatically based on the selected defect type.
 
+### e. Human Resources & Payroll (`hr_employees.php`, `hr_attendance.php`, `hr_payroll.php`)
+*   **Employee Management:** Tracks matricules, functions, and hourly rates (`Taux`).
+*   **Daily Attendance:** Managers/Admins can record daily working hours (e.g., 9, 8.5) or statuses (A for Absent, `****` for Weekend).
+*   **Payroll Engine:** Automatically calculates salaries from the 26th of the previous month to the 25th of the current.
+    *   **Logic:** `BRUT = Hours * Rate`. `NET = BRUT - CNSS - Advances + Transport`.
+    *   **Rounding:** The final `ARROND` Net Salary is automatically rounded to the nearest 10 MAD using `ceil(net / 10) * 10`.
+
 ## 3. Database Schema Overview
 
 The database uses InnoDB engine and `utf8mb4` encoding.
@@ -52,6 +59,10 @@ The database uses InnoDB engine and `utf8mb4` encoding.
 *   **Core Tables:**
     *   `users`: Staff records, credentials, roles.
     *   `departments`, `locations`, `shifts`: Factory structure lookups.
+*   **HR Tables:**
+    *   `hr_employees`: Static employee data and hourly rates.
+    *   `hr_attendance`: Daily timesheet hours recorded by managers.
+    *   `hr_payroll`: Generated monthly payslips and mathematical adjustments.
 *   **SQDC Tables:**
     *   `sqdc_daily`: Daily color status per user per category.
     *   `countermeasures`: Action plans for issues.
@@ -122,6 +133,11 @@ Here is a comprehensive list of all `.php` files in the project categorized by f
 *   `admin_email.php`: Interface to manage SMTP configurations stored in the database.
 *   `admin_issues.php`: Centralized management of all countermeasures and pending issues.
 *   `admin_reports.php`: General reporting, data export (Excel/CSV), and analytics.
+
+### Human Resources (HR)
+*   `hr_employees.php`: Master directory of all employees, their functions, and hourly pay rates.
+*   `hr_attendance.php`: Smart grid for managers to log daily hours worked.
+*   `hr_payroll.php`: The payroll generator, aggregating hours (26th to 25th) and calculating final rounded NET pay.
 
 ### Quality & ISO 9001 Modules (Core)
 *   `iso_docs.php`: Main Document Control module (Revisions, Attachments, Status tracking).
