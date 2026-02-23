@@ -250,7 +250,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <form method="POST"
                                 onsubmit="return confirm('Are you sure you want to completely delete this employee?');"
                                 style="display:inline;">
-                                <?= csrf_token_field() ?>
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="emp_id" value="<?= $emp['id'] ?>">
                                 <button type="submit" name="delete_emp" class="btn-save btn-sm" style="background:#d63031;">🗑️
                                     Delete</button>
@@ -269,7 +269,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             style="background:white; padding:25px; border-radius:8px; width:90%; max-width:600px; max-height:90vh; overflow-y:auto;">
             <h3 id="modalTitle" style="margin-top:0;">Add New Employee</h3>
             <form method="POST" id="empForm">
-                <?= csrf_token_field() ?>
+                <?= csrf_field() ?>
                 <input type="hidden" name="emp_id" id="emp_id">
                 <input type="hidden" name="add_emp" id="form_action" value="1">
 

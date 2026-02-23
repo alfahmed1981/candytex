@@ -84,7 +84,7 @@ When modifying this system, AI agents MUST adhere to these security rules:
     require 'includes/auth.php';
     if (!isset($_SESSION['user_cin'])) { header("Location: index.php"); exit; }
     ```
-2.  **CSRF Protection:** All forms modifying data MUST include `<?= csrf_token_field() ?>`. All POST handlers MUST begin with `require_csrf();`.
+2.  **CSRF Protection:** All forms modifying data MUST include `<?= csrf_field() ?>`. All POST handlers MUST begin with `require_csrf();`.
 3.  **SQL Injection Prevention:** ALWAYS use PDO prepared statements (`$pdo->prepare() -> execute()`). Never interpolate variables directly into SQL strings.
 4.  **Role Checks:** Use `$is_admin = ($_SESSION['role'] === 'admin');` to conditionally show UI buttons or allow backend deletes (`if (isset($_POST['delete']) && $is_admin) { ... }`).
 5.  **Audit Logging:** Whenever a critical insert/update/delete occurs, call `audit_log($pdo, 'action_name', 'Details');`.

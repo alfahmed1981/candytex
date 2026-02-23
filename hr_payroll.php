@@ -245,7 +245,7 @@ foreach ($payroll_records as $r) {
             </div>
 
             <form method="POST" style="display:inline;">
-                <?= csrf_token_field() ?>
+                <?= csrf_field() ?>
                 <button type="submit" name="generate_payroll" class="btn-save" style="background:#28a745;"
                     onclick="return confirm('This will calculate Brut salaries based on attendance. Proceed?');">
                     🔄
@@ -314,7 +314,7 @@ foreach ($payroll_records as $r) {
 
             <!-- Grid -->
             <form method="POST">
-                <?= csrf_token_field() ?>
+                <?= csrf_field() ?>
                 <div style="overflow-x: auto; margin-bottom: 20px;">
                     <table>
                         <thead>

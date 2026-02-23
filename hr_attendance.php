@@ -145,7 +145,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <form method="POST">
-            <?= csrf_token_field() ?>
+            <?= csrf_field() ?>
             <input type="hidden" name="work_date" value="<?= htmlspecialchars($selected_date) ?>">
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
