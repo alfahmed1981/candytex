@@ -39,10 +39,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
 
 // --- SELF-HEALING DATABASE MIGRATION ---
 try {
-    $pdo->exec(file_get_contents('hr_schema_v2.sql'));
-    $pdo->exec(file_get_contents('hr_schema_v3.sql'));
-    $pdo->exec(file_get_contents('hr_schema_v4.sql'));
-    $pdo->exec(file_get_contents('hr_schema_v5.sql'));
+    if (!function_exists('run_sql_file')) {
+        function run_sql_file($pdo, $filename)
+        {
+            if (!file_exists($filename))
+                return;
+            $sql = file_get_contents($filename);
+            $queries = explode(';', $sql);
+            foreach ($queries as $query) {
+                $cleaned = trim($query);
+                if (!empty($cleaned)) {
+                    try {
+                        $pdo->exec($cleaned);
+                    } catch (PDOException $e) {
+                    }
+                }
+            }
+        }
+    }
+    run_sql_file($pdo, 'hr_schema_v2.sql');
+    run_sql_file($pdo, 'hr_schema_v3.sql');
+    run_sql_file($pdo, 'hr_schema_v4.sql');
+    run_sql_file($pdo, 'hr_schema_v5.sql');
+    run_sql_file($pdo, 'update_payment_types.sql'); // Auto-update payment types from Excel
 } catch (Exception $e) {
 }
 
@@ -607,7 +626,8 @@ try {
                         <option value="">-- All Depts --</option>
                         <?php foreach ($depts as $d): ?>
                             <option value="<?= htmlspecialchars($d) ?>" <?= $dept_filter === $d ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($d) ?></option>
+                                <?= htmlspecialchars($d) ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -618,7 +638,8 @@ try {
                         <option value="">-- All Functions --</option>
                         <?php foreach ($funcs as $f): ?>
                             <option value="<?= htmlspecialchars($f) ?>" <?= $func_filter === $f ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($f) ?></option>
+                                <?= htmlspecialchars($f) ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -837,7 +858,8 @@ try {
                                 <option value="">-- Select Department --</option>
                                 <?php foreach ($all_departments as $ad): ?>
                                     <option value="<?= htmlspecialchars($ad['name']) ?>">
-                                        <?= htmlspecialchars($ad['name']) ?></option>
+                                        <?= htmlspecialchars($ad['name']) ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
