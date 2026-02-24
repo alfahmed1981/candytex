@@ -122,6 +122,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>HR - Daily Attendance</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <style>
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
@@ -145,6 +146,11 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <h2>🕒 Daily Timesheet / سجل الحضور اليومي</h2>
                 <p>Record working hours for your team / تسجيل ساعات العمل</p>
             </div>
+            <?php if ($is_admin): ?>
+            <button class="btn-primary" onclick="openImportModal()" style="background:#28a745; display:flex; gap:5px; align-items:center;">
+                📊 Import Excel (PAIE)
+            </button>
+            <?php endif; ?>
         </div>
 
         <!-- Date & Department Filter -->
