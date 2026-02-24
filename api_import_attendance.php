@@ -89,12 +89,64 @@ try {
 
     $pdo->commit();
 
+    // Now insert payrolls (Using a separate transaction for safety, or same. Let's use the same)
+    $stmt_cnss = $pdo->prepare("UPDATE hr_employees SET cnss_number = ? WHERE id = ? AND (cnss_number IS NULL OR cnss_number = '')");
+
+    $stmt_payroll = $pdo->prepare("
+        INSERT INTO hr_payroll 
+        (employee_id, payroll_month, payroll_year, period_start, period_end, cnss_deduction, advances, brut_salary, net_salary, rounded_net, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft')
+        ON DUPLICATE KEY UPDATE 
+            cnss_deduction = VALUES(cnss_deduction),
+            advances = VALUES(advances),
+            brut_salary = VALUES(brut_salary),
+            net_salary = VALUES(net_salary),
+            rounded_net = VALUES(rounded_net)
+    ");
+
+    $payroll_count = 0;
+    $cnss_updates = 0;
+    $payroll_month = 12;
+    $payroll_year = 2025;
+    $period_start = "2025-11-26";
+    $period_end = "2025-12-25";
+
+    if (isset($data['payrolls']) && is_array($data['payrolls'])) {
+        foreach ($data['payrolls'] as $p) {
+            $mat = (string) $p['matricule'];
+            if (!isset($emp_map[$mat]))
+                continue;
+
+            $emp_id = $emp_map[$mat];
+
+            if (!empty($p['cnss'])) {
+                $stmt_cnss->execute([$p['cnss'], $emp_id]);
+                if ($stmt_cnss->rowCount() > 0)
+                    $cnss_updates++;
+            }
+
+            $stmt_payroll->execute([
+                $emp_id,
+                $payroll_month,
+                $payroll_year,
+                $period_start,
+                $period_end,
+                $p['cnss_deduction'],
+                $p['advances'],
+                $p['brut'],
+                $p['net_salary'],
+                $p['rounded_net']
+            ]);
+            $payroll_count++;
+        }
+    }
+
     // Log the import
-    audit_log($pdo, 'hr_excel_import', "Imported $success_count attendance records from Excel");
+    audit_log($pdo, 'hr_excel_import', "Imported $success_count attendance & $payroll_count payrolls (CNSS Linked: $cnss_updates)");
 
     echo json_encode([
         'success' => true,
-        'message' => "Successfully imported $success_count records. Skipped $skipped_count unknown matricules."
+        'message' => "Successfully imported $success_count attendance records and $payroll_count payroll snapshots. Linked $cnss_updates new CNSS numbers!"
     ]);
 
 } catch (Exception $e) {

@@ -336,6 +336,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     const sheetNamesToProcess = ['HORAIRE', 'mens', 'MENS', 'Mens'];
                     let foundAnySheet = false;
                     const records = [];
+                    const payrolls = [];
 
                     // Dates mapping (Nov 26 to Dec 25 mapped to cols 7 to 36)
                     const dates = [];
@@ -357,10 +358,37 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 if (!matricule) continue;
                                 matricule = String(matricule).trim();
                                 
-                                // Check if numeric matricule
-                                if (isNaN(parseInt(matricule))) continue;
+                                // Extract Payroll Data based on sheet type
+                                let cnss = '';
+                                let brut = 0;
+                                let cnss_ded = 0;
+                                let advance = 0;
+                                let net = 0;
+                                let rounded_net = 0;
 
-                                // Column C check (some employees might have CNSS info, we skip or use it as needed. Let's just focus on dates 7-36)
+                                if (sheetName.toUpperCase() === 'HORAIRE') {
+                                    cnss = row[3];
+                                    brut = parseFloat(row[39]) || 0;
+                                    cnss_ded = parseFloat(row[40]) || 0;
+                                    advance = parseFloat(row[42]) || 0;
+                                    net = parseFloat(row[44]) || 0;
+                                    rounded_net = parseFloat(row[45]) || 0;
+                                } else {
+                                    cnss = row[4];
+                                    advance = parseFloat(row[36]) || 0;
+                                }
+
+                                payrolls.push({
+                                    matricule: matricule,
+                                    cnss: String(cnss || '').trim(),
+                                    brut: brut,
+                                    cnss_deduction: cnss_ded,
+                                    advances: advance,
+                                    net_salary: net,
+                                    rounded_net: rounded_net
+                                });
+
+                                // Extract Attendance grid
                                 for (let col = 7; col <= 36; col++) {
                                     const dateStr = dates[col - 7];
                                     let cellValue = row[col];
@@ -410,7 +438,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     // Confirm and Send to API
                     Swal.fire({
                         title: 'Ready to Import',
-                        text: `Found ${records.length} daily pointage records across multiple sheets. Do you want to save them to the database?`,
+                        text: `Found ${records.length} daily pointage records and ${payrolls.length} payroll snapshots. Do you want to save them to the database?`,
                         icon: 'question',
                         showCancelButton: true,
                         confirmButtonText: 'Yes, Import Now',
@@ -422,7 +450,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     'Content-Type': 'application/json',
                                     'X-CSRF-Token': '<?= $_SESSION['csrf_token'] ?>'
                                 },
-                                body: JSON.stringify({ records: records })
+                                body: JSON.stringify({ records: records, payrolls: payrolls })
                             })
                             .then(response => {
                                 if (!response.ok) {
