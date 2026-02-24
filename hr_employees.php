@@ -598,6 +598,7 @@ try {
             border: 1px solid #ddd;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -610,7 +611,11 @@ try {
                 <h2>👥 Human Resources / Ressources Humaines / الموارد البشرية</h2>
                 <p>Employee Profiles, ISO & CNSS / Profils des Employés / ملفات الموظفين المفصلة</p>
             </div>
-            <button class="btn-save" onclick="openAddModal()">➕ Add / Ajouter / إضافة موظف</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-save" style="background:#28a745;" onclick="exportEmployeesToExcel()">📥 Export
+                    Excel</button>
+                <button class="btn-save" onclick="openAddModal()">➕ Add / Ajouter</button>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -1177,6 +1182,53 @@ try {
             lnameInput.addEventListener('input', runKinshipCheck);
             addressInput.addEventListener('input', runKinshipCheck);
         });
+
+        // --- EXCEL EXPORT LOGIC ---
+        function exportEmployeesToExcel() {
+            Swal.fire({
+                title: 'Exporting...',
+                text: 'Fetching employee data, please wait.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('api_export_employees.php')
+                .then(response => {
+                    if (!response.ok) throw new Error("API Network response was not ok");
+                    return response.json();
+                })
+                .then(res => {
+                    if (res.error) {
+                        Swal.fire('Error', res.error, 'error');
+                        return;
+                    }
+
+                    if (!res.data || res.data.length === 0) {
+                        Swal.fire('Info', 'No active employees to export.', 'info');
+                        return;
+                    }
+
+                    // Create SheetJS Worksheet
+                    const ws = XLSX.utils.json_to_sheet(res.data);
+
+                    // Create an empty Workbook
+                    const wb = XLSX.utils.book_new();
+
+                    // Append the Worksheet to the Workbook
+                    XLSX.utils.book_append_sheet(wb, ws, "Employees");
+
+                    // Generate Excel file and trigger download
+                    const today = new Date().toISOString().split('T')[0];
+                    XLSX.writeFile(wb, `CandyTex_Employees_${today}.xlsx`);
+
+                    Swal.fire('Success!', `Exported ${res.count} employees to Excel.`, 'success');
+                })
+                .catch(err => {
+                    Swal.fire('Error', 'Failed to export data: ' + err.message, 'error');
+                });
+        }
     </script>
 </body>
 
