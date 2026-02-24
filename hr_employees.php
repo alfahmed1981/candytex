@@ -276,6 +276,7 @@ $search = $_GET['search'] ?? '';
 $status_filter = $_GET['status'] ?? 'Active';
 $dept_filter = $_GET['department'] ?? '';
 $func_filter = $_GET['function_title'] ?? '';
+$location_filter = $_GET['location_id'] ?? '';
 $sort_by = $_GET['sort_by'] ?? 'id_desc';
 
 $query = "SELECT * FROM hr_employees WHERE 1=1";
@@ -299,6 +300,10 @@ if ($dept_filter) {
 if ($func_filter) {
     $query .= " AND function_title = ?";
     $params[] = $func_filter;
+}
+if ($location_filter) {
+    $query .= " AND location_id = ?";
+    $params[] = $location_filter;
 }
 
 switch ($sort_by) {
@@ -618,6 +623,18 @@ try {
                     <input type="text" name="search" placeholder="Name, ID, CIN, Phone..."
                         value="<?= htmlspecialchars($search) ?>"
                         style="width:100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <div>
+                    <label style="font-size:0.85em; font-weight:bold;">Factory / المصنع</label>
+                    <select name="location_id" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <option value="">-- All Factories --</option>
+                        <?php foreach ($all_locations as $loc): ?>
+                            <option value="<?= $loc['id'] ?>" <?= $location_filter == $loc['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($loc['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
                 <div>
