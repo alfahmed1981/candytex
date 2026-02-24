@@ -35,6 +35,7 @@ try {
     run_sql_file($pdo, 'hr_schema_v3.sql');
     run_sql_file($pdo, 'hr_schema_v4.sql');
     run_sql_file($pdo, 'hr_schema_v5.sql');
+    run_sql_file($pdo, 'update_payment_types.sql'); // Auto-update payment types from Excel
 } catch (Exception $e) {
 }
 
