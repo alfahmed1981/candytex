@@ -49,10 +49,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_attendance'])) {
 // Filters
 $selected_date = $_GET['date'] ?? date('Y-m-d');
 $department_filter = $_GET['department'] ?? 'All';
+$location_filter = $_GET['location_id'] ?? '';
+$function_filter = $_GET['function_title'] ?? '';
+$manager_filter = $_GET['manager_cin'] ?? '';
 
-// Fetch Departments for filter
+// Fetch Filter Lookup Data
 $dept_stmt = $pdo->query("SELECT DISTINCT department FROM hr_employees WHERE department IS NOT NULL AND status='Active' ORDER BY department");
 $departments = $dept_stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$loc_stmt = $pdo->query("SELECT * FROM locations ORDER BY name");
+$all_locations = $loc_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$func_stmt = $pdo->query("SELECT DISTINCT function_title FROM hr_employees WHERE function_title IS NOT NULL AND status='Active' ORDER BY function_title");
+$all_functions = $func_stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$mgr_stmt = $pdo->query("SELECT cin, name FROM users WHERE role IN ('manager', 'admin') ORDER BY name");
+$all_managers = $mgr_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch Employees based on role and filters
 $query = "SELECT e.id, e.matricule, e.full_name, e.function_title, e.department, 
@@ -76,9 +88,24 @@ if (!$is_admin) {
         // Fallback: If manager has no dept set, they see nobody.
         $query .= " AND 1=0"; 
     }
-} elseif ($department_filter !== 'All') {
-    $query .= " AND e.department = ?";
-    $params[] = $department_filter;
+} else {
+    // Admin specific filters
+    if ($department_filter !== 'All') {
+        $query .= " AND e.department = ?";
+        $params[] = $department_filter;
+    }
+    if ($location_filter) {
+        $query .= " AND e.location_id = ?";
+        $params[] = $location_filter;
+    }
+    if ($function_filter) {
+        $query .= " AND e.function_title = ?";
+        $params[] = $function_filter;
+    }
+    if ($manager_filter) {
+        $query .= " AND e.manager_cin = ?";
+        $params[] = $manager_filter;
+    }
 }
 
 $query .= " ORDER BY e.department, e.full_name";
@@ -130,11 +157,41 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 <?php if ($is_admin): ?>
                 <div class="form-group" style="margin: 0;">
+                    <label>Factory / المصنع</label>
+                    <select name="location_id" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
+                        <option value="">-- All Factories --</option>
+                        <?php foreach ($all_locations as $loc): ?>
+                            <option value="<?= $loc['id'] ?>" <?= $location_filter == $loc['id'] ? 'selected' : '' ?>><?= htmlspecialchars($loc['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
                     <label>Department / القسم</label>
-                    <select name="department" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        <option value="All">🌍 All Departments</option>
+                    <select name="department" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
+                        <option value="All">-- All Depts --</option>
                         <?php foreach ($departments as $dept): ?>
                             <option value="<?= htmlspecialchars($dept) ?>" <?= $department_filter === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label>Function / الوظيفة</label>
+                    <select name="function_title" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
+                        <option value="">-- All Functions --</option>
+                        <?php foreach ($all_functions as $func): ?>
+                            <option value="<?= htmlspecialchars($func) ?>" <?= $function_filter === $func ? 'selected' : '' ?>><?= htmlspecialchars($func) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label>Team Leader / مسؤول الفريق</label>
+                    <select name="manager_cin" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
+                        <option value="">-- All Leaders --</option>
+                        <?php foreach ($all_managers as $mgr): ?>
+                            <option value="<?= htmlspecialchars($mgr['cin']) ?>" <?= $manager_filter === $mgr['cin'] ? 'selected' : '' ?>><?= htmlspecialchars($mgr['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
