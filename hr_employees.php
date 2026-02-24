@@ -12,9 +12,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
     $lastName = trim($_POST['last_name'] ?? '');
     $address = trim($_POST['address'] ?? '');
     $empId = intval($_POST['emp_id'] ?? 0);
-    
+
     $warnings = [];
-    
+
     if (mb_strlen($lastName) > 2) {
         $stmt = $pdo->prepare("SELECT full_name FROM hr_employees WHERE last_name = ? AND id != ?");
         $stmt->execute([$lastName, $empId]);
@@ -23,16 +23,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
             $warnings[] = "⚠️ Familial kinship detected (same surname): " . implode(', ', $matches);
         }
     }
-    
+
     if (mb_strlen($address) > 10) {
         $stmt = $pdo->prepare("SELECT full_name FROM hr_employees WHERE address LIKE ? AND address != '' AND id != ?");
-        $stmt->execute(['%'.$address.'%', $empId]);
+        $stmt->execute(['%' . $address . '%', $empId]);
         $matches = $stmt->fetchAll(PDO::FETCH_COLUMN);
         if ($matches) {
             $warnings[] = "⚠️ Possible same residence as: " . implode(', ', $matches);
         }
     }
-    
+
     echo json_encode(['warnings' => $warnings]);
     exit;
 }
@@ -42,7 +42,9 @@ try {
     $pdo->exec(file_get_contents('hr_schema_v2.sql'));
     $pdo->exec(file_get_contents('hr_schema_v3.sql'));
     $pdo->exec(file_get_contents('hr_schema_v4.sql'));
-} catch (Exception $e) {}
+    $pdo->exec(file_get_contents('hr_schema_v5.sql'));
+} catch (Exception $e) {
+}
 
 // --- HANDLE POST REQUESTS (CRUD) ---
 $msg = '';
@@ -68,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dept = trim($_POST['department']);
         $location_id = !empty($_POST['location_id']) ? intval($_POST['location_id']) : null;
         $h_date = !empty($_POST['hire_date']) ? $_POST['hire_date'] : null;
+        $payment_type = $_POST['payment_type'] ?? 'Hourly';
         $rate = floatval($_POST['hourly_rate']);
         $cnss = trim($_POST['cnss_number']);
         $contract = trim($_POST['contract_type']);
@@ -81,9 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("INSERT INTO hr_employees 
                 (location_id, matricule, first_name, last_name, full_name, cin, date_of_birth, gender, marital_status, children_count, 
-                 phone_number, address, function_title, department, manager_cin, current_shift, hire_date, hourly_rate, cnss_number, contract_type, 
+                 phone_number, address, function_title, department, manager_cin, current_shift, hire_date, payment_type, hourly_rate, cnss_number, contract_type, 
                  blood_group, emergency_contact, emergency_phone) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmt->execute([
                 $location_id,
@@ -103,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $manager_cin,
                 $current_shift,
                 $h_date,
+                $payment_type,
                 $rate,
                 $cnss,
                 $contract,
@@ -110,9 +114,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $em_contact,
                 $em_phone
             ]);
-            
+
             $new_emp_id = $pdo->lastInsertId();
-            
+
             // History Logging for Initial Assignment
             if ($manager_cin) {
                 $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, new_value, changed_by_cin) VALUES (?, 'TEAM_TRANSFER', ?, ?)")
@@ -154,8 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $location_id = !empty($_POST['location_id']) ? intval($_POST['location_id']) : null;
         $manager_cin = !empty($_POST['manager_cin']) ? trim($_POST['manager_cin']) : null;
         $current_shift = !empty($_POST['current_shift']) ? trim($_POST['current_shift']) : null;
-        
+
         $h_date = !empty($_POST['hire_date']) ? $_POST['hire_date'] : null;
+        $payment_type = $_POST['payment_type'] ?? 'Hourly';
         $rate = floatval($_POST['hourly_rate']);
         $cnss = trim($_POST['cnss_number']);
         $contract = trim($_POST['contract_type']);
@@ -174,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $pdo->prepare("UPDATE hr_employees SET 
                 location_id=?, matricule=?, first_name=?, last_name=?, full_name=?, cin=?, date_of_birth=?, gender=?, marital_status=?, children_count=?, 
-                phone_number=?, address=?, function_title=?, department=?, manager_cin=?, current_shift=?, hire_date=?, hourly_rate=?, cnss_number=?, contract_type=?, 
+                phone_number=?, address=?, function_title=?, department=?, manager_cin=?, current_shift=?, hire_date=?, payment_type=?, hourly_rate=?, cnss_number=?, contract_type=?, 
                 blood_group=?, emergency_contact=?, emergency_phone=?, status=? 
                 WHERE id=?");
 
@@ -196,6 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $manager_cin,
                 $current_shift,
                 $h_date,
+                $payment_type,
                 $rate,
                 $cnss,
                 $contract,
@@ -277,12 +283,24 @@ if ($func_filter) {
 }
 
 switch ($sort_by) {
-    case 'name_asc': $query .= " ORDER BY full_name ASC"; break;
-    case 'name_desc': $query .= " ORDER BY full_name DESC"; break;
-    case 'rate_desc': $query .= " ORDER BY hourly_rate DESC"; break;
-    case 'rate_asc': $query .= " ORDER BY hourly_rate ASC"; break;
-    case 'id_asc': $query .= " ORDER BY id ASC"; break;
-    default: $query .= " ORDER BY id DESC"; break;
+    case 'name_asc':
+        $query .= " ORDER BY full_name ASC";
+        break;
+    case 'name_desc':
+        $query .= " ORDER BY full_name DESC";
+        break;
+    case 'rate_desc':
+        $query .= " ORDER BY hourly_rate DESC";
+        break;
+    case 'rate_asc':
+        $query .= " ORDER BY hourly_rate ASC";
+        break;
+    case 'id_asc':
+        $query .= " ORDER BY id ASC";
+        break;
+    default:
+        $query .= " ORDER BY id DESC";
+        break;
 }
 
 $stmt = $pdo->prepare($query);
@@ -306,10 +324,11 @@ try {
                          FROM hr_employee_history h 
                          LEFT JOIN users u ON h.changed_by_cin = u.cin 
                          ORDER BY h.changed_at DESC");
-    foreach($hist->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    foreach ($hist->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $histories[$row['employee_id']][] = $row;
     }
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 
 
 ?>
@@ -374,8 +393,15 @@ try {
         }
 
         /* Classes for view toggling */
-        .field-cnss, .field-dept, .field-cin, .field-phone { display: none; } /* Hidden by default to avoid clutter */
-        
+        .field-cnss,
+        .field-dept,
+        .field-cin,
+        .field-phone {
+            display: none;
+        }
+
+        /* Hidden by default to avoid clutter */
+
         .toggle-controls {
             display: flex;
             gap: 10px;
@@ -386,6 +412,7 @@ try {
             flex-wrap: wrap;
             font-size: 0.9em;
         }
+
         .toggle-controls label {
             cursor: pointer;
             display: flex;
@@ -499,6 +526,7 @@ try {
             resize: vertical;
             min-height: 60px;
         }
+
         .history-timeline {
             position: relative;
             padding-left: 20px;
@@ -565,18 +593,21 @@ try {
         <div class="filter-card"
             style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <form method="GET" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
-                
+
                 <div style="flex:1; min-width:200px;">
                     <label style="font-size:0.85em; font-weight:bold;">Search / Recherche</label>
-                    <input type="text" name="search" placeholder="Name, ID, CIN, Phone..." value="<?= htmlspecialchars($search) ?>" style="width:100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <input type="text" name="search" placeholder="Name, ID, CIN, Phone..."
+                        value="<?= htmlspecialchars($search) ?>"
+                        style="width:100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
 
                 <div>
                     <label style="font-size:0.85em; font-weight:bold;">Department / القسم</label>
                     <select name="department" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                         <option value="">-- All Depts --</option>
-                        <?php foreach($depts as $d): ?>
-                            <option value="<?= htmlspecialchars($d) ?>" <?= $dept_filter === $d ? 'selected' : '' ?>><?= htmlspecialchars($d) ?></option>
+                        <?php foreach ($depts as $d): ?>
+                            <option value="<?= htmlspecialchars($d) ?>" <?= $dept_filter === $d ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($d) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -585,8 +616,9 @@ try {
                     <label style="font-size:0.85em; font-weight:bold;">Function / الوظيفة</label>
                     <select name="function_title" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                         <option value="">-- All Functions --</option>
-                        <?php foreach($funcs as $f): ?>
-                            <option value="<?= htmlspecialchars($f) ?>" <?= $func_filter === $f ? 'selected' : '' ?>><?= htmlspecialchars($f) ?></option>
+                        <?php foreach ($funcs as $f): ?>
+                            <option value="<?= htmlspecialchars($f) ?>" <?= $func_filter === $f ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($f) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -613,8 +645,10 @@ try {
                 </div>
 
                 <div style="padding-bottom:1px;">
-                    <button type="submit" class="btn-save" style="background: #1a6b8a; height: 35px; line-height: 1;">🔍 Filter</button>
-                    <a href="hr_employees.php" class="btn-details" style="height: 35px; line-height: 1.2; display: inline-block; text-align: center;">Reset</a>
+                    <button type="submit" class="btn-save" style="background: #1a6b8a; height: 35px; line-height: 1;">🔍
+                        Filter</button>
+                    <a href="hr_employees.php" class="btn-details"
+                        style="height: 35px; line-height: 1.2; display: inline-block; text-align: center;">Reset</a>
                 </div>
             </form>
         </div>
@@ -644,13 +678,19 @@ try {
                             </h4>
                             <div class="emp-meta">
                                 <span title="Matricule" class="field-mat">🆔 <?= htmlspecialchars($emp['matricule']) ?></span>
-                                <span title="Function" class="field-func">💼 <?= htmlspecialchars($emp['function_title'] ?: 'N/A') ?></span>
-                                <span title="Department" class="field-dept">🏢 <?= htmlspecialchars($emp['department'] ?: 'N/A') ?></span>
-                                <span title="Hourly Rate" class="field-rate">💰 <?= number_format($emp['hourly_rate'], 2) ?> MAD/h</span>
-                                
-                                <?php if ($emp['cin']): ?><span title="CIN" class="field-cin">💳 <?= htmlspecialchars($emp['cin']) ?></span><?php endif; ?>
-                                <?php if ($emp['phone_number']): ?><span title="Phone" class="field-phone">📞 <?= htmlspecialchars($emp['phone_number']) ?></span><?php endif; ?>
-                                <?php if ($emp['cnss_number']): ?><span title="CNSS" class="field-cnss">🛡️ <?= htmlspecialchars($emp['cnss_number']) ?></span><?php endif; ?>
+                                <span title="Function" class="field-func">💼
+                                    <?= htmlspecialchars($emp['function_title'] ?: 'N/A') ?></span>
+                                <span title="Department" class="field-dept">🏢
+                                    <?= htmlspecialchars($emp['department'] ?: 'N/A') ?></span>
+                                <span title="Salary" class="field-rate">💰 <?= number_format($emp['hourly_rate'], 2) ?>
+                                    <?= $emp['payment_type'] === 'Monthly' ? 'MAD/month' : 'MAD/h' ?></span>
+
+                                <?php if ($emp['cin']): ?><span title="CIN" class="field-cin">💳
+                                        <?= htmlspecialchars($emp['cin']) ?></span><?php endif; ?>
+                                <?php if ($emp['phone_number']): ?><span title="Phone" class="field-phone">📞
+                                        <?= htmlspecialchars($emp['phone_number']) ?></span><?php endif; ?>
+                                <?php if ($emp['cnss_number']): ?><span title="CNSS" class="field-cnss">🛡️
+                                        <?= htmlspecialchars($emp['cnss_number']) ?></span><?php endif; ?>
                             </div>
                         </div>
                         <div class="emp-actions">
@@ -689,10 +729,12 @@ try {
 
                 <!-- Tabs Navigation -->
                 <div class="tab-buttons">
-                    <button type="button" class="tab-btn active-tab" onclick="openTab('tab-personal', this)">👤 Personal / Personnel</button>
+                    <button type="button" class="tab-btn active-tab" onclick="openTab('tab-personal', this)">👤 Personal
+                        / Personnel</button>
                     <button type="button" class="tab-btn" onclick="openTab('tab-work', this)">💼 Work / Travail</button>
                     <button type="button" class="tab-btn" onclick="openTab('tab-safety', this)">🚑 ISO 45001</button>
-                    <button type="button" class="tab-btn" onclick="openTab('tab-history', this)" id="historyTabBtn" style="display:none;">📜 History / سجل الحركات</button>
+                    <button type="button" class="tab-btn" onclick="openTab('tab-history', this)" id="historyTabBtn"
+                        style="display:none;">📜 History / سجل الحركات</button>
                 </div>
 
                 <!-- TAB 1: Personal & Contact -->
@@ -718,8 +760,10 @@ try {
                             <input type="text" name="last_name" id="m_last" required>
                         </div>
                     </div>
-                    
-                    <div id="kinshipWarning" style="display:none; color:#d63031; background:#fadbd8; padding:10px; border-radius:4px; margin-bottom:15px; font-weight:bold; font-size:0.9em;"></div>
+
+                    <div id="kinshipWarning"
+                        style="display:none; color:#d63031; background:#fadbd8; padding:10px; border-radius:4px; margin-bottom:15px; font-weight:bold; font-size:0.9em;">
+                    </div>
 
                     <div class="form-row three">
                         <div class="form-group">
@@ -763,13 +807,13 @@ try {
 
                 <!-- TAB 2: Work & Payroll -->
                 <div id="tab-work" class="tab-content">
-                    
+
                     <div class="form-row">
                         <div class="form-group" style="grid-column: span 2;">
                             <label>Location / Factory / المصنع</label>
                             <select name="location_id" id="m_location">
                                 <option value="">-- Select Factory --</option>
-                                <?php foreach($all_locations as $loc): ?>
+                                <?php foreach ($all_locations as $loc): ?>
                                     <option value="<?= $loc['id'] ?>"><?= htmlspecialchars($loc['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -779,19 +823,21 @@ try {
                     <div class="form-row">
                         <div class="form-group">
                             <label>Function / Fonction / الوظيفة (Optional)</label>
-                            <input type="text" name="function_title" id="m_function" list="funcList" placeholder="Select or type a function...">
+                            <input type="text" name="function_title" id="m_function" list="funcList"
+                                placeholder="Select or type a function...">
                             <datalist id="funcList">
-                                <?php foreach($funcs as $f): ?>
+                                <?php foreach ($funcs as $f): ?>
                                     <option value="<?= htmlspecialchars($f) ?>">
-                                <?php endforeach; ?>
+                                    <?php endforeach; ?>
                             </datalist>
                         </div>
                         <div class="form-group">
                             <label>Department / Département / القسم</label>
                             <select name="department" id="m_dept">
                                 <option value="">-- Select Department --</option>
-                                <?php foreach($all_departments as $ad): ?>
-                                    <option value="<?= htmlspecialchars($ad['name']) ?>"><?= htmlspecialchars($ad['name']) ?></option>
+                                <?php foreach ($all_departments as $ad): ?>
+                                    <option value="<?= htmlspecialchars($ad['name']) ?>">
+                                        <?= htmlspecialchars($ad['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -802,8 +848,9 @@ try {
                             <label>Team Leader / رئيس الفريق</label>
                             <select name="manager_cin" id="m_manager">
                                 <option value="">-- No Direct Leader --</option>
-                                <?php foreach($all_managers as $mgr): ?>
-                                    <option value="<?= $mgr['cin'] ?>"><?= htmlspecialchars($mgr['name']) ?> (<?= $mgr['cin'] ?>)</option>
+                                <?php foreach ($all_managers as $mgr): ?>
+                                    <option value="<?= $mgr['cin'] ?>"><?= htmlspecialchars($mgr['name']) ?>
+                                        (<?= $mgr['cin'] ?>)</option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -811,8 +858,9 @@ try {
                             <label>Shift / الفترة</label>
                             <select name="current_shift" id="m_shift">
                                 <option value="">-- No Shift assigned --</option>
-                                <?php foreach($all_shifts as $sh): ?>
-                                    <option value="<?= $sh['code'] ?>"><?= htmlspecialchars($sh['name']) ?> (<?= $sh['code'] ?>)</option>
+                                <?php foreach ($all_shifts as $sh): ?>
+                                    <option value="<?= $sh['code'] ?>"><?= htmlspecialchars($sh['name']) ?>
+                                        (<?= $sh['code'] ?>)</option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -841,7 +889,15 @@ try {
                     <div class="form-row"
                         style="background:#f8f9fa; padding:15px; border-radius:4px; border:1px solid #ddd;">
                         <div class="form-group" style="margin-bottom:0;">
-                            <label style="color:#28a745;">Hourly Rate / Taux / الأجر بالساعة (MAD/h)*</label>
+                            <label style="color:#28a745;">Payment Type / نوع الدفع*</label>
+                            <select name="payment_type" id="m_payment_type" required
+                                style="font-size:1.1em; font-weight:bold; color:#28a745;">
+                                <option value="Hourly">Hourly / الأجر بالساعة</option>
+                                <option value="Monthly">Monthly / الراتب الشهري</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="color:#28a745;">Rate / Salary / الراتب (MAD)*</label>
                             <input type="number" step="0.01" name="hourly_rate" id="m_rate" value="9.00" required
                                 style="font-size:1.2em; font-weight:bold; color:#28a745;">
                         </div>
@@ -894,10 +950,12 @@ try {
 
                 <!-- TAB 4: History / Ségil -->
                 <div id="tab-history" class="tab-content">
-                    <div style="background:#fff3cd; padding:15px; border-radius:4px; margin-bottom:15px; color:#856404; font-size:0.9em;">
-                        <strong>Historical Log:</strong> This tab records function changes, team transfers, and shift alterations chronologically.
+                    <div
+                        style="background:#fff3cd; padding:15px; border-radius:4px; margin-bottom:15px; color:#856404; font-size:0.9em;">
+                        <strong>Historical Log:</strong> This tab records function changes, team transfers, and shift
+                        alterations chronologically.
                     </div>
-                    
+
                     <div id="employeeHistoryContainer" class="history-timeline">
                         <!-- Populated by JS -->
                     </div>
@@ -970,6 +1028,7 @@ try {
             document.getElementById('m_hire').value = emp.hire_date || '';
             document.getElementById('m_contract').value = emp.contract_type || 'CDI';
             document.getElementById('m_cnss').value = emp.cnss_number || '';
+            document.getElementById('m_payment_type').value = emp.payment_type || 'Hourly';
             document.getElementById('m_rate').value = emp.hourly_rate;
 
             // ISO 45001
@@ -982,18 +1041,18 @@ try {
             document.getElementById('statusGroup').style.display = 'block';
 
             document.getElementById('modalSubmitBtn').innerText = '💾 Update / Modifier / تحديث';
-            
+
             // Build History Timeline
             document.getElementById('historyTabBtn').style.display = 'inline-block';
             const histContainer = document.getElementById('employeeHistoryContainer');
             histContainer.innerHTML = '';
-            
+
             if (employeeHistories[emp.id] && employeeHistories[emp.id].length > 0) {
                 employeeHistories[emp.id].forEach(h => {
                     let text = `Changed <b>${h.change_type}</b>`;
-                    if(h.old_value) text += ` from <i>${h.old_value}</i>`;
-                    if(h.new_value) text += ` to <b>${h.new_value}</b>`;
-                    
+                    if (h.old_value) text += ` from <i>${h.old_value}</i>`;
+                    if (h.new_value) text += ` to <b>${h.new_value}</b>`;
+
                     histContainer.innerHTML += `
                         <div class="timeline-item">
                             <div class="timeline-date">🗓️ ${h.changed_at} - <small>By: ${h.acting_user}</small></div>
@@ -1035,11 +1094,11 @@ try {
                     if (isChecked) toggleField(t, cb); // apply state
                 }
             });
-            
+
             // Kinship Check Triggers
             const lnameInput = document.getElementById('m_last');
             const addressInput = document.getElementById('m_address');
-            
+
             let kinshipTimeout;
             function runKinshipCheck() {
                 clearTimeout(kinshipTimeout);
@@ -1047,35 +1106,35 @@ try {
                     const lname = lnameInput.value;
                     const addr = addressInput.value;
                     const empId = document.getElementById('emp_id').value;
-                    
+
                     if (lname.trim().length > 2 || addr.trim().length > 10) {
                         const formData = new FormData();
                         formData.append('last_name', lname);
                         formData.append('address', addr);
                         formData.append('emp_id', empId);
-                        
+
                         fetch('hr_employees.php?action=check_kinship', {
                             method: 'POST',
                             body: formData
                         })
-                        .then(r => r.json())
-                        .then(data => {
-                            const warningDiv = document.getElementById('kinshipWarning');
-                            if (data.warnings && data.warnings.length > 0) {
-                                warningDiv.style.display = 'block';
-                                warningDiv.innerHTML = data.warnings.join('<br>');
-                            } else {
-                                warningDiv.style.display = 'none';
-                                warningDiv.innerHTML = '';
-                            }
-                        })
-                        .catch(err => console.error('Kinship check error:', err));
+                            .then(r => r.json())
+                            .then(data => {
+                                const warningDiv = document.getElementById('kinshipWarning');
+                                if (data.warnings && data.warnings.length > 0) {
+                                    warningDiv.style.display = 'block';
+                                    warningDiv.innerHTML = data.warnings.join('<br>');
+                                } else {
+                                    warningDiv.style.display = 'none';
+                                    warningDiv.innerHTML = '';
+                                }
+                            })
+                            .catch(err => console.error('Kinship check error:', err));
                     } else {
                         document.getElementById('kinshipWarning').style.display = 'none';
                     }
                 }, 800);
             }
-            
+
             lnameInput.addEventListener('input', runKinshipCheck);
             addressInput.addEventListener('input', runKinshipCheck);
         });

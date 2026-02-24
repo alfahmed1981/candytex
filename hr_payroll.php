@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
         $pdo->beginTransaction();
 
         // Fetch all active employees (and inactive ones who worked this period)
-        $emp_stmt = $pdo->query("SELECT id, hourly_rate FROM hr_employees");
+        $emp_stmt = $pdo->query("SELECT id, hourly_rate, payment_type FROM hr_employees");
         $employees = $emp_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $ins_stmt = $pdo->prepare("INSERT INTO hr_payroll 
@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
         foreach ($employees as $emp) {
             $eid = $emp['id'];
             $rate = floatval($emp['hourly_rate']);
+            $payment_type = $emp['payment_type'] ?? 'Hourly';
 
             // Sum hours worked in the period
             $hr_stmt = $pdo->prepare("SELECT SUM(hours_worked) FROM hr_attendance WHERE employee_id = ? AND work_date BETWEEN ? AND ?");
@@ -63,7 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
                 $adv = $existing ? floatval($existing['advances']) : 0.00;
 
                 // MATH RULES based on Excel
-                $brut = $total_hours * $rate;
+                if ($payment_type === 'Monthly') {
+                    $brut = $rate; // Monthly rate is fixed
+                } else {
+                    $brut = $total_hours * $rate; // Hourly computation
+                }
+
                 $net = $brut - $cnss - $adv + $trans;
 
                 // ROUNDING RULE: (e.g. 2412.53 -> 2420)
@@ -122,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_adjustments'])) 
 }
 
 // Fetch Payroll Data
-$stmt = $pdo->prepare("SELECT p.*, e.matricule, e.full_name, e.function_title, e.department, e.hourly_rate 
+$stmt = $pdo->prepare("SELECT p.*, e.matricule, e.full_name, e.function_title, e.department, e.payment_type, e.hourly_rate 
                        FROM hr_payroll p 
                        JOIN hr_employees e ON p.employee_id = e.id 
                        WHERE p.payroll_month = ? AND p.payroll_year = ? 
@@ -344,8 +350,10 @@ foreach ($payroll_records as $r) {
                                     <td class="text-left">
                                         <?= htmlspecialchars($r['function_title']) ?>
                                     </td>
-                                    <td>
+                                    <td style="white-space:nowrap;">
                                         <?= number_format($r['hourly_rate'], 2) ?>
+                                        <br><small
+                                            style="color:#888;"><?= $r['payment_type'] === 'Monthly' ? 'MAD/month' : 'MAD/h' ?></small>
                                     </td>
                                     <td style="font-weight:bold;">
                                         <?= number_format($r['total_hours'], 2) ?>

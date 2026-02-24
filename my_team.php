@@ -34,6 +34,7 @@ try {
     run_sql_file($pdo, 'hr_schema_v2.sql');
     run_sql_file($pdo, 'hr_schema_v3.sql');
     run_sql_file($pdo, 'hr_schema_v4.sql');
+    run_sql_file($pdo, 'hr_schema_v5.sql');
 } catch (Exception $e) {
 }
 
@@ -83,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // --- ADD BY MATRICULE ---
     if (isset($_POST['add_by_matricule'])) {
         $add_mat = trim($_POST['matricule']);
-        
+
         $target_manager = $user_cin;
         if ($is_admin && isset($_POST['target_manager']) && !empty($_POST['target_manager'])) {
             $target_manager = $_POST['target_manager'];
@@ -100,10 +101,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = "⚠️ العامل " . htmlspecialchars($emp['full_name']) . " موجود بالفعل في هذا الفريق.";
                 } else {
                     $old_manager = $emp['manager_cin'];
-                    
+
                     // Update manager
                     $pdo->prepare("UPDATE hr_employees SET manager_cin = ? WHERE id = ?")->execute([$target_manager, $emp['id']]);
-                    
+
                     // Log to history
                     $pdo->prepare("INSERT INTO hr_employee_history (employee_id, change_type, old_value, new_value, changed_by_cin) VALUES (?, 'TEAM_TRANSFER', ?, ?, ?)")
                         ->execute([$emp['id'], $old_manager, $target_manager, $user_cin]);
@@ -386,18 +387,22 @@ if ($view_cin !== $user_cin && $is_admin) {
             <?php endif; ?>
 
             <!-- ADD BY MATRICULE FORM -->
-            <div class="form-box" style="margin-bottom:20px; border-left:4px solid #0984e3; background:#e3f2fd; border-radius:8px; padding:15px;">
+            <div class="form-box"
+                style="margin-bottom:20px; border-left:4px solid #0984e3; background:#e3f2fd; border-radius:8px; padding:15px;">
                 <h4 style="margin-top:0; color:#0984e3;">➕ Add Employee to Team / إضافة عامل للفريق</h4>
-                <p style="font-size:12px; color:#555; margin-bottom:10px;">أدخل رقم التسجيل (Matricule) الخاص بالعامل لضمه إلى فريقك ليظهر في قائمة الحضور.</p>
+                <p style="font-size:12px; color:#555; margin-bottom:10px;">أدخل رقم التسجيل (Matricule) الخاص بالعامل
+                    لضمه إلى فريقك ليظهر في قائمة الحضور.</p>
                 <form method="POST" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
                     <?php if ($is_admin): ?>
                         <input type="hidden" name="target_manager" value="<?= htmlspecialchars($view_cin) ?>">
                     <?php endif; ?>
                     <div style="flex:1; min-width:200px;">
-                        <input type="text" name="matricule" placeholder="Enter Matricule... (مثال: AB1234)" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-weight:bold;">
+                        <input type="text" name="matricule" placeholder="Enter Matricule... (مثال: AB1234)" required
+                            style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-weight:bold;">
                     </div>
                     <div>
-                        <button type="submit" name="add_by_matricule" style="background:#0984e3; color:white; padding:10px 20px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
+                        <button type="submit" name="add_by_matricule"
+                            style="background:#0984e3; color:white; padding:10px 20px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
                             🔍 البحث والإضافة
                         </button>
                     </div>
