@@ -173,9 +173,9 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <div class="form-group" style="margin: 0;">
-                    <label>Department / القسم</label>
+                    <label>Department (CNSS) / القسم</label>
                     <select name="department" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
-                        <option value="All">-- All Depts --</option>
+                        <option value="All">-- All --</option>
                         <?php foreach ($departments as $dept): ?>
                             <option value="<?= htmlspecialchars($dept) ?>" <?= $department_filter === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
                         <?php endforeach; ?>
@@ -302,5 +302,159 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             });
         }
     </script>
+
+    <?php if ($is_admin): ?>
+    <!-- Excel Import Modal -->
+    <div id="importModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+        <div class="modal-content" style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:400px; border-radius:8px;">
+            <span onclick="closeImportModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+            <h2>Import PAIE Excel</h2>
+            <p style="color:#666; font-size:0.9em; margin-bottom:15px;">Please upload the standard monthly PAIE Excel file. The system will extract days 26 to 25 from both <b>HORAIRE</b> and <b>mens</b> sheets efficiently.</p>
+            <input type="file" id="excelFile" accept=".xlsx, .xls" style="margin-bottom: 20px; width: 100%;">
+            <button onclick="closeImportModal()" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        function openImportModal() {
+            document.getElementById('importModal').style.display = 'block';
+        }
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    const sheetNamesToProcess = ['HORAIRE', 'mens', 'MENS', 'Mens'];
+                    let foundAnySheet = false;
+                    const records = [];
+
+                    // Dates mapping (Nov 26 to Dec 25 mapped to cols 7 to 36)
+                    const dates = [];
+                    for(let d=26; d<=30; d++) dates.push(`2025-11-${d}`);
+                    for(let d=1; d<=25; d++) dates.push(`2025-12-${String(d).padStart(2, '0')}`);
+
+                    sheetNamesToProcess.forEach(sheetName => {
+                        if(workbook.Sheets[sheetName]) {
+                            foundAnySheet = true;
+                            const sheet = workbook.Sheets[sheetName];
+                            const rowData = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: null});
+
+                            // Data starts at row index 3
+                            for (let i = 3; i < rowData.length; i++) {
+                                const row = rowData[i];
+                                if (!row || row.length < 5) continue;
+
+                                let matricule = row[0];
+                                if (!matricule) continue;
+                                matricule = String(matricule).trim();
+                                
+                                // Check if numeric matricule
+                                if (isNaN(parseInt(matricule))) continue;
+
+                                // Column C check (some employees might have CNSS info, we skip or use it as needed. Let's just focus on dates 7-36)
+                                for (let col = 7; col <= 36; col++) {
+                                    const dateStr = dates[col - 7];
+                                    let cellValue = row[col];
+                                    
+                                    if (cellValue === null || cellValue === undefined || cellValue === '') continue; // skip blank
+                                    
+                                    cellValue = String(cellValue).trim().toUpperCase();
+                                    
+                                    let status = 'P';
+                                    let hours = 0;
+
+                                    if (cellValue === 'A') {
+                                        status = 'A';
+                                    } else if (cellValue === 'W' || cellValue.includes('*')) {
+                                        status = 'W';
+                                    } else {
+                                        let parsed = parseFloat(cellValue);
+                                        if (!isNaN(parsed)) {
+                                            status = 'P';
+                                            hours = parsed;
+                                        } else {
+                                            continue; // empty/unknown
+                                        }
+                                    }
+
+                                    records.push({
+                                        matricule: matricule,
+                                        date: dateStr,
+                                        hours: hours,
+                                        status: status
+                                    });
+                                }
+                            }
+                        }
+                    });
+
+                    if (!foundAnySheet) {
+                        Swal.fire('Error', 'Could not find HORAIRE or mens sheets in the Excel file.', 'error');
+                        return;
+                    }
+
+                    if (records.length === 0) {
+                        Swal.fire('Information', 'No valid attendance data found to import.', 'info');
+                        return;
+                    }
+
+                    // Confirm and Send to API
+                    Swal.fire({
+                        title: 'Ready to Import',
+                        text: `Found ${records.length} daily pointage records across multiple sheets. Do you want to save them to the database?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Import Now',
+                        showLoaderOnConfirm: true,
+                        preConfirm: () => {
+                            return fetch('api_import_attendance.php', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': '<?= $_SESSION['csrf_token'] ?>'
+                                },
+                                body: JSON.stringify({ records: records })
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.json().then(err => { throw new Error(err.error || response.statusText) });
+                                }
+                                return response.json();
+                            })
+                            .catch(error => {
+                                Swal.showValidationMessage(`Request failed: ${error}`);
+                            })
+                        },
+                        allowOutsideClick: () => !Swal.isLoading()
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: result.value.message,
+                                icon: 'success'
+                            }).then(() => {
+                                closeImportModal();
+                                window.location.reload();
+                            });
+                        }
+                    });
+
+                } catch(err) {
+                    Swal.fire('Error', 'Failed to parse Excel file: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+    <?php endif; ?>
 </body>
 </html>
