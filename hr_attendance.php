@@ -448,9 +448,9 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRF-Token': '<?= $_SESSION['csrf_token'] ?>'
+                                    'X-CSRF-Token': '<?= csrf_token() ?>'
                                 },
-                                body: JSON.stringify({ records: records, payrolls: payrolls })
+                                body: JSON.stringify({ records: records, payrolls: payrolls, csrf_token: '<?= csrf_token() ?>' })
                             })
                             .then(response => {
                                 if (!response.ok) {

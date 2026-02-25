@@ -23,15 +23,22 @@ if (!isset($data['records']) || !is_array($data['records'])) {
 }
 
 // CSRF check
-$headers = getallheaders();
 $csrf_token = '';
-if (isset($headers['X-CSRF-Token'])) {
-    $csrf_token = $headers['X-CSRF-Token'];
-} elseif (isset($data['csrf_token'])) {
+if (isset($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+    $csrf_token = $_SERVER['HTTP_X_CSRF_TOKEN'];
+} elseif (function_exists('getallheaders')) {
+    $headers = getallheaders();
+    if (isset($headers['X-CSRF-Token'])) {
+        $csrf_token = $headers['X-CSRF-Token'];
+    } elseif (isset($headers['X-Csrf-Token'])) {
+        $csrf_token = $headers['X-Csrf-Token'];
+    }
+}
+if (empty($csrf_token) && isset($data['csrf_token'])) {
     $csrf_token = $data['csrf_token'];
 }
 
-if (!hash_equals($_SESSION['csrf_token'], $csrf_token)) {
+if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrf_token)) {
     http_response_code(403);
     echo json_encode(['error' => 'Invalid CSRF token']);
     exit;
