@@ -293,7 +293,8 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <option value="">-- All Factories --</option>
                             <?php foreach ($all_locations as $loc): ?>
                                 <option value="<?= $loc['id'] ?>" <?= $location_filter == $loc['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($loc['name']) ?></option>
+                                    <?= htmlspecialchars($loc['name']) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -316,7 +317,8 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <option value="">-- All Functions --</option>
                             <?php foreach ($all_functions as $func): ?>
                                 <option value="<?= htmlspecialchars($func) ?>" <?= $function_filter === $func ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($func) ?></option>
+                                    <?= htmlspecialchars($func) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -378,25 +380,35 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <td style="text-align:center;">
                                     <select name="attendance[<?= $emp['id'] ?>][status]" class="select-status att-status"
                                         onchange="updateRowColor(this)">
-                                        <option value="P" <?= $emp['att_status'] == 'P' ? 'selected' : '' ?>>Present / Présent / حاضر (P)
+                                        <option value="P" <?= $emp['att_status'] == 'P' ? 'selected' : '' ?>>Present / Présent
+                                            / حاضر (P)
                                         </option>
-                                        <option value="A" <?= $emp['att_status'] == 'A' ? 'selected' : '' ?>>Absent / Absent / غائب (A)
+                                        <option value="A" <?= $emp['att_status'] == 'A' ? 'selected' : '' ?>>Absent / Absent /
+                                            غائب (A)
                                         </option>
-                                        <option value="W" <?= $emp['att_status'] == 'W' ? 'selected' : '' ?>>Weekend / Week-end / عطلة (****)
+                                        <option value="W" <?= $emp['att_status'] == 'W' ? 'selected' : '' ?>>Weekend / Week-end
+                                            / عطلة (****)
                                         </option>
-                                        <option value="M" <?= $emp['att_status'] == 'M' ? 'selected' : '' ?>>Disease / Maladie 🤒 / مرض (M)
+                                        <option value="M" <?= $emp['att_status'] == 'M' ? 'selected' : '' ?>>Disease / Maladie
+                                            🤒 / مرض (M)
                                         </option>
-                                        <option value="MAT" <?= $emp['att_status'] == 'MAT' ? 'selected' : '' ?>>Maternity / Maternité 🤰 / أمومة
+                                        <option value="MAT" <?= $emp['att_status'] == 'MAT' ? 'selected' : '' ?>>Maternity /
+                                            Maternité 🤰 / أمومة
                                             (MAT)</option>
-                                        <option value="AT" <?= $emp['att_status'] == 'AT' ? 'selected' : '' ?>>Work Accident / Accident Travail 🚑 / حادثة شغل (AT)
+                                        <option value="AT" <?= $emp['att_status'] == 'AT' ? 'selected' : '' ?>>Work Accident /
+                                            Accident Travail 🚑 / حادثة شغل (AT)
                                         </option>
-                                        <option value="MP" <?= $emp['att_status'] == 'MP' ? 'selected' : '' ?>>Disciplinary / Mise à pied ⚖️ / توقيف عن العمل
+                                        <option value="MP" <?= $emp['att_status'] == 'MP' ? 'selected' : '' ?>>Disciplinary /
+                                            Mise à pied ⚖️ / توقيف عن العمل
                                             (MP)</option>
-                                        <option value="AI" <?= $emp['att_status'] == 'AI' ? 'selected' : '' ?>>Justified / Absence Justifiée 📄 / غياب مبرر
+                                        <option value="AI" <?= $emp['att_status'] == 'AI' ? 'selected' : '' ?>>Justified /
+                                            Absence Justifiée 📄 / غياب مبرر
                                             (AI)</option>
-                                        <option value="CP" <?= $emp['att_status'] == 'CP' ? 'selected' : '' ?>>Paid Leave / Congé Payé 🏖️ / عطلة مدفوعة الأجر
+                                        <option value="CP" <?= $emp['att_status'] == 'CP' ? 'selected' : '' ?>>Paid Leave /
+                                            Congé Payé 🏖️ / عطلة مدفوعة الأجر
                                             (CP)</option>
-                                        <option value="R" <?= $emp['att_status'] == 'R' ? 'selected' : '' ?>>Lateness / Retard ⏱️ / تأخر (R)
+                                        <option value="R" <?= $emp['att_status'] == 'R' ? 'selected' : '' ?>>Lateness / Retard
+                                            ⏱️ / تأخر (R)
                                         </option>
                                     </select>
                                     <button type="button" class="btn-primary"
@@ -433,9 +445,9 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <script>
         function updateRowColor(selectElem) {
-            const tr = selectElem.closest('tr')  ;
+            const tr = selectElem.closest('tr');
             tr.className = 'status-' + selectElem.value;
-            
+
             // Auto blank hours if A or W
             const hoursInput = tr.querySelector('.att-hours');
             if (selectElem.value === 'A' || selectElem.value === 'W') {
@@ -450,7 +462,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             trs.forEach(tr => {
                 const statusSelect = tr.querySelector('.att-status');
                 const hoursInput = tr.querySelector('.att-hours');
-                
+
                 if (statusSelect && hoursInput) {
                     statusSelect.value = status;
                     if (status === 'A' || status === 'W') {
@@ -466,11 +478,16 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <?php if ($is_admin): ?>
         <!-- Excel Import Modal -->
-        <div id="importModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
-            <div class="modal-content" style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:400px; border-radius:8px;">
-                <span onclick="closeImportModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+        <div id="importModal" class="modal"
+            style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+            <div class="modal-content"
+                style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:400px; border-radius:8px;">
+                <span onclick="closeImportModal()"
+                    style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
                 <h2>Import PAIE Excel</h2>
-                <p style="color:#666; font-size:0.9em; margin-bottom:15px;">Please upload the standard monthly PAIE Excel file. The system will extract days 26 to 25 from both <b>HORAIRE</b> and <b>mens</b> sheets efficiently.</p>
+                <p style="color:#666; font-size:0.9em; margin-bottom:15px;">Please upload the standard monthly PAIE Excel
+                    file. The system will extract days 26 to 25 from both <b>HORAIRE</b> and <b>mens</b> sheets efficiently.
+                </p>
                 <input type="file" id="excelFile" accept=".xlsx, .xls" style="margin-bottom: 20px; width: 100%;">
                 <button onclick="closeImportModal()" class="btn-cancel">Cancel</button>
             </div>
@@ -484,16 +501,16 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 document.getElementById('importModal').style.display = 'none';
             }
 
-            document.getElementById('excelFile').addEventListener('change', function(e) {
+            document.getElementById('excelFile').addEventListener('change', function (e) {
                 const file = e.target.files[0];
                 if (!file) return;
 
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function (e) {
                     try {
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {type: 'array'});
-                    
+                        const workbook = XLSX.read(data, { type: 'array' });
+
                         const sheetNamesToProcess = ['HORAIRE', 'mens', 'MENS', 'Mens'];
                         let foundAnySheet = false;
                         const records = [];
@@ -501,14 +518,14 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         // Dates mapping (Nov 26 to Dec 25 mapped to cols 7 to 36)
                         const dates = [];
-                        for(let d=26; d<=30; d++) dates.push(`2025-11-${d}`);
-                        for(let d=1; d<=25; d++) dates.push(`2025-12-${String(d).padStart(2, '0')}`);
+                        for (let d = 26; d <= 30; d++) dates.push(`2025-11-${d}`);
+                        for (let d = 1; d <= 25; d++) dates.push(`2025-12-${String(d).padStart(2, '0')}`);
 
                         sheetNamesToProcess.forEach(sheetName => {
-                            if(workbook.Sheets[sheetName]) {
+                            if (workbook.Sheets[sheetName]) {
                                 foundAnySheet = true;
                                 const sheet = workbook.Sheets[sheetName];
-                                const rowData = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: null});
+                                const rowData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
 
                                 // Data starts at row index 3
                                 for (let i = 3; i < rowData.length; i++) {
@@ -518,7 +535,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     let matricule = row[0];
                                     if (!matricule) continue;
                                     matricule = String(matricule).trim();
-                                
+
                                     // Extract Payroll Data based on sheet type
                                     let cnss = '';
                                     let brut = 0;
@@ -553,11 +570,11 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     for (let col = 7; col <= 36; col++) {
                                         const dateStr = dates[col - 7];
                                         let cellValue = row[col];
-                                    
+
                                         if (cellValue === null || cellValue === undefined || cellValue === '') continue; // skip blank
-                                    
+
                                         cellValue = String(cellValue).trim().toUpperCase();
-                                    
+
                                         let status = 'P';
                                         let hours = 0;
 
@@ -613,15 +630,15 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     },
                                     body: JSON.stringify({ records: records, payrolls: payrolls, csrf_token: '<?= csrf_token() ?>' })
                                 })
-                                .then(response => {
-                                    if (!response.ok) {
-                                        return response.json().then(err => { throw new Error(err.error || response.statusText) });
-                                    }
-                                    return response.json();
-                                })
-                                .catch(error => {
-                                    Swal.showValidationMessage(`Request failed: ${error}`);
-                                })
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            return response.json().then(err => { throw new Error(err.error || response.statusText) });
+                                        }
+                                        return response.json();
+                                    })
+                                    .catch(error => {
+                                        Swal.showValidationMessage(`Request failed: ${error}`);
+                                    })
                             },
                             allowOutsideClick: () => !Swal.isLoading()
                         }).then((result) => {
@@ -637,7 +654,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             }
                         });
 
-                    } catch(err) {
+                    } catch (err) {
                         Swal.fire('Error', 'Failed to parse Excel file: ' + err.message, 'error');
                     }
                 };
@@ -646,19 +663,25 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </script>
     <?php endif; ?>
     <!-- Advanced Absence Modal -->
-    <div id="absenceModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
-        <div class="modal-content" style="background-color:#fefefe; margin:10% auto; padding:20px; border:1px solid #888; width:500px; border-radius:8px;">
-            <span onclick="closeAbsenceModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+    <div id="absenceModal" class="modal"
+        style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.5);">
+        <div class="modal-content"
+            style="background-color:#fefefe; margin:10% auto; padding:20px; border:1px solid #888; width:500px; border-radius:8px;">
+            <span onclick="closeAbsenceModal()"
+                style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
             <h2 id="absModalTitle">Record Legal Absence / Justification</h2>
             <p id="absModalEmpName" style="color:#0b3c5d; font-weight:bold;"></p>
-            
-            <form id="absenceForm" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;" onsubmit="event.preventDefault(); saveAbsence();">
+
+            <form id="absenceForm" style="display:flex; flex-direction:column; gap:10px; margin-top:15px;"
+                onsubmit="event.preventDefault(); saveAbsence();">
                 <input type="hidden" id="absEmpId">
                 <input type="hidden" id="absOriginalDate">
-                
+
                 <div class="form-group" style="margin: 0;">
                     <label>Absence Type / نوع التبرير / Type</label>
-                    <select id="absType" required style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;" onchange="toggleLateness()">
+                    <select id="absType" required
+                        style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;"
+                        onchange="toggleLateness()">
                         <option value="M">Disease / Maladie 🤒 / مرض</option>
                         <option value="MAT">Maternity / Maternité 🤰 / أمومة</option>
                         <option value="AT">Work Accident / Accident Travail 🚑 / حادثة شغل</option>
@@ -671,36 +694,89 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <div id="latenessDiv" style="display:none; margin: 0;">
                     <label>Lateness Duration (Minutes) / دقائق التأخير</label>
-                    <input type="number" id="absLateness" min="1" placeholder="e.g. 15" style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <input type="number" id="absLateness" min="1" placeholder="e.g. 15"
+                        style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
 
                 <div id="dateRangeDiv" style="display:flex; gap:10px; margin: 0;">
                     <div style="flex:1;">
                         <label>Start / من</label>
-                        <input type="date" id="absStart" required style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <input type="date" id="absStart" required
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
                     </div>
                     <div style="flex:1;">
                         <label>End / إلى</label>
-                        <input type="date" id="absEnd" required style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <input type="date" id="absEnd" required
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
                     </div>
                 </div>
 
-                <div class="form-group" id="certDiv" style="margin: 0;">
-                    <label>Certificate / Report # (Optional)</label>
-                    <input type="text" id="absCert" placeholder="e.g. CERT-2026-001" style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                <!-- New CNSS Medical / Maternité Fields -->
+                <div id="medicalDiv" style="display:none; gap:10px; margin: 0;">
+                    <div style="flex:1;">
+                        <label>Doctor Name / الطبيب المعالج</label>
+                        <input type="text" id="absDoctorName" placeholder="Dr. XYZ"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label>INPE (Doctor ID)</label>
+                        <input type="text" id="absDoctorINPE" placeholder="e.g. 123456789"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div id="maternityDiv" style="display:none; margin: 0;">
+                    <label>Expected Delivery Date (DPA) / تاريخ الولادة المتوقع</label>
+                    <input type="date" id="absMaternityDate"
+                        style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <div id="accidentDiv" style="display:none; gap:10px; margin: 0;">
+                    <div style="flex:1;">
+                        <label>Accident Date / تاريخ الحادثة</label>
+                        <input type="date" id="absAccidentDate"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Location / مكان الحادثة</label>
+                        <input type="text" id="absAccidentLocation" placeholder="e.g. Atelier 1"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div id="certDivWrapper" style="display:flex; gap:10px; margin: 0;">
+                    <div class="form-group" id="certDiv" style="flex:1; margin: 0;">
+                        <label>Certificate / Report # (Optional)</label>
+                        <input type="text" id="absCert" placeholder="e.g. CERT-2026-001"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div class="form-group" id="certDateDiv" style="flex:1; margin: 0;">
+                        <label>Cert Date / تاريخ الشهادة</label>
+                        <input type="date" id="absCertDate"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
                 </div>
 
                 <div class="form-group" id="extendDiv" style="display:flex; align-items:center; gap:5px; margin: 0;">
-                    <input type="checkbox" id="absExtend">
+                    <input type="checkbox" id="absExtend" onchange="toggleExtensionReason()">
                     <label for="absExtend" style="margin:0;">This is an extension (Prolongation) / تمديد</label>
+                </div>
+
+                <div id="extendReasonDiv" style="display:none; margin: 0;">
+                    <label style="color:#d84315; font-weight:bold;">Extension Reason / سبب التمديد</label>
+                    <input type="text" id="absExtendReason" placeholder="e.g. Complications suite à la maladie"
+                        style="width:100%; padding:8px; border: 1px solid #d84315; border-radius: 4px;">
                 </div>
 
                 <div class="form-group" style="margin: 0;">
                     <label>Comments / ملاحظات</label>
-                    <textarea id="absComments" rows="3" style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+                    <textarea id="absComments" rows="3"
+                        style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
                 </div>
 
-                <button type="submit" class="btn-save" style="background:#0b3c5d; width:100%; margin-top:10px; padding: 10px;">💾 Save & Auto-Sync / حفظ</button>
+                <button type="submit" class="btn-save"
+                    style="background:#0b3c5d; width:100%; margin-top:10px; padding: 10px;">💾 Save & Auto-Sync /
+                    حفظ</button>
             </form>
         </div>
     </div>
@@ -712,8 +788,8 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('absOriginalDate').value = currentDate;
             document.getElementById('absStart').value = currentDate;
             document.getElementById('absEnd').value = currentDate;
-            
-            if(['M','MAT','AT','MP','AI','CP','R'].includes(currentStatus)) {
+
+            if (['M', 'MAT', 'AT', 'MP', 'AI', 'CP', 'R'].includes(currentStatus)) {
                 document.getElementById('absType').value = currentStatus;
             } else {
                 document.getElementById('absType').value = 'M';
@@ -726,22 +802,51 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('absenceModal').style.display = 'none';
         }
 
+        function toggleExtensionReason() {
+            const isExtend = document.getElementById('absExtend').checked;
+            document.getElementById('extendReasonDiv').style.display = isExtend ? 'block' : 'none';
+            document.getElementById('absExtendReason').required = isExtend;
+        }
+
         function toggleLateness() {
             const type = document.getElementById('absType').value;
+
+            // Hide all advanced sections first
+            document.getElementById('latenessDiv').style.display = 'none';
+            document.getElementById('dateRangeDiv').style.display = 'flex';
+            document.getElementById('certDivWrapper').style.display = 'flex';
+            document.getElementById('extendDiv').style.display = 'flex';
+            document.getElementById('medicalDiv').style.display = 'none';
+            document.getElementById('maternityDiv').style.display = 'none';
+            document.getElementById('accidentDiv').style.display = 'none';
+
+            // Reset required flags
+            document.getElementById('absLateness').required = false;
+            document.getElementById('absEnd').required = true;
+            document.getElementById('absDoctorName').required = false;
+            document.getElementById('absDoctorINPE').required = false;
+            document.getElementById('absMaternityDate').required = false;
+            document.getElementById('absAccidentDate').required = false;
+
             if (type === 'R') {
                 document.getElementById('latenessDiv').style.display = 'block';
                 document.getElementById('dateRangeDiv').style.display = 'none';
-                document.getElementById('certDiv').style.display = 'none';
+                document.getElementById('certDivWrapper').style.display = 'none';
                 document.getElementById('extendDiv').style.display = 'none';
                 document.getElementById('absLateness').required = true;
                 document.getElementById('absEnd').required = false;
-            } else {
-                document.getElementById('latenessDiv').style.display = 'none';
-                document.getElementById('dateRangeDiv').style.display = 'flex';
-                document.getElementById('certDiv').style.display = 'block';
-                document.getElementById('extendDiv').style.display = 'flex';
-                document.getElementById('absLateness').required = false;
-                document.getElementById('absEnd').required = true;
+                document.getElementById('absExtend').checked = false; // Reset extension if R
+                toggleExtensionReason();
+            } else if (type === 'M') {
+                document.getElementById('medicalDiv').style.display = 'flex';
+                // Note: Not strictly making INPE required right now to prevent blocking, but showing it.
+            } else if (type === 'MAT') {
+                document.getElementById('medicalDiv').style.display = 'flex';
+                document.getElementById('maternityDiv').style.display = 'block';
+                document.getElementById('absMaternityDate').required = true;
+            } else if (type === 'AT') {
+                document.getElementById('accidentDiv').style.display = 'flex';
+                document.getElementById('absAccidentDate').required = true;
             }
         }
 
@@ -755,8 +860,16 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 end_date: type === 'R' ? document.getElementById('absStart').value : document.getElementById('absEnd').value,
                 cert_num: document.getElementById('absCert').value,
                 comments: document.getElementById('absComments').value,
-                is_extension: document.getElementById('absExtend').checked,
-                lateness_minutes: document.getElementById('absLateness').value
+                is_extension: document.getElementById('absExtend').checked ? 1 : 0,
+                lateness_minutes: document.getElementById('absLateness').value,
+                // New CNSS Fields
+                doctor_name: document.getElementById('absDoctorName').value,
+                doctor_inpe: document.getElementById('absDoctorINPE').value,
+                certificate_date: document.getElementById('absCertDate').value,
+                maternity_expected_date: document.getElementById('absMaternityDate').value,
+                accident_date: document.getElementById('absAccidentDate').value,
+                accident_location: document.getElementById('absAccidentLocation').value,
+                extension_reason: document.getElementById('absExtendReason').value
             };
 
             fetch('api_save_absence.php', {
@@ -764,18 +877,19 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
                 body: JSON.stringify(data)
             })
-            .then(res => res.json())
-            .then(res => {
-                if (res.success) {
-                    Swal.fire('Saved!', res.message, 'success').then(() => {
-                        window.location.reload();
-                    });
-                } else {
-                    Swal.fire('Error', res.error || 'Failed to save', 'error');
-                }
-            })
-            .catch(err => Swal.fire('Error', 'Network error', 'error'));
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success) {
+                        Swal.fire('Saved!', res.message, 'success').then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', res.error || 'Failed to save', 'error');
+                    }
+                })
+                .catch(err => Swal.fire('Error', 'Network error', 'error'));
         }
     </script>
 </body>
+
 </html>

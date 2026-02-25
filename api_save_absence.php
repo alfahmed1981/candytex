@@ -49,6 +49,15 @@ $comments = trim($data['comments'] ?? '');
 $is_extension = filter_var($data['is_extension'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
 $duration_minutes = intval($data['lateness_minutes'] ?? 0);
 
+// New CNSS Fields
+$doctor_name = trim($data['doctor_name'] ?? '');
+$doctor_inpe = trim($data['doctor_inpe'] ?? '');
+$certificate_date = !empty($data['certificate_date']) ? $data['certificate_date'] : null;
+$maternity_expected_date = !empty($data['maternity_expected_date']) ? $data['maternity_expected_date'] : null;
+$accident_date = !empty($data['accident_date']) ? $data['accident_date'] : null;
+$accident_location = trim($data['accident_location'] ?? '');
+$extension_reason = trim($data['extension_reason'] ?? '');
+
 if (!$employee_id || !$type || !$start || !$end) {
     http_response_code(400);
     echo json_encode(['error' => 'Missing required fields (employee, type, start, end).']);
@@ -103,8 +112,9 @@ try {
         }
 
         $stmt_abs = $pdo->prepare("INSERT INTO hr_absences 
-            (employee_id, absence_type, start_date, end_date, certificate_number, is_extension, parent_absence_id, comments, recorded_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            (employee_id, absence_type, start_date, end_date, certificate_number, is_extension, parent_absence_id, comments, recorded_by,
+             doctor_name, doctor_inpe, certificate_date, maternity_expected_date, accident_date, accident_location, extension_reason) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt_abs->execute([
             $employee_id,
             $type,
@@ -114,7 +124,14 @@ try {
             $is_extension,
             $parent_id,
             $comments,
-            $_SESSION['user_cin']
+            $_SESSION['user_cin'],
+            $doctor_name,
+            $doctor_inpe,
+            $certificate_date,
+            $maternity_expected_date,
+            $accident_date,
+            $accident_location,
+            $extension_reason
         ]);
 
         // RETROSPECTIVE & FUTURE ATTENDANCE UPDATE
