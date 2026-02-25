@@ -63,6 +63,20 @@ function is_admin()
     return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 }
 
+function is_hr()
+{
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'hr';
+}
+
+function require_hr_or_admin()
+{
+    require_login();
+    if (!is_admin() && !is_hr()) {
+        http_response_code(403);
+        die("⛔ Access Denied. HR or Admin clearance required.");
+    }
+}
+
 // --- IMPERSONATION HELPERS ---
 function start_impersonation($pdo, $target_cin)
 {

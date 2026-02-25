@@ -3,8 +3,19 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
-// HR Module access: Admins or dedicated HR role. For now, we restrict to Admin.
-require_admin();
+// HR Module access: Admins or dedicated HR role.
+require_hr_or_admin();
+
+$is_hr_only = is_hr();
+$hr_location_id = null;
+if ($is_hr_only) {
+    $stmt = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
+    $stmt->execute([$_SESSION['user_cin']]);
+    $hr_location_id = $stmt->fetchColumn();
+    if (!$hr_location_id) {
+        die("⛔ Your account is not properly assigned to a factory location. Please contact Admin.");
+    }
+}
 
 // --- AJAX: Kinship Check ---
 if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
@@ -88,6 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $func = trim($_POST['function_title']);
         $dept = trim($_POST['department']);
         $location_id = !empty($_POST['location_id']) ? intval($_POST['location_id']) : null;
+        if ($is_hr_only) {
+            $location_id = $hr_location_id; // Force HR to add to their own factory
+        }
         $h_date = !empty($_POST['hire_date']) ? $_POST['hire_date'] : null;
         $payment_type = $_POST['payment_type'] ?? 'Hourly';
         $rate = floatval($_POST['hourly_rate']);
@@ -158,6 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Edit Employee
     elseif (isset($_POST['edit_emp'])) {
+        if ($is_hr_only)
+            die("Unauthorized Action: HR Managers can only add employees, not edit them.");
         $id = intval($_POST['emp_id']);
         $mat = trim($_POST['matricule']);
         $fname = trim($_POST['first_name']);
@@ -259,6 +275,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Delete Employee
     elseif (isset($_POST['delete_emp'])) {
+        if ($is_hr_only)
+            die("Unauthorized Action: HR Managers cannot delete employees.");
         $id = intval($_POST['emp_id']);
         try {
             $stmt = $pdo->prepare("DELETE FROM hr_employees WHERE id=?");
@@ -301,7 +319,12 @@ if ($func_filter) {
     $query .= " AND function_title = ?";
     $params[] = $func_filter;
 }
-if ($location_filter) {
+
+// Enforce Location Filtering
+if ($is_hr_only) {
+    $query .= " AND location_id = ?";
+    $params[] = $hr_location_id;
+} else if ($location_filter) {
     $query .= " AND location_id = ?";
     $params[] = $location_filter;
 }

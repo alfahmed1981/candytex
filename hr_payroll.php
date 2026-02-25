@@ -3,8 +3,19 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
-// Only Admin can generate payroll
-require_admin();
+// HR Managers and Admins can generate payroll
+require_hr_or_admin();
+
+$is_hr = is_hr();
+$hr_location_id = null;
+if ($is_hr) {
+    $stmt_hr = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
+    $stmt_hr->execute([$_SESSION['user_cin']]);
+    $hr_location_id = $stmt_hr->fetchColumn();
+    if (!$hr_location_id) {
+        die("⛔ Your account is not properly assigned to a factory location. Please contact Admin.");
+    }
+}
 
 $msg = '';
 
@@ -32,8 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
     try {
         $pdo->beginTransaction();
 
-        // Fetch all active employees (and inactive ones who worked this period)
-        $emp_stmt = $pdo->query("SELECT id, hourly_rate, payment_type FROM hr_employees");
+        // Fetch active employees (and inactive ones who worked this period)
+        $emp_query = "SELECT id, hourly_rate, payment_type FROM hr_employees";
+        if ($is_hr) {
+            $emp_query .= " WHERE location_id = " . intval($hr_location_id);
+        }
+        $emp_stmt = $pdo->query($emp_query);
         $employees = $emp_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $ins_stmt = $pdo->prepare("INSERT INTO hr_payroll 
@@ -135,12 +150,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_adjustments'])) 
 }
 
 // Fetch Payroll Data
-$stmt = $pdo->prepare("SELECT p.*, e.matricule, e.full_name, e.function_title, e.department, e.payment_type, e.hourly_rate 
+$query = "SELECT p.*, e.matricule, e.full_name, e.function_title, e.department, e.payment_type, e.hourly_rate 
                        FROM hr_payroll p 
                        JOIN hr_employees e ON p.employee_id = e.id 
-                       WHERE p.payroll_month = ? AND p.payroll_year = ? 
-                       ORDER BY e.department, e.full_name");
-$stmt->execute([$sel_month, $sel_year]);
+                       WHERE p.payroll_month = ? AND p.payroll_year = ?";
+$params = [$sel_month, $sel_year];
+
+if ($is_hr) {
+    $query .= " AND e.location_id = ?";
+    $params[] = $hr_location_id;
+}
+
+$query .= " ORDER BY e.department, e.full_name";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
 $payroll_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Totals

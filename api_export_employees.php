@@ -5,10 +5,10 @@ require 'includes/auth.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Ensure only admins can export the full employee list
-if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
+// Ensure only admins or HR can export the full employee list
+if (!isset($_SESSION['user_cin']) || (!is_admin() && !is_hr())) {
     http_response_code(403);
-    echo json_encode(['error' => 'Unauthorized. Admin access required.']);
+    echo json_encode(['error' => 'Unauthorized. Admin or HR access required.']);
     exit;
 }
 
