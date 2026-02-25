@@ -138,11 +138,11 @@ try {
                 $payroll_year,
                 $period_start,
                 $period_end,
-                $p['cnss_deduction'],
-                $p['advances'],
-                $p['brut'],
-                $p['net_salary'],
-                $p['rounded_net']
+                $p['cnss_deduction'], // cnss_deduction
+                $p['advances'],       // advances
+                $p['brut'],           // brut_salary
+                $p['net_salary'],     // net_salary
+                $p['rounded_net']     // rounded_net
             ]);
             $payroll_count++;
         }

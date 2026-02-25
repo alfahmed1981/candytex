@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
             $total_hours = floatval($hr_stmt->fetchColumn() ?: 0);
 
             // Only generate record if they actually worked, or if they already have an existing payroll record that needs updating
-            $check_stmt = $pdo->prepare("SELECT cnss_deduction, transport_allowance, advances FROM hr_payroll WHERE employee_id = ? AND payroll_month = ? AND payroll_year = ?");
+            $check_stmt = $pdo->prepare("SELECT brut_salary, cnss_deduction, transport_allowance, advances FROM hr_payroll WHERE employee_id = ? AND payroll_month = ? AND payroll_year = ?");
             $check_stmt->execute([$eid, $sel_month, $sel_year]);
             $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -62,12 +62,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
                 $cnss = $existing ? floatval($existing['cnss_deduction']) : 0.00;
                 $trans = $existing ? floatval($existing['transport_allowance']) : 0.00;
                 $adv = $existing ? floatval($existing['advances']) : 0.00;
+                $existing_brut = $existing ? floatval($existing['brut_salary']) : 0.00;
 
-                // MATH RULES based on Excel
-                if ($payment_type === 'Monthly') {
-                    $brut = $rate; // Monthly rate is fixed
+                // MATH RULES based on Excel vs Manual
+                // If a brut salary was already imported from Excel (e.g. > 0), preserve it.
+                // Otherwise, calculate it manually from the system's Rate.
+                if ($existing_brut > 0) {
+                    $brut = $existing_brut;
                 } else {
-                    $brut = $total_hours * $rate; // Hourly computation
+                    if ($payment_type === 'Monthly') {
+                        $brut = $rate; // Monthly rate is fixed
+                    } else {
+                        $brut = $total_hours * $rate; // Hourly computation
+                    }
                 }
 
                 $net = $brut - $cnss - $adv + $trans;
