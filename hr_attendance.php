@@ -378,25 +378,25 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <td style="text-align:center;">
                                     <select name="attendance[<?= $emp['id'] ?>][status]" class="select-status att-status"
                                         onchange="updateRowColor(this)">
-                                        <option value="P" <?= $emp['att_status'] == 'P' ? 'selected' : '' ?>>Present (P)
+                                        <option value="P" <?= $emp['att_status'] == 'P' ? 'selected' : '' ?>>Present / Présent / حاضر (P)
                                         </option>
-                                        <option value="A" <?= $emp['att_status'] == 'A' ? 'selected' : '' ?>>Absent (A)
+                                        <option value="A" <?= $emp['att_status'] == 'A' ? 'selected' : '' ?>>Absent / Absent / غائب (A)
                                         </option>
-                                        <option value="W" <?= $emp['att_status'] == 'W' ? 'selected' : '' ?>>Weekend (****)
+                                        <option value="W" <?= $emp['att_status'] == 'W' ? 'selected' : '' ?>>Weekend / Week-end / عطلة (****)
                                         </option>
-                                        <option value="M" <?= $emp['att_status'] == 'M' ? 'selected' : '' ?>>Maladie 🤒 (M)
+                                        <option value="M" <?= $emp['att_status'] == 'M' ? 'selected' : '' ?>>Disease / Maladie 🤒 / مرض (M)
                                         </option>
-                                        <option value="MAT" <?= $emp['att_status'] == 'MAT' ? 'selected' : '' ?>>Maternité 🤰
+                                        <option value="MAT" <?= $emp['att_status'] == 'MAT' ? 'selected' : '' ?>>Maternity / Maternité 🤰 / أمومة
                                             (MAT)</option>
-                                        <option value="AT" <?= $emp['att_status'] == 'AT' ? 'selected' : '' ?>>Accident 🚑 (AT)
+                                        <option value="AT" <?= $emp['att_status'] == 'AT' ? 'selected' : '' ?>>Work Accident / Accident Travail 🚑 / حادثة شغل (AT)
                                         </option>
-                                        <option value="MP" <?= $emp['att_status'] == 'MP' ? 'selected' : '' ?>>Mise à pied ⚖️
+                                        <option value="MP" <?= $emp['att_status'] == 'MP' ? 'selected' : '' ?>>Disciplinary / Mise à pied ⚖️ / توقيف عن العمل
                                             (MP)</option>
-                                        <option value="AI" <?= $emp['att_status'] == 'AI' ? 'selected' : '' ?>>Ab Justifiée 📄
+                                        <option value="AI" <?= $emp['att_status'] == 'AI' ? 'selected' : '' ?>>Justified / Absence Justifiée 📄 / غياب مبرر
                                             (AI)</option>
-                                        <option value="CP" <?= $emp['att_status'] == 'CP' ? 'selected' : '' ?>>Congé Payé 🏖️
+                                        <option value="CP" <?= $emp['att_status'] == 'CP' ? 'selected' : '' ?>>Paid Leave / Congé Payé 🏖️ / عطلة مدفوعة الأجر
                                             (CP)</option>
-                                        <option value="R" <?= $emp['att_status'] == 'R' ? 'selected' : '' ?>>Retard ⏱️ (R)
+                                        <option value="R" <?= $emp['att_status'] == 'R' ? 'selected' : '' ?>>Lateness / Retard ⏱️ / تأخر (R)
                                         </option>
                                     </select>
                                     <button type="button" class="btn-primary"
@@ -657,15 +657,15 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <input type="hidden" id="absOriginalDate">
                 
                 <div class="form-group" style="margin: 0;">
-                    <label>Absence Type / نوع التبرير</label>
+                    <label>Absence Type / نوع التبرير / Type</label>
                     <select id="absType" required style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;" onchange="toggleLateness()">
-                        <option value="M">Maladie 🤒</option>
-                        <option value="MAT">Maternité 🤰</option>
-                        <option value="AT">Accident Travail 🚑</option>
-                        <option value="MP">Mise à pied ⚖️</option>
-                        <option value="AI">Absence Justifiée 📄</option>
-                        <option value="CP">Congé Payé 🏖️</option>
-                        <option value="R">Retard / Lateness ⏱️</option>
+                        <option value="M">Disease / Maladie 🤒 / مرض</option>
+                        <option value="MAT">Maternity / Maternité 🤰 / أمومة</option>
+                        <option value="AT">Work Accident / Accident Travail 🚑 / حادثة شغل</option>
+                        <option value="MP">Disciplinary / Mise à pied ⚖️ / توقيف عن العمل</option>
+                        <option value="AI">Justified Absence / Absence Justifiée 📄 / غياب مبرر</option>
+                        <option value="CP">Paid Leave / Congé Payé 🏖️ / عطلة مدفوعة الأجر</option>
+                        <option value="R">Lateness / Retard ⏱️ / تأخر</option>
                     </select>
                 </div>
 
