@@ -13,9 +13,9 @@ if (!isset($_SESSION['user_cin'])) {
 
 $user_cin = $_SESSION['user_cin'];
 
-// Auto-migrate hr_absences table to add document_path
+// Auto-migrate hr_absences table
 try {
-    $pdo->exec("ALTER TABLE hr_absences ADD COLUMN IF NOT EXISTS document_path VARCHAR(255) NULL");
+    $pdo->exec("ALTER TABLE hr_absences ADD COLUMN IF NOT EXISTS document_path VARCHAR(255) NULL, ADD COLUMN exit_time TIME DEFAULT NULL, ADD COLUMN return_time TIME DEFAULT NULL;");
 } catch (Exception $e) {
     error_log("Failed to alter hr_absences: " . $e->getMessage());
 }
@@ -81,11 +81,15 @@ $query = "SELECT e.id, e.matricule, e.full_name, e.function_title, e.department,
                  (SELECT document_path FROM hr_absences habs 
                   WHERE habs.employee_id = e.id 
                   AND ? BETWEEN habs.start_date AND habs.end_date 
-                  AND habs.document_path IS NOT NULL LIMIT 1) as document_path
+                  AND habs.document_path IS NOT NULL LIMIT 1) as document_path,
+                 (SELECT id FROM hr_absences habs2 
+                  WHERE habs2.employee_id = e.id 
+                  AND ? BETWEEN habs2.start_date AND habs2.end_date 
+                  AND habs2.absence_type = 'AUT' LIMIT 1) as autorisation_id
           FROM hr_employees e 
           LEFT JOIN hr_attendance a ON e.id = a.employee_id AND a.work_date = ? 
           WHERE e.status = 'Active'";
-$params = [$selected_date, $selected_date];
+$params = [$selected_date, $selected_date, $selected_date];
 
 if (!$is_admin && !$is_hr) {
     // Manager only sees their department (Assuming manager's department is in users table)
@@ -425,10 +429,19 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <button type="button" class="btn-primary"
                                         style="padding: 4px; border-radius: 4px; font-size: 0.8em; margin-left: 5px;"
                                         onclick="openAbsenceModal(<?= $emp['id'] ?>, '<?= addslashes($emp['full_name']) ?>', '<?= $emp['att_status'] ?>', '<?= htmlspecialchars($selected_date) ?>')">📝</button>
-                                    
+
                                     <?php if (!empty($emp['document_path'])): ?>
-                                        <a href="<?= htmlspecialchars($emp['document_path']) ?>" target="_blank" title="View Document / معاينة الوثيقة"
-                                            style="display: inline-block; padding: 4px; border-radius: 4px; font-size: 0.9em; margin-left: 5px; text-decoration: none; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;">👁️ Photo</a>
+                                        <a href="<?= htmlspecialchars($emp['document_path']) ?>" target="_blank"
+                                            title="View Document / معاينة الوثيقة"
+                                            style="display: inline-block; padding: 4px; border-radius: 4px; font-size: 0.9em; margin-left: 5px; text-decoration: none; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;">👁️
+                                            Photo</a>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($emp['autorisation_id'])): ?>
+                                        <a href="print_bon_sortie.php?id=<?= $emp['autorisation_id'] ?>" target="_blank"
+                                            title="Print Bon de Sortie"
+                                            style="display: inline-block; padding: 4px; border-radius: 4px; font-size: 0.9em; margin-left: 5px; text-decoration: none; background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">🎫
+                                            Print</a>
                                     <?php endif; ?>
                                 </td>
                                 <td style="text-align:center;">
@@ -705,28 +718,42 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <option value="AI">Justified Absence / Absence Justifiée 📄 / غياب مبرر</option>
                         <option value="CP">Paid Leave / Congé Payé 🏖️ / عطلة مدفوعة الأجر</option>
                         <option value="R">Lateness / Retard ⏱️ / تأخر</option>
+                        <option value="AUT">Autorisation / Bon de Sortie 🎫 / خروج برخصة</option>
                     </select>
                 </div>
 
                 <!-- Document Capture Section -->
                 <div class="form-group"
                     style="margin: 0; padding: 10px; background: #e8f5e9; border: 1px dashed #2e7d32; border-radius: 6px;">
-                    <label style="color: #1b5e20; font-weight: bold; margin-bottom: 5px; display: block;">📷 1. Capture Document / التقاط صورة المستند</label>
+                    <label style="color: #1b5e20; font-weight: bold; margin-bottom: 5px; display: block;">📷 1. Capture
+                        Document / التقاط صورة المستند</label>
                     <p style="font-size: 0.85em; color: #444; margin-bottom: 10px; line-height: 1.4;">
-                        <strong>العربية:</strong> لتفادي التزوير، يرجى التقاط صورة مباشرة للمستند بالكاميرا. تأكد من أنها واضحة ومقروءة.<br>
-                        <strong>Français:</strong> Veuillez prendre une photo directe du document avec l'appareil. Assurez-vous qu'elle est claire et lisible.<br>
-                        <strong>English:</strong> Please take a direct photo of the document with the camera. Ensure it is clear, well-lit, and readable.
+                        <strong>العربية:</strong> لتفادي التزوير، يرجى التقاط صورة مباشرة للمستند بالكاميرا. تأكد من
+                        أنها واضحة ومقروءة.<br>
+                        <strong>Français:</strong> Veuillez prendre une photo directe du document avec l'appareil.
+                        Assurez-vous qu'elle est claire et lisible.<br>
+                        <strong>English:</strong> Please take a direct photo of the document with the camera. Ensure it
+                        is clear, well-lit, and readable.
                     </p>
-                    
+
                     <div id="camera-container" style="text-align: center; margin-bottom: 5px;">
-                        <video id="camera-stream" autoplay playsinline muted style="width: 100%; max-width: 400px; display: none; border: 1px solid #ccc; border-radius: 4px;"></video>
+                        <video id="camera-stream" autoplay playsinline muted
+                            style="width: 100%; max-width: 400px; display: none; border: 1px solid #ccc; border-radius: 4px;"></video>
                         <canvas id="camera-canvas" style="display: none;"></canvas>
-                        <img id="camera-preview" style="width: 100%; max-width: 400px; display: none; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;" />
-                        
-                        <div style="margin-top: 10px; display:flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                            <button type="button" id="btn-start-camera" class="btn-primary" style="background: #0288d1; padding: 8px 15px;" onclick="startCamera()">📸 Start Camera / فتح الكاميرا</button>
-                            <button type="button" id="btn-capture" class="btn-primary" style="background: #2e7d32; padding: 8px 15px; display: none;" onclick="captureImage()">✅ Capture / التقاط</button>
-                            <button type="button" id="btn-retake" class="btn-primary" style="background: #f57c00; padding: 8px 15px; display: none;" onclick="retakeImage()">🔄 Retake / إعادة</button>
+                        <img id="camera-preview"
+                            style="width: 100%; max-width: 400px; display: none; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;" />
+
+                        <div
+                            style="margin-top: 10px; display:flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button type="button" id="btn-start-camera" class="btn-primary"
+                                style="background: #0288d1; padding: 8px 15px;" onclick="startCamera()">📸 Start Camera
+                                / فتح الكاميرا</button>
+                            <button type="button" id="btn-capture" class="btn-primary"
+                                style="background: #2e7d32; padding: 8px 15px; display: none;"
+                                onclick="captureImage()">✅ Capture / التقاط</button>
+                            <button type="button" id="btn-retake" class="btn-primary"
+                                style="background: #f57c00; padding: 8px 15px; display: none;"
+                                onclick="retakeImage()">🔄 Retake / إعادة</button>
                         </div>
                     </div>
                 </div>
@@ -735,6 +762,19 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <label>Lateness Duration (Minutes) / دقائق التأخير</label>
                     <input type="number" id="absLateness" min="1" placeholder="e.g. 15"
                         style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <div id="autorisationDiv" style="display:none; gap:10px; margin: 0;">
+                    <div style="flex:1;">
+                        <label>Exit Time / ساعة الخروج</label>
+                        <input type="time" id="absExitTime"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Expected Return / ساعة الدخول المتوقعة</label>
+                        <input type="time" id="absReturnTime"
+                            style="width:100%; padding:8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
                 </div>
 
                 <div id="dateRangeDiv" style="display:flex; gap:10px; margin: 0;">
@@ -855,14 +895,14 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const video = document.getElementById('camera-stream');
             const canvas = document.getElementById('camera-canvas');
             const preview = document.getElementById('camera-preview');
-            
+
             if (!cameraStream) return;
 
             // Compress to max 1024px width for web
             let targetWidth = video.videoWidth;
             let targetHeight = video.videoHeight;
             const MAX_WIDTH = 1024;
-            
+
             if (targetWidth > MAX_WIDTH) {
                 targetHeight = Math.round(targetHeight * (MAX_WIDTH / targetWidth));
                 targetWidth = MAX_WIDTH;
@@ -870,18 +910,18 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             canvas.width = targetWidth || MAX_WIDTH;
             canvas.height = targetHeight || (MAX_WIDTH * 0.75);
-            
+
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
+
             // Convert to JPG Blob
-            canvas.toBlob(function(blob) {
-                if(blob) {
+            canvas.toBlob(function (blob) {
+                if (blob) {
                     capturedBlob = blob;
                     const url = URL.createObjectURL(blob);
                     preview.src = url;
                     preview.style.display = 'block';
-                    
+
                     stopCamera();
                     document.getElementById('btn-capture').style.display = 'none';
                     document.getElementById('btn-retake').style.display = 'inline-block';
@@ -903,7 +943,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('absStart').value = currentDate;
             document.getElementById('absEnd').value = currentDate;
 
-            if (['M', 'MAT', 'AT', 'MP', 'AI', 'CP', 'R'].includes(currentStatus)) {
+            if (['M', 'MAT', 'AT', 'MP', 'AI', 'CP', 'R', 'AUT'].includes(currentStatus)) {
                 document.getElementById('absType').value = currentStatus;
             } else {
                 document.getElementById('absType').value = 'M';
@@ -944,6 +984,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('medicalDiv').style.display = 'none';
             document.getElementById('maternityDiv').style.display = 'none';
             document.getElementById('accidentDiv').style.display = 'none';
+            document.getElementById('autorisationDiv').style.display = 'none';
 
             // Reset required flags
             document.getElementById('absLateness').required = false;
@@ -972,6 +1013,12 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             } else if (type === 'AT') {
                 document.getElementById('accidentDiv').style.display = 'flex';
                 document.getElementById('absAccidentDate').required = true;
+            } else if (type === 'AUT') {
+                document.getElementById('dateRangeDiv').style.display = 'none';
+                document.getElementById('autorisationDiv').style.display = 'flex';
+                document.getElementById('absExitTime').required = true;
+                document.getElementById('absEnd').required = false;
+                document.getElementById('extendDiv').style.display = 'none';
             }
         }
 
@@ -995,6 +1042,12 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             formData.append('accident_date', document.getElementById('absAccidentDate').value);
             formData.append('accident_location', document.getElementById('absAccidentLocation').value);
             formData.append('extension_reason', document.getElementById('absExtendReason').value);
+
+            if (type === 'AUT') {
+                formData.append('end_date', document.getElementById('absStart').value);
+                formData.append('exit_time', document.getElementById('absExitTime').value);
+                formData.append('return_time', document.getElementById('absReturnTime').value);
+            }
 
             if (capturedBlob) {
                 formData.append('document', capturedBlob, 'captured.jpg');

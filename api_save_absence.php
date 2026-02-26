@@ -54,6 +54,8 @@ $cert_num = trim($data['cert_num'] ?? '');
 $comments = trim($data['comments'] ?? '');
 $is_extension = filter_var($data['is_extension'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
 $duration_minutes = intval($data['lateness_minutes'] ?? 0);
+$exit_time = !empty($data['exit_time']) ? $data['exit_time'] : null;
+$return_time = !empty($data['return_time']) ? $data['return_time'] : null;
 
 // New CNSS Fields
 $doctor_name = trim($data['doctor_name'] ?? '');
@@ -156,8 +158,8 @@ try {
 
         $stmt_abs = $pdo->prepare("INSERT INTO hr_absences 
             (employee_id, absence_type, start_date, end_date, certificate_number, is_extension, parent_absence_id, comments, recorded_by,
-             doctor_name, doctor_inpe, certificate_date, maternity_expected_date, accident_date, accident_location, extension_reason, document_path) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+             doctor_name, doctor_inpe, certificate_date, maternity_expected_date, accident_date, accident_location, extension_reason, document_path, exit_time, return_time) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt_abs->execute([
             $employee_id,
             $type,
@@ -175,7 +177,9 @@ try {
             $accident_date,
             $accident_location,
             $extension_reason,
-            $document_path
+            $document_path,
+            $exit_time,
+            $return_time
         ]);
 
         // RETROSPECTIVE & FUTURE ATTENDANCE UPDATE
