@@ -13,6 +13,13 @@ if (!isset($_SESSION['user_cin'])) {
 
 $user_cin = $_SESSION['user_cin'];
 
+// Auto-migrate hr_absences table to add document_path
+try {
+    $pdo->exec("ALTER TABLE hr_absences ADD COLUMN IF NOT EXISTS document_path VARCHAR(255) NULL");
+} catch (Exception $e) {
+    error_log("Failed to alter hr_absences: " . $e->getMessage());
+}
+
 // Handle POST request to save attendance
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_attendance'])) {
@@ -692,6 +699,23 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </select>
                 </div>
 
+                <!-- Document Upload Section -->
+                <div class="form-group"
+                    style="margin: 0; padding: 10px; background: #e8f5e9; border: 1px dashed #2e7d32; border-radius: 6px;">
+                    <label style="color: #1b5e20; font-weight: bold; margin-bottom: 5px; display: block;">📷 1. Attach
+                        Document (Required for Justification)</label>
+                    <p style="font-size: 0.85em; color: #444; margin-bottom: 10px; line-height: 1.4;">
+                        <strong>English:</strong> Please ensure the photo is clear, well-lit, and the text is entirely
+                        readable before uploading.<br>
+                        <strong>Français:</strong> Veuillez vous assurer que la photo est claire, bien éclairée et que
+                        le texte est entièrement lisible.<br>
+                        <strong>العربية:</strong> يرجى التأكد من أن الصورة واضحة ومضاءة جيدًا وأن النص مقروء تمامًا قبل
+                        تحميلها.
+                    </p>
+                    <input type="file" id="absDocument" accept="image/*,application/pdf" capture="environment"
+                        style="width:100%; padding:8px; border: 1px solid #a5d6a7; border-radius: 4px; background: white;">
+                </div>
+
                 <div id="latenessDiv" style="display:none; margin: 0;">
                     <label>Lateness Duration (Minutes) / دقائق التأخير</label>
                     <input type="number" id="absLateness" min="1" placeholder="e.g. 15"
@@ -833,6 +857,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 document.getElementById('dateRangeDiv').style.display = 'none';
                 document.getElementById('certDivWrapper').style.display = 'none';
                 document.getElementById('extendDiv').style.display = 'none';
+                document.getElementById('absDocument').required = false;
                 document.getElementById('absLateness').required = true;
                 document.getElementById('absEnd').required = false;
                 document.getElementById('absExtend').checked = false; // Reset extension if R
@@ -852,33 +877,45 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         function saveAbsence() {
             const type = document.getElementById('absType').value;
-            const data = {
-                csrf_token: '<?= csrf_token() ?>',
-                employee_id: document.getElementById('absEmpId').value,
-                type: type,
-                start_date: document.getElementById('absStart').value,
-                end_date: type === 'R' ? document.getElementById('absStart').value : document.getElementById('absEnd').value,
-                cert_num: document.getElementById('absCert').value,
-                comments: document.getElementById('absComments').value,
-                is_extension: document.getElementById('absExtend').checked ? 1 : 0,
-                lateness_minutes: document.getElementById('absLateness').value,
-                // New CNSS Fields
-                doctor_name: document.getElementById('absDoctorName').value,
-                doctor_inpe: document.getElementById('absDoctorINPE').value,
-                certificate_date: document.getElementById('absCertDate').value,
-                maternity_expected_date: document.getElementById('absMaternityDate').value,
-                accident_date: document.getElementById('absAccidentDate').value,
-                accident_location: document.getElementById('absAccidentLocation').value,
-                extension_reason: document.getElementById('absExtendReason').value
-            };
+            const formData = new FormData();
+
+            formData.append('csrf_token', '<?= csrf_token() ?>');
+            formData.append('employee_id', document.getElementById('absEmpId').value);
+            formData.append('type', type);
+            formData.append('start_date', document.getElementById('absStart').value);
+            formData.append('end_date', type === 'R' ? document.getElementById('absStart').value : document.getElementById('absEnd').value);
+            formData.append('cert_num', document.getElementById('absCert').value);
+            formData.append('comments', document.getElementById('absComments').value);
+            formData.append('is_extension', document.getElementById('absExtend').checked ? 1 : 0);
+            formData.append('lateness_minutes', document.getElementById('absLateness').value);
+            formData.append('doctor_name', document.getElementById('absDoctorName').value);
+            formData.append('doctor_inpe', document.getElementById('absDoctorINPE').value);
+            formData.append('certificate_date', document.getElementById('absCertDate').value);
+            formData.append('maternity_expected_date', document.getElementById('absMaternityDate').value);
+            formData.append('accident_date', document.getElementById('absAccidentDate').value);
+            formData.append('accident_location', document.getElementById('absAccidentLocation').value);
+            formData.append('extension_reason', document.getElementById('absExtendReason').value);
+
+            const fileInput = document.getElementById('absDocument');
+            if (fileInput.files.length > 0) {
+                formData.append('document', fileInput.files[0]);
+            }
+
+            // Optional: disable button and show loading text to prevent multiple clicks
+            const submitBtn = document.querySelector('#absenceForm button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Uploading...';
 
             fetch('api_save_absence.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
-                body: JSON.stringify(data)
+                headers: { 'X-CSRF-Token': '<?= csrf_token() ?>' }, // Omit Content-Type so browser sets boundary for FormData
+                body: formData
             })
                 .then(res => res.json())
                 .then(res => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
                     if (res.success) {
                         Swal.fire('Saved!', res.message, 'success').then(() => {
                             window.location.reload();

@@ -18,8 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$input = file_get_contents('php://input');
-$data = json_decode($input, true);
+// Support both JSON payload and FormData
+$contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
+if (strpos($contentType, 'application/json') !== false) {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true) ?: [];
+} else {
+    $data = $_POST;
+}
 
 // Verify CSRF token
 $csrf_token = '';
@@ -81,6 +87,43 @@ if (is_hr()) {
     }
 }
 
+// Handle File Upload
+$document_path = null;
+if (isset($_FILES['document']) && $_FILES['document']['error'] === UPLOAD_ERR_OK) {
+    $fileTmpPath = $_FILES['document']['tmp_name'];
+    $fileName = $_FILES['document']['name'];
+    $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+    $allowedfileExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+    if (in_array($fileExtension, $allowedfileExtensions)) {
+        $uploadFileDir = __DIR__ . '/uploads/absences/';
+        if (!is_dir($uploadFileDir)) {
+            mkdir($uploadFileDir, 0755, true);
+        }
+
+        // New format: emp_{id}_{type}_{start}_{uniqid}.ext
+        $newFileName = sprintf(
+            "emp_%d_%s_%s_%s.%s",
+            $employee_id,
+            $type,
+            preg_replace('/[^0-9\-]/', '', $start),
+            uniqid(),
+            $fileExtension
+        );
+        $dest_path = $uploadFileDir . $newFileName;
+
+        if (move_uploaded_file($fileTmpPath, $dest_path)) {
+            $document_path = 'uploads/absences/' . $newFileName;
+        } else {
+            error_log("Failed to move uploaded document.");
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(['error' => 'Upload failed. Allowed file types: ' . implode(',', $allowedfileExtensions)]);
+        exit;
+    }
+}
+
 try {
     $pdo->beginTransaction();
 
@@ -113,8 +156,8 @@ try {
 
         $stmt_abs = $pdo->prepare("INSERT INTO hr_absences 
             (employee_id, absence_type, start_date, end_date, certificate_number, is_extension, parent_absence_id, comments, recorded_by,
-             doctor_name, doctor_inpe, certificate_date, maternity_expected_date, accident_date, accident_location, extension_reason) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+             doctor_name, doctor_inpe, certificate_date, maternity_expected_date, accident_date, accident_location, extension_reason, document_path) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt_abs->execute([
             $employee_id,
             $type,
@@ -131,7 +174,8 @@ try {
             $maternity_expected_date,
             $accident_date,
             $accident_location,
-            $extension_reason
+            $extension_reason,
+            $document_path
         ]);
 
         // RETROSPECTIVE & FUTURE ATTENDANCE UPDATE
