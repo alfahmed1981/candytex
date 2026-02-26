@@ -699,21 +699,27 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </select>
                 </div>
 
-                <!-- Document Upload Section -->
+                <!-- Document Capture Section -->
                 <div class="form-group"
                     style="margin: 0; padding: 10px; background: #e8f5e9; border: 1px dashed #2e7d32; border-radius: 6px;">
-                    <label style="color: #1b5e20; font-weight: bold; margin-bottom: 5px; display: block;">📷 1. Attach
-                        Document (Required for Justification)</label>
+                    <label style="color: #1b5e20; font-weight: bold; margin-bottom: 5px; display: block;">📷 1. Capture Document / التقاط صورة المستند</label>
                     <p style="font-size: 0.85em; color: #444; margin-bottom: 10px; line-height: 1.4;">
-                        <strong>English:</strong> Please ensure the photo is clear, well-lit, and the text is entirely
-                        readable before uploading.<br>
-                        <strong>Français:</strong> Veuillez vous assurer que la photo est claire, bien éclairée et que
-                        le texte est entièrement lisible.<br>
-                        <strong>العربية:</strong> يرجى التأكد من أن الصورة واضحة ومضاءة جيدًا وأن النص مقروء تمامًا قبل
-                        تحميلها.
+                        <strong>العربية:</strong> لتفادي التزوير، يرجى التقاط صورة مباشرة للمستند بالكاميرا. تأكد من أنها واضحة ومقروءة.<br>
+                        <strong>Français:</strong> Veuillez prendre une photo directe du document avec l'appareil. Assurez-vous qu'elle est claire et lisible.<br>
+                        <strong>English:</strong> Please take a direct photo of the document with the camera. Ensure it is clear, well-lit, and readable.
                     </p>
-                    <input type="file" id="absDocument" accept="image/*,application/pdf" capture="environment"
-                        style="width:100%; padding:8px; border: 1px solid #a5d6a7; border-radius: 4px; background: white;">
+                    
+                    <div id="camera-container" style="text-align: center; margin-bottom: 5px;">
+                        <video id="camera-stream" autoplay playsinline muted style="width: 100%; max-width: 400px; display: none; border: 1px solid #ccc; border-radius: 4px;"></video>
+                        <canvas id="camera-canvas" style="display: none;"></canvas>
+                        <img id="camera-preview" style="width: 100%; max-width: 400px; display: none; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px;" />
+                        
+                        <div style="margin-top: 10px; display:flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button type="button" id="btn-start-camera" class="btn-primary" style="background: #0288d1; padding: 8px 15px;" onclick="startCamera()">📸 Start Camera / فتح الكاميرا</button>
+                            <button type="button" id="btn-capture" class="btn-primary" style="background: #2e7d32; padding: 8px 15px; display: none;" onclick="captureImage()">✅ Capture / التقاط</button>
+                            <button type="button" id="btn-retake" class="btn-primary" style="background: #f57c00; padding: 8px 15px; display: none;" onclick="retakeImage()">🔄 Retake / إعادة</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="latenessDiv" style="display:none; margin: 0;">
@@ -806,6 +812,81 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <script>
+        let cameraStream = null;
+        let capturedBlob = null;
+
+        async function startCamera() {
+            try {
+                const constraints = { video: { facingMode: "environment" }, audio: false };
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('camera-stream');
+                video.srcObject = cameraStream;
+                video.style.display = 'block';
+                document.getElementById('camera-preview').style.display = 'none';
+                document.getElementById('btn-start-camera').style.display = 'none';
+                document.getElementById('btn-capture').style.display = 'inline-block';
+                document.getElementById('btn-retake').style.display = 'none';
+                capturedBlob = null;
+            } catch (err) {
+                console.error("Camera error:", err);
+                Swal.fire('Error / خطأ', 'Camera access denied or not available. Please allow permissions. / لا يمكن الوصول للكاميرا، يرجى تفعيل الصلاحية.', 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            const video = document.getElementById('camera-stream');
+            if (video) video.style.display = 'none';
+        }
+
+        function captureImage() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            const preview = document.getElementById('camera-preview');
+            
+            if (!cameraStream) return;
+
+            // Compress to max 1024px width for web
+            let targetWidth = video.videoWidth;
+            let targetHeight = video.videoHeight;
+            const MAX_WIDTH = 1024;
+            
+            if (targetWidth > MAX_WIDTH) {
+                targetHeight = Math.round(targetHeight * (MAX_WIDTH / targetWidth));
+                targetWidth = MAX_WIDTH;
+            }
+
+            canvas.width = targetWidth || MAX_WIDTH;
+            canvas.height = targetHeight || (MAX_WIDTH * 0.75);
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to JPG Blob
+            canvas.toBlob(function(blob) {
+                if(blob) {
+                    capturedBlob = blob;
+                    const url = URL.createObjectURL(blob);
+                    preview.src = url;
+                    preview.style.display = 'block';
+                    
+                    stopCamera();
+                    document.getElementById('btn-capture').style.display = 'none';
+                    document.getElementById('btn-retake').style.display = 'inline-block';
+                }
+            }, 'image/jpeg', 0.8);
+        }
+
+        function retakeImage() {
+            capturedBlob = null;
+            document.getElementById('camera-preview').src = '';
+            document.getElementById('camera-preview').style.display = 'none';
+            startCamera();
+        }
+
         function openAbsenceModal(empId, empName, currentStatus, currentDate) {
             document.getElementById('absEmpId').value = empId;
             document.getElementById('absModalEmpName').innerText = empName;
@@ -819,11 +900,22 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 document.getElementById('absType').value = 'M';
             }
             toggleLateness();
+
+            // Reset Camera UI
+            stopCamera();
+            document.getElementById('camera-preview').src = '';
+            document.getElementById('camera-preview').style.display = 'none';
+            document.getElementById('btn-start-camera').style.display = 'inline-block';
+            document.getElementById('btn-capture').style.display = 'none';
+            document.getElementById('btn-retake').style.display = 'none';
+            capturedBlob = null;
+
             document.getElementById('absenceModal').style.display = 'block';
         }
 
         function closeAbsenceModal() {
             document.getElementById('absenceModal').style.display = 'none';
+            stopCamera();
         }
 
         function toggleExtensionReason() {
@@ -857,7 +949,6 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 document.getElementById('dateRangeDiv').style.display = 'none';
                 document.getElementById('certDivWrapper').style.display = 'none';
                 document.getElementById('extendDiv').style.display = 'none';
-                document.getElementById('absDocument').required = false;
                 document.getElementById('absLateness').required = true;
                 document.getElementById('absEnd').required = false;
                 document.getElementById('absExtend').checked = false; // Reset extension if R
@@ -896,9 +987,8 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             formData.append('accident_location', document.getElementById('absAccidentLocation').value);
             formData.append('extension_reason', document.getElementById('absExtendReason').value);
 
-            const fileInput = document.getElementById('absDocument');
-            if (fileInput.files.length > 0) {
-                formData.append('document', fileInput.files[0]);
+            if (capturedBlob) {
+                formData.append('document', capturedBlob, 'captured.jpg');
             }
 
             // Optional: disable button and show loading text to prevent multiple clicks
