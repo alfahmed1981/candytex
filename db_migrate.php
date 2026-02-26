@@ -6,15 +6,20 @@ require 'includes/auth.php';
 // Only admins can trigger database migrations
 require_admin();
 
-$sql = file_get_contents('hr_schema_v7.sql');
 try {
-    $pdo->exec($sql);
-    echo "<h1>Migration Successful!</h1><p>The CNSS and Moroccan Labor Law fields were successfully added to the hr_absences table. You can delete this file now.</p>";
+    // The PAIE excel put CNSS prefixes like "D 23" into the department column. Let's nullify them.
+    $sql = "UPDATE hr_employees SET department = NULL WHERE department REGEXP '^D ?[0-9]+$'";
+    $affected = $pdo->exec($sql);
+
+    // Also remove them from the standalone departments table in admin_advanced if any leaked there
+    $sql2 = "DELETE FROM departments WHERE name REGEXP '^D ?[0-9]+$'";
+    $affected2 = $pdo->exec($sql2);
+
+    echo "<h1>Cleanup Successful!</h1>";
+    echo "<p>Cleared $affected 'DXX' codes from employee records.</p>";
+    echo "<p>Deleted $affected2 'DXX' codes from system departments.</p>";
+    echo "<p>You can delete this script now.</p>";
 } catch (PDOException $e) {
-    if ($e->getCode() == '42S21') {
-        echo "<h1>Migration Successful (Already Applied):</h1><p>The columns already exist. You're good to go.</p>";
-    } else {
-        echo "<h1>Migration Failed:</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>";
-    }
+    echo "<h1>Cleanup Failed:</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>";
 }
 
