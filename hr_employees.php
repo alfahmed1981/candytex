@@ -50,7 +50,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
 
 // --- SELF-HEALING DATABASE MIGRATION ---
 try {
-    $pdo->exec("ALTER TABLE hr_employees ADD COLUMN id_card_front VARCHAR(255) DEFAULT NULL, ADD COLUMN id_card_back VARCHAR(255) DEFAULT NULL;");
+    $pdo->exec("ALTER TABLE hr_employees ADD COLUMN id_card_front VARCHAR(255) DEFAULT NULL, ADD COLUMN id_card_back VARCHAR(255) DEFAULT NULL, ADD COLUMN photo VARCHAR(255) DEFAULT NULL;");
 } catch (PDOException $e) {
 }
 
@@ -140,13 +140,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $id_card_front = processBase64Upload($_POST['id_front_b64'] ?? '', 'id_front_' . $cin);
         $id_card_back = processBase64Upload($_POST['id_back_b64'] ?? '', 'id_back_' . $cin);
+        $photo = processBase64Upload($_POST['photo_b64'] ?? '', 'photo_' . $cin);
 
         try {
             $stmt = $pdo->prepare("INSERT INTO hr_employees 
                 (location_id, matricule, first_name, last_name, full_name, cin, date_of_birth, gender, marital_status, children_count, 
                  phone_number, address, function_title, department, manager_cin, current_shift, hire_date, payment_type, hourly_rate, cnss_number, contract_type, 
-                 blood_group, emergency_contact, emergency_phone, id_card_front, id_card_back) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 blood_group, emergency_contact, emergency_phone, id_card_front, id_card_back, photo) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmt->execute([
                 $location_id,
@@ -174,7 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $em_contact,
                 $em_phone,
                 $id_card_front,
-                $id_card_back
+                $id_card_back,
+                $photo
             ]);
 
             $new_emp_id = $pdo->lastInsertId();
@@ -237,19 +239,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             // Fetch old metrics to compare for history logging
-            $stmt_old = $pdo->prepare("SELECT function_title, department, manager_cin, current_shift, id_card_front, id_card_back FROM hr_employees WHERE id=?");
+            $stmt_old = $pdo->prepare("SELECT function_title, department, manager_cin, current_shift, id_card_front, id_card_back, photo FROM hr_employees WHERE id=?");
             $stmt_old->execute([$id]);
             $old_emp = $stmt_old->fetch();
 
             $new_id_front = processBase64Upload($_POST['id_front_b64'] ?? '', 'id_front_' . $cin);
             $new_id_back = processBase64Upload($_POST['id_back_b64'] ?? '', 'id_back_' . $cin);
+            $new_photo = processBase64Upload($_POST['photo_b64'] ?? '', 'photo_' . $cin);
+            
             $id_card_front = $new_id_front ? $new_id_front : $old_emp['id_card_front'];
             $id_card_back = $new_id_back ? $new_id_back : $old_emp['id_card_back'];
+            $photo = $new_photo ? $new_photo : $old_emp['photo'];
 
             $stmt = $pdo->prepare("UPDATE hr_employees SET 
                 location_id=?, matricule=?, first_name=?, last_name=?, full_name=?, cin=?, date_of_birth=?, gender=?, marital_status=?, children_count=?, 
                 phone_number=?, address=?, function_title=?, department=?, manager_cin=?, current_shift=?, hire_date=?, payment_type=?, hourly_rate=?, cnss_number=?, contract_type=?, 
-                blood_group=?, emergency_contact=?, emergency_phone=?, status=?, id_card_front=?, id_card_back=? 
+                blood_group=?, emergency_contact=?, emergency_phone=?, status=?, id_card_front=?, id_card_back=?, photo=? 
                 WHERE id=?");
 
             $stmt->execute([
@@ -280,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $status,
                 $id_card_front,
                 $id_card_back,
+                $photo,
                 $id
             ]);
 
@@ -842,6 +848,26 @@ try {
 
                 <!-- TAB 1: Personal & Contact -->
                 <div id="tab-personal" class="tab-content active">
+                    <input type="hidden" name="photo_b64" id="photo_b64">
+                    
+                    <div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #ddd; text-align:center; margin-bottom: 15px;">
+                        <label style="color:#0984e3;">Profile Photo / صورة شخصية</label>
+                        
+                        <div id="view_photo_container" style="display:none; margin-bottom: 10px;">
+                            <img id="view_photo_img" src="" style="width:120px; height:120px; object-fit:cover; border-radius:50%; border:2px solid #1565c0; display:block; margin:0 auto 10px;">
+                        </div>
+
+                        <video id="video-photo" autoplay playsinline muted style="width:100%; max-width:200px; display:none; border:1px solid #ccc; border-radius:8px; margin:0 auto;"></video>
+                        <canvas id="canvas-photo" style="display:none;"></canvas>
+                        <img id="preview-photo" style="width:100%; max-width:200px; display:none; border:1px solid #ccc; border-radius:8px; margin:5px auto;" />
+                        
+                        <div style="margin-top:10px; display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
+                            <button type="button" id="btn-start-photo" class="btn-primary" style="background:#0288d1; padding:6px 12px; font-size:0.85em;" onclick="startIdCamera('photo')">📸 Start Camera</button>
+                            <button type="button" id="btn-cap-photo" class="btn-primary" style="background:#28a745; padding:6px 12px; font-size:0.85em; display:none;" onclick="captureIdImage('photo')">✅ Capture</button>
+                            <button type="button" id="btn-retake-photo" class="btn-primary" style="background:#f57c00; padding:6px 12px; font-size:0.85em; display:none;" onclick="retakeIdImage('photo')">🔄 Retake</button>
+                        </div>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label>Matricule / ID / الرقم الاستدلالي (Required)*</label>
@@ -1138,19 +1164,19 @@ try {
         }
 
         // Camera ID logic
-        let activeStreamFront = null;
-        let activeStreamBack = null;
+        let activeStreams = { front: null, back: null, photo: null };
 
         async function startIdCamera(side) {
             try {
-                if (side === 'front') stopCamera('back');
-                else stopCamera('front');
+                // Stop others
+                ['front', 'back', 'photo'].forEach(s => {
+                    if (s !== side) stopCamera(s);
+                });
 
-                const constraints = { video: { facingMode: "environment" }, audio: false };
+                const constraints = { video: { facingMode: (side === 'photo' ? "user" : "environment") }, audio: false };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 
-                if (side === 'front') activeStreamFront = stream;
-                else activeStreamBack = stream;
+                activeStreams[side] = stream;
 
                 const video = document.getElementById(`video-${side}`);
                 video.srcObject = stream;
@@ -1167,11 +1193,10 @@ try {
         }
 
         function stopCamera(side) {
-            let stream = side === 'front' ? activeStreamFront : activeStreamBack;
+            let stream = activeStreams[side];
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
-                if (side === 'front') activeStreamFront = null;
-                else activeStreamBack = null;
+                activeStreams[side] = null;
             }
             const video = document.getElementById(`video-${side}`);
             if (video) video.style.display = 'none';
@@ -1181,13 +1206,13 @@ try {
             const video = document.getElementById(`video-${side}`);
             const canvas = document.getElementById(`canvas-${side}`);
             const preview = document.getElementById(`preview-${side}`);
-            const stream = side === 'front' ? activeStreamFront : activeStreamBack;
+            const stream = activeStreams[side];
             
             if (!stream) return;
 
             let targetWidth = video.videoWidth;
             let targetHeight = video.videoHeight;
-            const MAX_WIDTH = 1024;
+            const MAX_WIDTH = side === 'photo' ? 600 : 1024;
             
             if (targetWidth > MAX_WIDTH) {
                 targetHeight = Math.round(targetHeight * (MAX_WIDTH / targetWidth));
@@ -1200,7 +1225,7 @@ try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
             const b64 = canvas.toDataURL('image/jpeg', 0.8);
-            document.getElementById(`id_${side}_b64`).value = b64;
+            document.getElementById(side === 'photo' ? `photo_b64` : `id_${side}_b64`).value = b64;
             
             preview.src = b64;
             preview.style.display = 'block';
@@ -1211,25 +1236,25 @@ try {
         }
 
         function retakeIdImage(side) {
-            document.getElementById(`id_${side}_b64`).value = '';
+            document.getElementById(side === 'photo' ? `photo_b64` : `id_${side}_b64`).value = '';
             document.getElementById(`preview-${side}`).src = '';
             document.getElementById(`preview-${side}`).style.display = 'none';
             startIdCamera(side);
         }
 
         function stopAllCameras() {
-            stopCamera('front');
-            stopCamera('back');
+            ['front', 'back', 'photo'].forEach(s => stopCamera(s));
         }
 
         function resetCameraUI(side) {
-            document.getElementById(`id_${side}_b64`).value = '';
+            document.getElementById(side === 'photo' ? `photo_b64` : `id_${side}_b64`).value = '';
             document.getElementById(`preview-${side}`).src = '';
             document.getElementById(`preview-${side}`).style.display = 'none';
             document.getElementById(`btn-start-${side}`).style.display = 'inline-block';
             document.getElementById(`btn-cap-${side}`).style.display = 'none';
             document.getElementById(`btn-retake-${side}`).style.display = 'none';
-            document.getElementById(`view_id_${side}_container`).style.display = 'none';
+            let container = document.getElementById(`view_${side === 'photo' ? 'photo' : 'id_' + side}_container`);
+            if(container) container.style.display = 'none';
         }
 
         // Full History Data embedded for JS
@@ -1246,6 +1271,7 @@ try {
 
             resetCameraUI('front');
             resetCameraUI('back');
+            resetCameraUI('photo');
 
             // Go to first tab
             openTab('tab-personal', document.querySelector('.tab-buttons .tab-btn:first-child'));
@@ -1296,6 +1322,12 @@ try {
 
             resetCameraUI('front');
             resetCameraUI('back');
+            resetCameraUI('photo');
+
+            if (emp.photo) {
+                document.getElementById('view_photo_container').style.display = 'block';
+                document.getElementById('view_photo_img').src = emp.photo;
+            }
             if (emp.id_card_front) {
                 document.getElementById('view_id_front_container').style.display = 'block';
                 document.getElementById('view_id_front_link').href = emp.id_card_front;
