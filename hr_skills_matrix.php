@@ -95,25 +95,35 @@ if ($dept_filter) {
 }
 $emp_query .= " ORDER BY department, full_name LIMIT 100"; // Limit to prevent massive horizontal scrolling lag
 
-$stmt = $pdo->prepare($emp_query);
-$stmt->execute($params);
-$employees = $stmt->fetchAll();
+$employees = [];
+try {
+    $stmt = $pdo->prepare($emp_query);
+    $stmt->execute($params);
+    $employees = $stmt->fetchAll();
+} catch (PDOException $e) {}
 
 // Fetch all skill evaluations for these employees
 $evaluations = [];
 if (!empty($employees)) {
-    $emp_ids = array_column($employees, 'id');
-    $in_clause = implode(',', array_fill(0, count($emp_ids), '?'));
-    $stmt_evals = $pdo->prepare("SELECT employee_id, skill_id, level FROM worker_skills WHERE employee_id IN ($in_clause)");
-    $stmt_evals->execute($emp_ids);
-    
-    foreach ($stmt_evals->fetchAll() as $row) {
-        $evaluations[$row['employee_id']][$row['skill_id']] = $row['level'];
+    try {
+        $emp_ids = array_column($employees, 'id');
+        $in_clause = implode(',', array_fill(0, count($emp_ids), '?'));
+        $stmt_evals = $pdo->prepare("SELECT employee_id, skill_id, level FROM worker_skills WHERE employee_id IN ($in_clause)");
+        $stmt_evals->execute($emp_ids);
+        
+        foreach ($stmt_evals->fetchAll() as $row) {
+            $evaluations[$row['employee_id']][$row['skill_id']] = $row['level'];
+        }
+    } catch (PDOException $e) {
+        // Table might missing if schema failed
     }
 }
 
 // Fetch distinct departments for dropdown
-$depts = $pdo->query("SELECT DISTINCT department FROM hr_employees WHERE department IS NOT NULL AND status='Active' ORDER BY department")->fetchAll(PDO::FETCH_COLUMN);
+$depts = [];
+try {
+    $depts = $pdo->query("SELECT DISTINCT department FROM hr_employees WHERE department IS NOT NULL AND status='Active' ORDER BY department")->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {}
 
 ?>
 <!DOCTYPE html>
