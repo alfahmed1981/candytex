@@ -3,16 +3,19 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
-// Security Check: ONLY Admins & Managers
-if (!isset($_SESSION['user_cin'])) {
-    header("Location: index.php");
-    exit;
-}
-
+require_login();
 $user_role = $_SESSION['role'];
 $user_cin = $_SESSION['user_cin'];
 $user_name = $_SESSION['user_name'] ?? '';
-$is_admin = $user_role === 'admin';
+
+$is_admin = is_admin();
+$is_hr = is_hr();
+$is_leader = is_leader();
+
+if (!$is_admin && !$is_hr && !$is_leader) {
+    header("Location: index.php");
+    exit;
+}
 
 // --- Self-healing: create NCR table ---
 $pdo->exec("CREATE TABLE IF NOT EXISTS `ncr_reports` (
@@ -225,25 +228,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // --- Fetch NCRs: role-based access ---
-if ($is_admin) {
-    // Admin: optionally filter by reporter via GET param
+if ($is_admin || $is_hr) {
     $filter_reporter = trim($_GET['reporter'] ?? '');
+    $sql = "SELECT n.*, u.name as reporter_name 
+            FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin WHERE 1=1";
+    $params = [];
+
     if ($filter_reporter) {
-        $stmt = $pdo->prepare("SELECT n.*, u.name as reporter_name 
-            FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin 
-            WHERE n.reported_by = ? ORDER BY n.created_at DESC");
-        $stmt->execute([$filter_reporter]);
-    } else {
-        $stmt = $pdo->query("SELECT n.*, u.name as reporter_name 
-            FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin 
-            ORDER BY n.created_at DESC");
+        $sql .= " AND n.reported_by = ?";
+        $params[] = $filter_reporter;
     }
+
+    if ($is_hr) {
+        $loc = get_user_factory($pdo, $user_cin);
+        $sql .= " AND n.location = ?";
+        $params[] = $loc;
+    }
+
+    $sql .= " ORDER BY n.created_at DESC";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $ncrs = $stmt->fetchAll();
 
-    // Fetch all reporters for the dropdown
-    $reporters = $pdo->query("SELECT DISTINCT n.reported_by, u.name 
+    // Fetch all reporters
+    $reporters_sql = "SELECT DISTINCT n.reported_by, u.name 
         FROM ncr_reports n LEFT JOIN users u ON n.reported_by = u.cin 
-        WHERE n.reported_by IS NOT NULL ORDER BY u.name")->fetchAll();
+        WHERE n.reported_by IS NOT NULL";
+    if ($is_hr) {
+        $reporters_sql .= " AND n.location = " . $pdo->quote($loc ?? '');
+    }
+    $reporters_sql .= " ORDER BY u.name";
+    $reporters = $pdo->query($reporters_sql)->fetchAll();
 } else {
     // Non-admin: only their own NCRs
     $stmt = $pdo->prepare("SELECT n.*, u.name as reporter_name 
@@ -335,6 +350,8 @@ foreach ($ncrs as $ncr) {
             border-radius: 8px;
             margin-left: 10px;
             transition: background 0.3s;
+            display: inline-block;
+            margin-bottom: 5px;
         }
 
         .page-header .nav-links a:hover {
@@ -2608,7 +2625,7 @@ foreach ($ncrs as $ncr) {
                 }
             });
         }
-    // ═══════ Confirmation before CAR Create ═══════
+        // ═══════ Confirmation before CAR Create ═══════
         function confirmCARSubmit(btn) {
             const form = btn.closest('form');
             const getSelText = (name) => {

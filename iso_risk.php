@@ -4,15 +4,19 @@ require 'db.php';
 require 'includes/auth.php';
 require_once 'includes/smtp_send.php';
 
-if (!isset($_SESSION['user_cin'])) {
-    header("Location: index.php");
-    exit;
-}
-
+require_login();
 $user_role = $_SESSION['role'];
 $user_cin = $_SESSION['user_cin'];
 $user_name = $_SESSION['user_name'] ?? '';
-$is_admin = $user_role === 'admin';
+
+$is_admin = is_admin();
+$is_hr = is_hr();
+$is_leader = is_leader();
+
+if (!$is_admin && !$is_hr && !$is_leader) {
+    header("Location: index.php");
+    exit;
+}
 
 // ═══════════════════════════════════════════════════
 // SELF-HEALING SCHEMA
@@ -271,10 +275,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ═══════════════════════════════════════════════════
 // DATA FETCH
 // ═══════════════════════════════════════════════════
-$risks = $pdo->query("SELECT r.*, u.name as reporter_name
+$sql_r = "SELECT r.*, u.name as reporter_name
     FROM risk_register r
-    LEFT JOIN users u ON r.created_by = u.cin
-    ORDER BY r.risk_score DESC, r.created_at DESC")->fetchAll();
+    LEFT JOIN users u ON r.created_by = u.cin WHERE 1=1";
+$params_r = [];
+
+if ($is_hr) {
+    $loc = get_user_factory($pdo, $user_cin);
+    $sql_r .= " AND r.location = ?";
+    $params_r[] = $loc;
+} elseif ($is_leader) {
+    $sql_r .= " AND r.created_by = ?";
+    $params_r[] = $user_cin;
+}
+
+$sql_r .= " ORDER BY r.risk_score DESC, r.created_at DESC";
+$stmt_r = $pdo->prepare($sql_r);
+$stmt_r->execute($params_r);
+$risks = $stmt_r->fetchAll();
 
 $reviews_all = $pdo->query("SELECT * FROM risk_reviews ORDER BY created_at DESC")->fetchAll();
 
@@ -1449,7 +1467,8 @@ foreach ($risks as $r) {
                     </div>
                     <div class="modal-btns">
                         <button type="button" class="btn-cancel" onclick="closeModal('risk-modal')">إلغاء</button>
-                        <button type="button" class="btn-submit" onclick="confirmRiskSubmit(this)">📋 تسجيل الخطر</button>
+                        <button type="button" class="btn-submit" onclick="confirmRiskSubmit(this)">📋 تسجيل
+                            الخطر</button>
                     </div>
                 </form>
             </div>
@@ -1889,37 +1908,37 @@ foreach ($risks as $r) {
         </script>
 
         <script>
-        // ═══════ Confirmation before Risk Create ═══════
-        function confirmRiskSubmit(btn) {
-            const form = btn.closest('form');
-            const getSelText = (name) => {
-                const el = form.querySelector(`[name="${name}"]`);
-                if (!el) return '-';
-                if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '-';
-                return el.value || '-';
-            };
+            // ═══════ Confirmation before Risk Create ═══════
+            function confirmRiskSubmit(btn) {
+                const form = btn.closest('form');
+                const getSelText = (name) => {
+                    const el = form.querySelector(`[name="${name}"]`);
+                    if (!el) return '-';
+                    if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '-';
+                    return el.value || '-';
+                };
 
-            const cat = getSelText('category');
-            const src = getSelText('source');
-            const loc = getSelText('location');
-            const dept = getSelText('department');
-            const desc = getSelText('description_en');
-            const controls = getSelText('existing_controls');
-            const likelihood = getSelText('likelihood');
-            const severity = getSelText('severity_risk');
-            const mitigation = getSelText('mitigation_action');
-            const responsible = getSelText('responsible');
-            const deadline = form.querySelector('[name="deadline"]')?.value || 'غير محدد';
+                const cat = getSelText('category');
+                const src = getSelText('source');
+                const loc = getSelText('location');
+                const dept = getSelText('department');
+                const desc = getSelText('description_en');
+                const controls = getSelText('existing_controls');
+                const likelihood = getSelText('likelihood');
+                const severity = getSelText('severity_risk');
+                const mitigation = getSelText('mitigation_action');
+                const responsible = getSelText('responsible');
+                const deadline = form.querySelector('[name="deadline"]')?.value || 'غير محدد';
 
-            // Calculate preview score
-            const lVal = parseInt(form.querySelector('[name="likelihood"]')?.value || 1);
-            const sVal = parseInt(form.querySelector('[name="severity_risk"]')?.value || 1);
-            const score = lVal * sVal;
-            const level = score >= 16 ? '🔴 Critical / حرج' : (score >= 10 ? '🟠 High / مرتفع' : (score >= 5 ? '🟡 Medium / متوسط' : '🟢 Low / منخفض'));
+                // Calculate preview score
+                const lVal = parseInt(form.querySelector('[name="likelihood"]')?.value || 1);
+                const sVal = parseInt(form.querySelector('[name="severity_risk"]')?.value || 1);
+                const score = lVal * sVal;
+                const level = score >= 16 ? '🔴 Critical / حرج' : (score >= 10 ? '🟠 High / مرتفع' : (score >= 5 ? '🟡 Medium / متوسط' : '🟢 Low / منخفض'));
 
-            Swal.fire({
-                title: 'تأكيد بيانات الخطر قبل الإرسال',
-                html: `
+                Swal.fire({
+                    title: 'تأكيد بيانات الخطر قبل الإرسال',
+                    html: `
                     <div style="text-align:right; direction:rtl; font-size:0.9em; line-height:1.9;">
                         <p>⚠️ <strong style="color:#c0392b;">لا يمكن التعديل بعد الإرسال</strong> — يرجى التأكد من المعلومات:</p>
                         <hr>
@@ -1938,25 +1957,25 @@ foreach ($risks as $r) {
                         <p>👤 <strong>المسؤول:</strong> ${responsible}</p>
                         <p>📅 <strong>الموعد:</strong> ${deadline}</p>
                     </div>`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: '✅ تأكيد الإرسال',
-                cancelButtonText: '✏️ مراجعة',
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                width: '600px',
-                customClass: { popup: 'swal-rtl' }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const hidden = document.createElement('input');
-                    hidden.type = 'hidden';
-                    hidden.name = 'create_risk';
-                    hidden.value = '1';
-                    form.appendChild(hidden);
-                    form.submit();
-                }
-            });
-        }
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '✅ تأكيد الإرسال',
+                    cancelButtonText: '✏️ مراجعة',
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    width: '600px',
+                    customClass: { popup: 'swal-rtl' }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'create_risk';
+                        hidden.value = '1';
+                        form.appendChild(hidden);
+                        form.submit();
+                    }
+                });
+            }
         </script>
     </div>
 </body>

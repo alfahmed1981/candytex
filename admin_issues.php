@@ -3,15 +3,18 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
-// Admin Only
-if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
+require_login();
+$user_role = $_SESSION['role'];
+$user_cin = $_SESSION['user_cin'];
+
+$is_admin = is_admin();
+$is_hr = is_hr();
+$is_leader = is_leader();
+
+if (!$is_admin && !$is_hr && !$is_leader) {
     header("Location: index.php");
     exit;
 }
-
-
-$user_role = $_SESSION['role'];
-$user_cin = $_SESSION['user_cin'];
 
 // Handle Status Update / Delete / Restore
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,6 +23,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['update_status'])) {
             $issue_id = intval($_POST['issue_id']);
             $new_status = $_POST['new_status'];
+
+            if ($is_leader) {
+                // Team Leaders can only update their own issues
+                $stmt_chk = $pdo->prepare("SELECT user_cin FROM countermeasures WHERE id = ?");
+                $stmt_chk->execute([$issue_id]);
+                if ($stmt_chk->fetchColumn() !== $user_cin) {
+                    die("Unauthorized");
+                }
+            }
 
             $stmt = $pdo->prepare("UPDATE countermeasures SET status = ? WHERE id = ?");
             $stmt->execute([$new_status, $issue_id]);
@@ -72,10 +84,18 @@ $show_deleted = isset($_GET['show_deleted']) ? true : false;
 
 $sql = "SELECT c.*, u.name as user_name, u.department, u.location 
         FROM countermeasures c 
-        LEFT JOIN users u ON c.user_cin = u.cin ";
+        LEFT JOIN users u ON c.user_cin = u.cin 
+        WHERE 1=1 ";
 
 if (!$show_deleted) {
-    $sql .= "WHERE c.status != 'Deleted' ";
+    $sql .= "AND c.status != 'Deleted' ";
+}
+
+if ($is_hr) {
+    $loc = get_user_factory($pdo, $user_cin);
+    $sql .= "AND u.location = " . $pdo->quote($loc) . " ";
+} elseif ($is_leader) {
+    $sql .= "AND c.user_cin = " . $pdo->quote($user_cin) . " ";
 }
 
 $sql .= "ORDER BY c.created_at DESC";
@@ -494,10 +514,16 @@ foreach ($issues as $issue) {
             </div>
             <div class="nav-links">
                 <a href="index.php">📊 لوحة القيادة</a>
-                <a href="iso_ncr.php">📝 NCR</a>
-                <a href="iso_risk.php">📋 مخاطر</a>
-                <a href="iso_docs.php">📄 وثائق</a>
-                <a href="admin.php">⚙️ الإدارة</a>
+                <?php if ($is_admin || $is_hr || $is_leader): ?>
+                    <a href="iso_ncr.php">📝 NCR</a>
+                    <a href="iso_risk.php">📋 مخاطر</a>
+                <?php endif; ?>
+                <?php if ($is_admin || $is_hr): ?>
+                    <a href="iso_docs.php">📄 وثائق</a>
+                <?php endif; ?>
+                <?php if ($is_admin): ?>
+                    <a href="admin.php">⚙️ الإدارة</a>
+                <?php endif; ?>
                 <a href="?logout=1">🚪 خروج</a>
             </div>
         </div>

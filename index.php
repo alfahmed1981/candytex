@@ -426,8 +426,15 @@ if ($show_discipline_notif) {
             <a href="my_team.php">👥 فريقي</a>
             <a href="global.php">🏭 المصنع</a>
             <a href="meetings.php">🗓️ اجتماعات</a>
-            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+            <?php if (is_admin() || is_hr() || is_leader()): ?>
+                <a href="iso_ncr.php">📝 NCR</a>
+                <a href="iso_risk.php">📋 مخاطر</a>
                 <a href="admin_issues.php">🛠️ مشاكل</a>
+            <?php endif; ?>
+            <?php if (is_admin() || is_hr()): ?>
+                <a href="iso_docs.php">📄 وثائق</a>
+            <?php endif; ?>
+            <?php if (is_admin()): ?>
                 <a href="admin.php">⚙️ إدارة</a>
             <?php endif; ?>
             <a href="?logout=1" class="logout">🚪 خروج</a>
@@ -460,11 +467,15 @@ if ($show_discipline_notif) {
         <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
         <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
         <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
-        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+        <?php if (is_admin() || is_hr() || is_leader()): ?>
             <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
             <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
-            <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
             <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
+        <?php endif; ?>
+        <?php if (is_admin() || is_hr()): ?>
+            <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
+        <?php endif; ?>
+        <?php if (is_admin()): ?>
             <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
         <?php endif; ?>
         <a href="?logout=1" class="logout-btn" style="background:#dc3545;">🚪 خروج</a>

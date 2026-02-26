@@ -3,8 +3,12 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
-// Security Check
-if (!isset($_SESSION['user_cin']) || $_SESSION['role'] !== 'admin') {
+require_login();
+$is_admin = is_admin();
+$is_hr = is_hr();
+$is_leader = is_leader();
+
+if (!$is_admin && !$is_hr && !$is_leader) {
     die("Access Denied.");
 }
 
@@ -35,6 +39,14 @@ $order = isset($_GET['order']) && $_GET['order'] === 'desc' ? 'DESC' : 'ASC';
 
 // A. Fetch All Managers
 $sql_users = "SELECT * FROM users WHERE role = 'manager'";
+
+if ($is_hr) {
+    $loc = get_user_factory($pdo, $_SESSION['user_cin']);
+    $sql_users .= " AND location = " . $pdo->quote($loc);
+} elseif ($is_leader) {
+    $sql_users .= " AND cin = " . $pdo->quote($_SESSION['user_cin']);
+}
+
 if ($sort_by === 'name' || $sort_by === 'department' || $sort_by === 'location') {
     $sql_users .= " ORDER BY $sort_by $order";
 } else {
@@ -352,6 +364,7 @@ function mask_cin($cin)
 
         /* ========= A4 Print Styles ========= */
         @media print {
+
             .no-print,
             .top-nav,
             .day-nav {
@@ -412,8 +425,8 @@ function mask_cin($cin)
             }
 
             body.print-ranking-mode .stats-container,
-            body.print-ranking-mode > .container > .data-table,
-            body.print-ranking-mode > .container > h1,
+            body.print-ranking-mode>.container>.data-table,
+            body.print-ranking-mode>.container>h1,
             body.print-ranking-mode .print-legend,
             body.print-ranking-mode .print-footer {
                 display: none !important;
@@ -475,8 +488,11 @@ function mask_cin($cin)
             <h3>📊 Daily Snapshot</h3>
         </div>
         <div class="nav-links">
-            <a href="admin.php">🔙 Admin</a>
-            <a href="admin_reports.php">📅 Monthly Report</a>
+            <a href="index.php">📊 لوحة القيادة</a>
+            <?php if ($is_admin || $is_hr): ?>
+                <a href="admin.php">🔙 Admin</a>
+                <a href="admin_reports.php">📅 Monthly Report</a>
+            <?php endif; ?>
             <a href="index.php?logout=1" class="logout">Logout</a>
         </div>
     </div>
@@ -517,7 +533,8 @@ function mask_cin($cin)
             <div class="day-label">
                 <?= $day_name_ar ?> &nbsp; <?= $selected_date ?>
                 <br><small>
-                    <input type="date" value="<?= $selected_date ?>" onchange="location.href='?date='+this.value" style="padding:3px 6px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
+                    <input type="date" value="<?= $selected_date ?>" onchange="location.href='?date='+this.value"
+                        style="padding:3px 6px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
                 </small>
             </div>
 
@@ -531,9 +548,11 @@ function mask_cin($cin)
 
             <div class="nav-actions">
                 <?php if ($unfilled_count > 0): ?>
-                    <button type="button" onclick="remindAll()" class="btn-wa-bulk" style="margin:0; padding:8px 14px; font-size:13px;">📱 تذكير (<?= $unfilled_count ?>)</button>
+                    <button type="button" onclick="remindAll()" class="btn-wa-bulk"
+                        style="margin:0; padding:8px 14px; font-size:13px;">📱 تذكير (<?= $unfilled_count ?>)</button>
                 <?php endif; ?>
-                <button type="button" onclick="window.print()" class="btn btn-secondary" style="padding:8px 14px;">🖨️ Print</button>
+                <button type="button" onclick="window.print()" class="btn btn-secondary" style="padding:8px 14px;">🖨️
+                    Print</button>
                 <button type="button" onclick="printDiscipline()" class="btn-print-ranking">🏆 طباعة الترتيب</button>
                 <a href="admin_discipline.php?date=<?= $selected_date ?>" class="btn btn-secondary"
                     style="background:#17a2b8; color:white; text-decoration:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px;">🏆

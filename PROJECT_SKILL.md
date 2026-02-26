@@ -34,10 +34,11 @@ The system is designed to manage factory production efficiency and ISO 9001 comp
 
 ### a. User & Roles Management (`users.php`, `auth.php`, `my_team.php`)
 *   **Authentication:** Session-based login using `user_cin` (National ID) and `password`.
-*   **Roles (RBAC):**
-    *   `admin`: Full access to all modules, can delete records, change statuses, manage users.
-    *   `manager` (Team Leader): Can create records (SQDC, NCR, CAR), manage their assigned team (`my_team.php`), but cannot delete critical ISO records.
-    *   `viewer`: Read-only access to specific dashboards.
+*   **Roles (RBAC V2):**
+    *   `admin` (المدير العام): Full global access. Can delete records, change statuses, manage users.
+    *   `hr` (مدير المصنع): Full operational access, but strictly isolated to their assigned factory `location`. Cannot see other factories' data.
+    *   `manager` (رئيس فريق): Can record SQDC, create NCR/CAR/Risks, and manage daily attendance for their assigned team. Restricted to only viewing/editing their own submitted records on global dashboards. Cannot add new employees.
+    *   `viewer` (مشاهد): Read-only access to specific dashboards.
 *   **Impersonation:** Admins can "impersonate" managers to debug issues (`auth.php -> handle_impersonation()`).
 
 ### b. SQDC Daily Management (`sqdc_board.php`, `sqdc_input.php`)
@@ -55,23 +56,25 @@ The system is designed to manage factory production efficiency and ISO 9001 comp
 *   **CAR (Corrective Action Report):** Linked to NCRs. Tracks Root Cause Analysis, Corrective Actions, and Preventive Actions. Admin/Quality team verifies effectiveness.
 *   Uses a "Smart UI" mapping generic English descriptions to Arabic translations automatically based on the selected defect type.
 
-### e. Human Resources & Payroll (`hr_employees.php`, `hr_attendance.php`, `hr_payroll.php`)
-*   **Employee Management:** Tracks matricules, functions, and hourly rates (`Taux`).
-*   **Daily Attendance:** Managers/Admins can record daily working hours (e.g., 9, 8.5) or statuses (A for Absent, `****` for Weekend).
+### e. Human Resources & Payroll (`hr_employees.php`, `hr_attendance.php`, `hr_payroll.php`, `api_save_absence.php`)
+*   **Employee Data:** Tracks matricules, CNSS numbers, and hourly rates (`Taux`). Supports full Excel export via `api_export_employees.php` and `SheetJS`.
+*   **Advanced Attendance & Absences:** Managers/HR log daily hours (9h, 8.5h) or Moroccan Labor Law statuses (`P, A, M, MAT, AT, MP`). Extended absences capture deep CNSS metadata (Doctor INPE, Cert Dates) and retroactively cascade over the daily grid. Latenesses (`R`) track exact penalty minutes.
 *   **Payroll Engine:** Automatically calculates salaries from the 26th of the previous month to the 25th of the current.
     *   **Logic:** `BRUT = Hours * Rate`. `NET = BRUT - CNSS - Advances + Transport`.
-    *   **Rounding:** The final `ARROND` Net Salary is automatically rounded to the nearest 10 MAD using `ceil(net / 10) * 10`.
+    *   **Rounding:** The final `ARROND` Net Salary is mathematically rounded to the nearest 10 MAD using `ceil(net / 10) * 10`.
 
 ## 5. Database Schema Overview
 
 The database uses InnoDB engine and `utf8mb4` encoding.
 
 *   **Core Tables:**
-    *   `users`: Staff records, credentials, roles.
+    *   `users`: Staff records, credentials, factory assignments (`location`), and `role`.
     *   `departments`, `locations`, `shifts`: Factory structure lookups.
 *   **HR Tables:**
-    *   `hr_employees`: Static employee data and hourly rates.
-    *   `hr_attendance`: Daily timesheet hours recorded by managers.
+    *   `hr_employees`: Static employee data, CNSS, and hourly rates.
+    *   `hr_attendance`: Daily timesheet hours.
+    *   `hr_absences`: Master record of legal leaves and medical certificates.
+    *   `hr_latenesses`: Daily minute-level tracking of tardiness.
     *   `hr_payroll`: Generated monthly payslips and mathematical adjustments.
 *   **SQDC Tables:**
     *   `sqdc_daily`: Daily color status per user per category.

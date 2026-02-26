@@ -4,7 +4,9 @@
 
 $current_page = basename($_SERVER['PHP_SELF']);
 $nav_user_name = $_SESSION['user_name'] ?? 'User';
-$nav_is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+$nav_is_admin = is_admin();
+$nav_is_hr = is_hr();
+$nav_is_leader = is_leader();
 $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
 ?>
 
@@ -34,12 +36,16 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <a href="global.php" <?= $current_page === 'global.php' ? 'class="active"' : '' ?>>🏭 المصنع</a>
         <a href="iso_ncr.php" <?= $current_page === 'iso_ncr.php' ? 'class="active"' : '' ?>>📝 NCR/CAR</a>
         <a href="iso_risk.php" <?= $current_page === 'iso_risk.php' ? 'class="active"' : '' ?>>📋 مخاطر</a>
-        <?php if ($nav_is_admin): ?>
+        <?php if ($nav_is_admin || $nav_is_hr): ?>
             <a href="iso_docs.php" <?= $current_page === 'iso_docs.php' ? 'class="active"' : '' ?>>📄 وثائق</a>
             <a href="hr_employees.php" <?= $current_page === 'hr_employees.php' ? 'class="active"' : '' ?>>👥 موارد بشرية</a>
             <a href="hr_attendance.php" <?= $current_page === 'hr_attendance.php' ? 'class="active"' : '' ?>>🕒 حضور يومي</a>
             <a href="hr_payroll.php" <?= $current_page === 'hr_payroll.php' ? 'class="active"' : '' ?>>💵 إدارة الرواتب</a>
+        <?php endif; ?>
+        <?php if ($nav_is_admin || $nav_is_hr || $nav_is_leader): ?>
             <a href="admin_issues.php" <?= $current_page === 'admin_issues.php' ? 'class="active"' : '' ?>>🛠️ مشاكل</a>
+        <?php endif; ?>
+        <?php if ($nav_is_admin): ?>
             <a href="admin.php" <?= $current_page === 'admin.php' ? 'class="active"' : '' ?>>⚙️ إدارة</a>
         <?php endif; ?>
         <a href="index.php?logout=1" class="logout">🚪 خروج</a>
@@ -63,12 +69,16 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
     <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
     <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
     <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
-    <?php if ($nav_is_admin): ?>
+    <?php if ($nav_is_admin || $nav_is_hr): ?>
         <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
         <a href="hr_employees.php" class="logout-btn" style="background:#0984e3;">👥 الموارد البشرية</a>
         <a href="hr_attendance.php" class="logout-btn" style="background:#00cec9;">🕒 الحضور اليومي</a>
         <a href="hr_payroll.php" class="logout-btn" style="background:#2ecc71;">💵 إدارة وتوليد الرواتب</a>
+    <?php endif; ?>
+    <?php if ($nav_is_admin || $nav_is_hr || $nav_is_leader): ?>
         <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
+    <?php endif; ?>
+    <?php if ($nav_is_admin): ?>
         <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
     <?php endif; ?>
     <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">🚪 خروج</a>
