@@ -77,11 +77,15 @@ $all_managers = $mgr_stmt->fetchAll(PDO::FETCH_ASSOC);
 // Fetch Employees based on role and filters
 $query = "SELECT e.id, e.matricule, e.full_name, e.function_title, e.department, 
                  COALESCE(a.hours_worked, '') as hours_worked, 
-                 COALESCE(a.status, 'P') as att_status
+                 COALESCE(a.status, 'P') as att_status,
+                 (SELECT document_path FROM hr_absences habs 
+                  WHERE habs.employee_id = e.id 
+                  AND ? BETWEEN habs.start_date AND habs.end_date 
+                  AND habs.document_path IS NOT NULL LIMIT 1) as document_path
           FROM hr_employees e 
           LEFT JOIN hr_attendance a ON e.id = a.employee_id AND a.work_date = ? 
           WHERE e.status = 'Active'";
-$params = [$selected_date];
+$params = [$selected_date, $selected_date];
 
 if (!$is_admin && !$is_hr) {
     // Manager only sees their department (Assuming manager's department is in users table)
@@ -421,6 +425,11 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <button type="button" class="btn-primary"
                                         style="padding: 4px; border-radius: 4px; font-size: 0.8em; margin-left: 5px;"
                                         onclick="openAbsenceModal(<?= $emp['id'] ?>, '<?= addslashes($emp['full_name']) ?>', '<?= $emp['att_status'] ?>', '<?= htmlspecialchars($selected_date) ?>')">📝</button>
+                                    
+                                    <?php if (!empty($emp['document_path'])): ?>
+                                        <a href="<?= htmlspecialchars($emp['document_path']) ?>" target="_blank" title="View Document / معاينة الوثيقة"
+                                            style="display: inline-block; padding: 4px; border-radius: 4px; font-size: 0.9em; margin-left: 5px; text-decoration: none; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;">👁️ Photo</a>
+                                    <?php endif; ?>
                                 </td>
                                 <td style="text-align:center;">
                                     <input type="number" step="0.5" min="0" max="24"
