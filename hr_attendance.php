@@ -269,6 +269,12 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             color: #f57f17;
             font-weight: bold;
         }
+
+        .status-AUT {
+            background: #fff3cd;
+            color: #856404;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -425,6 +431,9 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <option value="R" <?= $emp['att_status'] == 'R' ? 'selected' : '' ?>>Lateness / Retard
                                             ⏱️ / تأخر (R)
                                         </option>
+                                        <option value="AUT" <?= $emp['att_status'] == 'AUT' ? 'selected' : '' ?>>Autorisation /
+                                            Bon de Sortie 🎫 / خروج برخصة
+                                            (AUT)</option>
                                     </select>
                                     <button type="button" class="btn-primary"
                                         style="padding: 4px; border-radius: 4px; font-size: 0.8em; margin-left: 5px;"
@@ -436,7 +445,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             style="display: inline-block; padding: 4px; border-radius: 4px; font-size: 0.9em; margin-left: 5px; text-decoration: none; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;">👁️
                                             Photo</a>
                                     <?php endif; ?>
-                                    
+
                                     <?php if (!empty($emp['autorisation_id'])): ?>
                                         <a href="print_bon_sortie.php?id=<?= $emp['autorisation_id'] ?>" target="_blank"
                                             title="Print Bon de Sortie"
