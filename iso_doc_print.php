@@ -520,14 +520,19 @@ $tpl = $templates[$doc['title_en']] ?? $default_template;
             </td>
         </tr>
         <tr>
+            <td class="meta-cell" style="text-align:center"><span class="meta-label">Factory:</span>
+                CANDYTEX S.A.R.L <?= htmlspecialchars($doc['location'] ?? '') ?>
+            </td>
             <td class="meta-cell" style="text-align:center"><span class="meta-label">Dept:</span>
                 <?= htmlspecialchars($doc['department'] ?: 'All') ?>
             </td>
-            <td class="meta-cell" style="text-align:center"><span class="meta-label">Owner:</span>
-                <?= htmlspecialchars($doc['owner'] ?: '-') ?>
-            </td>
             <td class="meta-cell"><span class="meta-label">Status:</span>
                 <?= htmlspecialchars($doc['status']) ?>
+            </td>
+        </tr>
+        <tr>
+            <td class="meta-cell" colspan="3" style="text-align:center"><span class="meta-label">Owner:</span>
+                <?= htmlspecialchars($doc['owner'] ?: '-') ?>
             </td>
         </tr>
     </table>

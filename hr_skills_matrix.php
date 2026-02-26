@@ -15,15 +15,17 @@ $is_hr = is_hr() || $is_admin;
 
 // Auto-run schema migration
 try {
-    function run_skills_sql($pdo) {
-        $file = 'hr_skills_schema.sql';
-        if (!file_exists($file)) return;
-        $sql = file_get_contents($file);
-        $queries = explode(';', $sql);
-        foreach ($queries as $query) {
-            $cleaned = trim($query);
-            if (!empty($cleaned)) {
-                try { $pdo->exec($cleaned); } catch (PDOException $e) {}
+    if(!function_exists('run_skills_sql')){
+        function run_skills_sql($pdo) {
+            $file = __DIR__ . '/hr_skills_schema.sql';
+            if (!file_exists($file)) return;
+            $sql = file_get_contents($file);
+            $queries = explode(';', $sql);
+            foreach ($queries as $query) {
+                $cleaned = trim($query);
+                if (!empty($cleaned)) {
+                    try { $pdo->exec($cleaned); } catch (PDOException $e) {}
+                }
             }
         }
     }
@@ -64,7 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['evaluate_skill'])) {
 }
 
 // Ensure at least some data exists for dictionary
-$all_skills = $pdo->query("SELECT * FROM skills_dictionary ORDER BY skill_category, skill_name")->fetchAll();
+$all_skills = [];
+try {
+    $stmt_skills = $pdo->query("SELECT * FROM skills_dictionary ORDER BY skill_category, skill_name");
+    if ($stmt_skills) {
+        $all_skills = $stmt_skills->fetchAll();
+    }
+} catch (PDOException $e) {
+    // Table might not exist yet if schema failed to load
+}
 
 // Filters
 $dept_filter = $_GET['department'] ?? '';

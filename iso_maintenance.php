@@ -15,19 +15,21 @@ $is_maintenance = false; // Could be expanded later for specific roles
 
 // Auto-run schema migration
 try {
-    function run_maintenance_sql($pdo)
-    {
-        $file = 'iso_maintenance_schema.sql';
-        if (!file_exists($file))
-            return;
-        $sql = file_get_contents($file);
-        $queries = explode(';', $sql);
-        foreach ($queries as $query) {
-            $cleaned = trim($query);
-            if (!empty($cleaned)) {
-                try {
-                    $pdo->exec($cleaned);
-                } catch (PDOException $e) {
+    if (!function_exists('run_maintenance_sql')) {
+        function run_maintenance_sql($pdo)
+        {
+            $file = __DIR__ . '/iso_maintenance_schema.sql';
+            if (!file_exists($file))
+                return;
+            $sql = file_get_contents($file);
+            $queries = explode(';', $sql);
+            foreach ($queries as $query) {
+                $cleaned = trim($query);
+                if (!empty($cleaned)) {
+                    try {
+                        $pdo->exec($cleaned);
+                    } catch (PDOException $e) {
+                    }
                 }
             }
         }
@@ -91,22 +93,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch Core Data
-$machines = $pdo->query("SELECT * FROM machines ORDER BY department, name")->fetchAll();
-$open_tickets = $pdo->query("SELECT t.*, m.name as machine_name, m.machine_code, u.name as reporter_name 
+$machines = [];
+$open_tickets = [];
+$recent_closed = [];
+$mttr = 0;
+
+try {
+    $stmt_m = $pdo->query("SELECT * FROM machines ORDER BY department, name");
+    if ($stmt_m)
+        $machines = $stmt_m->fetchAll();
+
+    $stmt_o = $pdo->query("SELECT t.*, m.name as machine_name, m.machine_code, u.name as reporter_name 
                              FROM maintenance_tickets t 
                              JOIN machines m ON t.machine_id = m.id 
                              LEFT JOIN users u ON t.reported_by_cin = u.cin 
                              WHERE t.status != 'Closed' 
-                             ORDER BY t.priority DESC, t.reported_at DESC")->fetchAll();
+                             ORDER BY t.priority DESC, t.reported_at DESC");
+    if ($stmt_o)
+        $open_tickets = $stmt_o->fetchAll();
 
-$recent_closed = $pdo->query("SELECT t.*, m.name as machine_name 
+    $stmt_c = $pdo->query("SELECT t.*, m.name as machine_name 
                               FROM maintenance_tickets t 
                               JOIN machines m ON t.machine_id = m.id 
                               WHERE t.status = 'Closed' 
-                              ORDER BY t.resolved_at DESC LIMIT 5")->fetchAll();
+                              ORDER BY t.resolved_at DESC LIMIT 5");
+    if ($stmt_c)
+        $recent_closed = $stmt_c->fetchAll();
 
-// Calculate MTTR (Mean Time To Repair in minutes) for the dashboard
-$mttr = $pdo->query("SELECT AVG(downtime_minutes) FROM maintenance_tickets WHERE status = 'Closed'")->fetchColumn();
+    // Calculate MTTR (Mean Time To Repair in minutes) for the dashboard
+    $stmt_mttr = $pdo->query("SELECT AVG(downtime_minutes) FROM maintenance_tickets WHERE status = 'Closed'");
+    if ($stmt_mttr)
+        $mttr = $stmt_mttr->fetchColumn() ?: 0;
+} catch (PDOException $e) {
+    // Tables might not exist yet if schema failed to load
+}
 
 ?>
 <!DOCTYPE html>

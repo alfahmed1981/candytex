@@ -2433,6 +2433,8 @@ foreach ($ncrs as $ncr) {
                 <div class="doc-meta">
                     <div class="doc-num">${ncr.ncr_number}</div>
                     <div>Document: QMS-NCR-001</div>
+                    <div>Factory: CANDYTEX S.A.R.L - ${ncr.location}</div>
+                    <div>Department: ${ncr.department}</div>
                     <div>Revision: 01</div>
                     <div>Date: ${fmtDate(ncr.created_at)}</div>
                     <div>Page 1 of 1</div>
@@ -2509,6 +2511,8 @@ foreach ($ncrs as $ncr) {
                 <div class="doc-meta">
                     <div class="doc-num">${car.car_number}</div>
                     <div>Document: QMS-CAR-001</div>
+                    <div>Factory: CANDYTEX S.A.R.L - ${ncr.location}</div>
+                    <div>Department: ${ncr.department}</div>
                     <div>Revision: 01</div>
                     <div>Date: ${fmtDate(car.created_at)}</div>
                     <div>Page 1 of 1</div>
