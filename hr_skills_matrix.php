@@ -172,41 +172,54 @@ try {
     
     <div class="main-content">
         <div class="container">
-            <h2>🧠 Training & Polyvalence Matrix</h2>
-            <p style="color: #666;">ISO 9001 Clause 7.2 Requirements: Ensuring worker competence, training evaluation, and skill mapping.</p>
+            <h2>🧠 مصفوفة المهارات والتدريب <small style="font-size:0.6em;color:#666">Training & Polyvalence Matrix</small></h2>
+            <p style="color: #666; font-size:0.9em;">
+                <strong>طَبقاً لمواصفة الآيزو ISO 9001: البند 7.2 (الكفاءة)</strong><br>
+                تهدف هذه المصفوفة إلى تقييم كفاءة العمال، وتحديد الاحتياجات التدريبية، لضمان قيام العمال المؤهلين فقط بتشغيل الماكينات.
+            </p>
+            
+            <div class="alert alert-info" style="background:#e3f2fd; color:#0d47a1; border:1px solid #bbdefb; padding:15px; border-radius:6px; margin:15px 0;">
+                <h4 style="margin:0 0 10px 0;">📖 دليل الاستخدام (كيفية الملء):</h4>
+                <ul style="margin:0; padding-inline-start: 20px; font-size:13px; line-height:1.6;">
+                    <li><strong>البحث والفلترة:</strong> استخدم الفلاتر أدناه للبحث عن عامل معين أو تصفية العمال حسب القسم.</li>
+                    <li><strong>التقييم:</strong> اضغط على المربع الفارغ (أو الذي يحتوي على رقم) المقابل لاسم العامل والمهارة المطلوبة.</li>
+                    <li><strong>مستويات الكفاءة:</strong> ستظهر نافذة تطلب منك تحديد مستوى كفاءة العامل من 0 إلى 4 (انظر مفتاح المستويات أدناه).</li>
+                    <li><strong>التحديث:</strong> بعد اختيار المستوى، سيتم تحديث المصفوفة تلقائياً وتلوين المربع حسب مستوى المهارة.</li>
+                </ul>
+            </div>
             
             <?php if ($msg): ?> <div class="alert alert-success"><?= $msg ?></div> <?php endif; ?>
 
             <div class="legend-box">
-                <strong>📋 Skill Level Legend:</strong>
-                <span><div class="level-badge lvl-0" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> 0 - Not Trained</span>
-                <span><div class="level-badge lvl-1" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> 1 - Beginner (In Training)</span>
-                <span><div class="level-badge lvl-2" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> 2 - Needs Supervision</span>
-                <span><div class="level-badge lvl-3" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> 3 - Independent Operator</span>
-                <span><div class="level-badge lvl-4" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> 4 - Expert / Trainer</span>
+                <strong style="width:100%; margin-bottom:10px;">📋 مفتاح مستويات تقييم المهارات (Skill Levels Legend):</strong>
+                <span><div class="level-badge lvl-0" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> <strong>0</strong> - غير مدرب (Not Trained)</span>
+                <span><div class="level-badge lvl-1" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> <strong>1</strong> - 🔴 مبتدئ قيد التدريب (Beginner)</span>
+                <span><div class="level-badge lvl-2" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> <strong>2</strong> - 🟠 يحتاج إشراف (Needs Supervision)</span>
+                <span><div class="level-badge lvl-3" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> <strong>3</strong> - 🟢 مستقل بمعايير الجودة (Independent)</span>
+                <span><div class="level-badge lvl-4" style="width:15px;height:15px;display:inline-block;vertical-align:middle;"></div> <strong>4</strong> - 🔵 خبير / مدرب (Expert/Trainer)</span>
             </div>
 
             <form method="GET" class="form-filters">
                 <div>
-                    <label style="font-size:12px;font-weight:bold;">Search Worker</label><br>
-                    <input type="text" name="search" placeholder="Name or Matricule" value="<?= htmlspecialchars($search) ?>">
+                    <label style="font-size:12px;font-weight:bold;">🔍 بحث عن عامل (Search Worker)</label><br>
+                    <input type="text" name="search" placeholder="الاسم أو الرقم..." value="<?= htmlspecialchars($search) ?>">
                 </div>
                 <div>
-                    <label style="font-size:12px;font-weight:bold;">Filter Department</label><br>
+                    <label style="font-size:12px;font-weight:bold;">🏢 تصفية حسب القسم (Filter Department)</label><br>
                     <select name="department">
-                        <option value="">-- All Departments --</option>
+                        <option value="">-- كل الأقسام --</option>
                         <?php foreach($depts as $d): ?>
                             <option value="<?= htmlspecialchars($d) ?>" <?= $dept_filter === $d ? 'selected' : '' ?>><?= htmlspecialchars($d) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <button type="submit" class="btn-blue">Filter Results</button>
+                <button type="submit" class="btn-blue">🎯 تصفية (Filter)</button>
             </form>
 
             <table>
                 <thead>
                     <tr>
-                        <th class="emp-col">Employee Name / Dept</th>
+                        <th class="emp-col">👤 اسم العامل والقسم (Employee Name / Dept)</th>
                         <?php foreach($all_skills as $sk): ?>
                             <th title="<?= htmlspecialchars($sk['skill_category']) ?>">
                                 <div class="skill-header"><?= htmlspecialchars($sk['skill_name']) ?></div>
@@ -216,14 +229,14 @@ try {
                 </thead>
                 <tbody>
                     <?php if (empty($employees)): ?>
-                        <tr><td colspan="<?= count($all_skills) + 1 ?>">No employees found matching filter.</td></tr>
+                        <tr><td colspan="<?= count($all_skills) + 1 ?>">🚫 لا يوجد عمال متطابقون مع بحثك. (No employees found matching filter.)</td></tr>
                     <?php endif; ?>
                     
                     <?php foreach($employees as $emp): ?>
                         <tr>
                             <td class="emp-col">
                                 <?= htmlspecialchars($emp['full_name']) ?> <small>(<?= htmlspecialchars($emp['matricule']) ?>)</small><br>
-                                <small style="color:#666; font-weight:normal;"><?= htmlspecialchars($emp['department'] ?: 'No Dept') ?></small>
+                                <small style="color:#666; font-weight:normal;"><?= htmlspecialchars($emp['department'] ?: 'بدون قسم (No Dept)') ?></small>
                             </td>
                             
                             <?php foreach($all_skills as $sk): 
@@ -255,17 +268,20 @@ try {
                 <input type="hidden" name="employee_id" id="modalEmpId">
                 <input type="hidden" name="skill_id" id="modalSkillId">
                 
+                <div style="text-align:right; direction:rtl; margin-bottom:10px;">
+                    <label style="font-size:12px;font-weight:bold;color:#444;">مستوى الكفاءة (Proficiency Level):</label>
+                </div>
                 <select name="level" id="modalLevel">
-                    <option value="0">0 - Remove Skill / Untrained</option>
-                    <option value="1">1 - Beginner (In Training)</option>
-                    <option value="2">2 - Capable but Needs Supervision</option>
-                    <option value="3">3 - Independent (Standard Output)</option>
-                    <option value="4">4 - Expert (Can Train Others)</option>
+                    <option value="0">0 - غير مدرب / حذف المهارة</option>
+                    <option value="1">1 - 🔴 مبتدئ (قيد التدريب)</option>
+                    <option value="2">2 - 🟠 قادر للعمل ولكن يحتاج إشراف</option>
+                    <option value="3">3 - 🟢 مستقل (يعمل بـمعايير الجودة)</option>
+                    <option value="4">4 - 🔵 خبير ممتاز (مؤهل لتدريب الآخرين)</option>
                 </select>
                 
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button type="submit" name="evaluate_skill" class="btn-blue" style="width:100%;">Save Level</button>
-                    <button type="button" onclick="closeEvalModal()" style="padding:10px; border:1px solid #ccc; background:#f9f9f9; border-radius:4px; cursor:pointer;">Cancel</button>
+                <div style="display:flex; gap:10px; margin-top:20px; flex-direction:row-reverse;">
+                    <button type="submit" name="evaluate_skill" class="btn-blue" style="width:100%;">💾 حفظ التقييم</button>
+                    <button type="button" onclick="closeEvalModal()" style="padding:10px; border:1px solid #ccc; background:#f9f9f9; border-radius:4px; cursor:pointer;">❌ إلغاء</button>
                 </div>
             </form>
         </div>
