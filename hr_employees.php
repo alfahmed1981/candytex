@@ -50,6 +50,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_kinship') {
 
 // --- SELF-HEALING DATABASE MIGRATION ---
 try {
+    $pdo->exec("ALTER TABLE hr_employees ADD COLUMN id_card_front VARCHAR(255) DEFAULT NULL, ADD COLUMN id_card_back VARCHAR(255) DEFAULT NULL;");
+} catch (PDOException $e) {
+}
+
+function processBase64Upload($b64_string, $prefix)
+{
+    if (empty($b64_string))
+        return null;
+    $parts = explode(';', $b64_string);
+    if (count($parts) < 2)
+        return null;
+    $dataParts = explode(',', $parts[1]);
+    if (count($dataParts) < 2)
+        return null;
+    $data = base64_decode($dataParts[1]);
+    $filename = $prefix . '_' . uniqid() . '.jpg';
+    $path = 'uploads/employees/' . $filename;
+    if (!is_dir('uploads/employees'))
+        mkdir('uploads/employees', 0777, true);
+    file_put_contents($path, $data);
+    return $path;
+}
+
+try {
     if (!function_exists('run_sql_file')) {
         function run_sql_file($pdo, $filename)
         {
@@ -114,12 +138,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $em_contact = trim($_POST['emergency_contact']);
         $em_phone = trim($_POST['emergency_phone']);
 
+        $id_card_front = processBase64Upload($_POST['id_front_b64'] ?? '', 'id_front_' . $cin);
+        $id_card_back = processBase64Upload($_POST['id_back_b64'] ?? '', 'id_back_' . $cin);
+
         try {
             $stmt = $pdo->prepare("INSERT INTO hr_employees 
                 (location_id, matricule, first_name, last_name, full_name, cin, date_of_birth, gender, marital_status, children_count, 
                  phone_number, address, function_title, department, manager_cin, current_shift, hire_date, payment_type, hourly_rate, cnss_number, contract_type, 
-                 blood_group, emergency_contact, emergency_phone) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 blood_group, emergency_contact, emergency_phone, id_card_front, id_card_back) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmt->execute([
                 $location_id,
@@ -145,7 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $contract,
                 $blood,
                 $em_contact,
-                $em_phone
+                $em_phone,
+                $id_card_front,
+                $id_card_back
             ]);
 
             $new_emp_id = $pdo->lastInsertId();
@@ -208,14 +237,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             // Fetch old metrics to compare for history logging
-            $stmt_old = $pdo->prepare("SELECT function_title, department, manager_cin, current_shift FROM hr_employees WHERE id=?");
+            $stmt_old = $pdo->prepare("SELECT function_title, department, manager_cin, current_shift, id_card_front, id_card_back FROM hr_employees WHERE id=?");
             $stmt_old->execute([$id]);
             $old_emp = $stmt_old->fetch();
+
+            $new_id_front = processBase64Upload($_POST['id_front_b64'] ?? '', 'id_front_' . $cin);
+            $new_id_back = processBase64Upload($_POST['id_back_b64'] ?? '', 'id_back_' . $cin);
+            $id_card_front = $new_id_front ? $new_id_front : $old_emp['id_card_front'];
+            $id_card_back = $new_id_back ? $new_id_back : $old_emp['id_card_back'];
 
             $stmt = $pdo->prepare("UPDATE hr_employees SET 
                 location_id=?, matricule=?, first_name=?, last_name=?, full_name=?, cin=?, date_of_birth=?, gender=?, marital_status=?, children_count=?, 
                 phone_number=?, address=?, function_title=?, department=?, manager_cin=?, current_shift=?, hire_date=?, payment_type=?, hourly_rate=?, cnss_number=?, contract_type=?, 
-                blood_group=?, emergency_contact=?, emergency_phone=?, status=? 
+                blood_group=?, emergency_contact=?, emergency_phone=?, status=?, id_card_front=?, id_card_back=? 
                 WHERE id=?");
 
             $stmt->execute([
@@ -244,6 +278,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $em_contact,
                 $em_phone,
                 $status,
+                $id_card_front,
+                $id_card_back,
                 $id
             ]);
 
@@ -799,6 +835,7 @@ try {
                         / Personnel</button>
                     <button type="button" class="tab-btn" onclick="openTab('tab-work', this)">💼 Work / Travail</button>
                     <button type="button" class="tab-btn" onclick="openTab('tab-safety', this)">🚑 ISO 45001</button>
+                    <button type="button" class="tab-btn" onclick="openTab('tab-documents', this)">🪪 Documents / الوثائق</button>
                     <button type="button" class="tab-btn" onclick="openTab('tab-history', this)" id="historyTabBtn"
                         style="display:none;">📜 History / سجل الحركات</button>
                 </div>
@@ -1015,6 +1052,56 @@ try {
                     </div>
                 </div>
 
+                <!-- TAB 5: Documents / ID Cards -->
+                <div id="tab-documents" class="tab-content">
+                    <div style="background:#e3f2fd; padding:15px; border-radius:4px; margin-bottom:15px; color:#1565c0; font-size:0.9em;">
+                        <strong>ID Cards / البطاقة الوطنية:</strong> Please capture the front and back of the employee's ID card for verification.
+                    </div>
+                    
+                    <input type="hidden" name="id_front_b64" id="id_front_b64">
+                    <input type="hidden" name="id_back_b64" id="id_back_b64">
+
+                    <div class="form-row">
+                        <!-- ID Front -->
+                        <div class="form-group" style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #ddd; text-align:center;">
+                            <label style="color:#0984e3;">Front ID Card / الواجهة الأمامية</label>
+                            
+                            <div id="view_id_front_container" style="display:none; margin-bottom: 10px;">
+                                <a id="view_id_front_link" href="#" target="_blank" class="btn-primary" style="background:#1565c0; text-decoration:none; padding:5px 10px; display:inline-block; border-radius:4px;">👁️ View Saved Front ID</a>
+                            </div>
+
+                            <video id="video-front" autoplay playsinline muted style="width:100%; max-width:300px; display:none; border:1px solid #ccc; border-radius:4px; margin:0 auto;"></video>
+                            <canvas id="canvas-front" style="display:none;"></canvas>
+                            <img id="preview-front" style="width:100%; max-width:300px; display:none; border:1px solid #ccc; border-radius:4px; margin:5px auto;" />
+                            
+                            <div style="margin-top:10px; display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
+                                <button type="button" id="btn-start-front" class="btn-primary" style="background:#0288d1; padding:6px 12px; font-size:0.85em;" onclick="startIdCamera('front')">📸 Start Camera</button>
+                                <button type="button" id="btn-cap-front" class="btn-primary" style="background:#28a745; padding:6px 12px; font-size:0.85em; display:none;" onclick="captureIdImage('front')">✅ Capture</button>
+                                <button type="button" id="btn-retake-front" class="btn-primary" style="background:#f57c00; padding:6px 12px; font-size:0.85em; display:none;" onclick="retakeIdImage('front')">🔄 Retake</button>
+                            </div>
+                        </div>
+
+                        <!-- ID Back -->
+                        <div class="form-group" style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #ddd; text-align:center;">
+                            <label style="color:#0984e3;">Back ID Card / الواجهة الخلفية</label>
+                            
+                            <div id="view_id_back_container" style="display:none; margin-bottom: 10px;">
+                                <a id="view_id_back_link" href="#" target="_blank" class="btn-primary" style="background:#1565c0; text-decoration:none; padding:5px 10px; display:inline-block; border-radius:4px;">👁️ View Saved Back ID</a>
+                            </div>
+
+                            <video id="video-back" autoplay playsinline muted style="width:100%; max-width:300px; display:none; border:1px solid #ccc; border-radius:4px; margin:0 auto;"></video>
+                            <canvas id="canvas-back" style="display:none;"></canvas>
+                            <img id="preview-back" style="width:100%; max-width:300px; display:none; border:1px solid #ccc; border-radius:4px; margin:5px auto;" />
+                            
+                            <div style="margin-top:10px; display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
+                                <button type="button" id="btn-start-back" class="btn-primary" style="background:#0288d1; padding:6px 12px; font-size:0.85em;" onclick="startIdCamera('back')">📸 Start Camera</button>
+                                <button type="button" id="btn-cap-back" class="btn-primary" style="background:#28a745; padding:6px 12px; font-size:0.85em; display:none;" onclick="captureIdImage('back')">✅ Capture</button>
+                                <button type="button" id="btn-retake-back" class="btn-primary" style="background:#f57c00; padding:6px 12px; font-size:0.85em; display:none;" onclick="retakeIdImage('back')">🔄 Retake</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- TAB 4: History / Ségil -->
                 <div id="tab-history" class="tab-content">
                     <div
@@ -1050,6 +1137,101 @@ try {
             btnElem.classList.add('active-tab');
         }
 
+        // Camera ID logic
+        let activeStreamFront = null;
+        let activeStreamBack = null;
+
+        async function startIdCamera(side) {
+            try {
+                if (side === 'front') stopCamera('back');
+                else stopCamera('front');
+
+                const constraints = { video: { facingMode: "environment" }, audio: false };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                if (side === 'front') activeStreamFront = stream;
+                else activeStreamBack = stream;
+
+                const video = document.getElementById(`video-${side}`);
+                video.srcObject = stream;
+                video.style.display = 'block';
+                
+                document.getElementById(`preview-${side}`).style.display = 'none';
+                document.getElementById(`btn-start-${side}`).style.display = 'none';
+                document.getElementById(`btn-cap-${side}`).style.display = 'inline-block';
+                document.getElementById(`btn-retake-${side}`).style.display = 'none';
+            } catch (err) {
+                console.error("Camera error:", err);
+                alert('Camera access denied or not available. / الكاميرا غير متاحة.');
+            }
+        }
+
+        function stopCamera(side) {
+            let stream = side === 'front' ? activeStreamFront : activeStreamBack;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                if (side === 'front') activeStreamFront = null;
+                else activeStreamBack = null;
+            }
+            const video = document.getElementById(`video-${side}`);
+            if (video) video.style.display = 'none';
+        }
+
+        function captureIdImage(side) {
+            const video = document.getElementById(`video-${side}`);
+            const canvas = document.getElementById(`canvas-${side}`);
+            const preview = document.getElementById(`preview-${side}`);
+            const stream = side === 'front' ? activeStreamFront : activeStreamBack;
+            
+            if (!stream) return;
+
+            let targetWidth = video.videoWidth;
+            let targetHeight = video.videoHeight;
+            const MAX_WIDTH = 1024;
+            
+            if (targetWidth > MAX_WIDTH) {
+                targetHeight = Math.round(targetHeight * (MAX_WIDTH / targetWidth));
+                targetWidth = MAX_WIDTH;
+            }
+            canvas.width = targetWidth || MAX_WIDTH;
+            canvas.height = targetHeight || (MAX_WIDTH * 0.75);
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const b64 = canvas.toDataURL('image/jpeg', 0.8);
+            document.getElementById(`id_${side}_b64`).value = b64;
+            
+            preview.src = b64;
+            preview.style.display = 'block';
+            
+            stopCamera(side);
+            document.getElementById(`btn-cap-${side}`).style.display = 'none';
+            document.getElementById(`btn-retake-${side}`).style.display = 'inline-block';
+        }
+
+        function retakeIdImage(side) {
+            document.getElementById(`id_${side}_b64`).value = '';
+            document.getElementById(`preview-${side}`).src = '';
+            document.getElementById(`preview-${side}`).style.display = 'none';
+            startIdCamera(side);
+        }
+
+        function stopAllCameras() {
+            stopCamera('front');
+            stopCamera('back');
+        }
+
+        function resetCameraUI(side) {
+            document.getElementById(`id_${side}_b64`).value = '';
+            document.getElementById(`preview-${side}`).src = '';
+            document.getElementById(`preview-${side}`).style.display = 'none';
+            document.getElementById(`btn-start-${side}`).style.display = 'inline-block';
+            document.getElementById(`btn-cap-${side}`).style.display = 'none';
+            document.getElementById(`btn-retake-${side}`).style.display = 'none';
+            document.getElementById(`view_id_${side}_container`).style.display = 'none';
+        }
+
         // Full History Data embedded for JS
         const employeeHistories = <?= json_encode($histories) ?>;
 
@@ -1061,6 +1243,9 @@ try {
             document.getElementById('statusGroup').style.display = 'none';
             document.getElementById('modalSubmitBtn').innerText = '💾 Save / Enregistrer / حفظ';
             document.getElementById('historyTabBtn').style.display = 'none'; // Hide history when adding
+
+            resetCameraUI('front');
+            resetCameraUI('back');
 
             // Go to first tab
             openTab('tab-personal', document.querySelector('.tab-buttons .tab-btn:first-child'));
@@ -1109,6 +1294,17 @@ try {
 
             document.getElementById('modalSubmitBtn').innerText = '💾 Update / Modifier / تحديث';
 
+            resetCameraUI('front');
+            resetCameraUI('back');
+            if (emp.id_card_front) {
+                document.getElementById('view_id_front_container').style.display = 'block';
+                document.getElementById('view_id_front_link').href = emp.id_card_front;
+            }
+            if (emp.id_card_back) {
+                document.getElementById('view_id_back_container').style.display = 'block';
+                document.getElementById('view_id_back_link').href = emp.id_card_back;
+            }
+
             // Build History Timeline
             document.getElementById('historyTabBtn').style.display = 'inline-block';
             const histContainer = document.getElementById('employeeHistoryContainer');
@@ -1138,6 +1334,7 @@ try {
 
         function closeModal() {
             document.getElementById('empModal').style.display = 'none';
+            stopAllCameras();
         }
 
         // Field Toggle Logic
