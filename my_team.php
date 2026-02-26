@@ -10,7 +10,8 @@ if (!isset($_SESSION['user_cin'])) {
 }
 
 $user_cin = $_SESSION['user_cin'];
-$is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+$is_admin = is_admin();
+$is_hr = is_hr();
 
 // --- SELF-HEALING DATABASE MIGRATION ---
 try {
@@ -82,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // --- ADD BY MATRICULE ---
-    if (isset($_POST['add_by_matricule'])) {
+    // --- ADD BY MATRICULE (ADMIN/HR ONLY) ---
+    if (isset($_POST['add_by_matricule']) && ($is_admin || $is_hr)) {
         $add_mat = trim($_POST['matricule']);
 
         $target_manager = $user_cin;
@@ -387,28 +388,30 @@ if ($view_cin !== $user_cin && $is_admin) {
                 </div>
             <?php endif; ?>
 
-            <!-- ADD BY MATRICULE FORM -->
-            <div class="form-box"
-                style="margin-bottom:20px; border-left:4px solid #0984e3; background:#e3f2fd; border-radius:8px; padding:15px;">
-                <h4 style="margin-top:0; color:#0984e3;">➕ Add Employee to Team / إضافة عامل للفريق</h4>
-                <p style="font-size:12px; color:#555; margin-bottom:10px;">أدخل رقم التسجيل (Matricule) الخاص بالعامل
-                    لضمه إلى فريقك ليظهر في قائمة الحضور.</p>
-                <form method="POST" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-                    <?php if ($is_admin): ?>
-                        <input type="hidden" name="target_manager" value="<?= htmlspecialchars($view_cin) ?>">
-                    <?php endif; ?>
-                    <div style="flex:1; min-width:200px;">
-                        <input type="text" name="matricule" placeholder="Enter Matricule... (مثال: AB1234)" required
-                            style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-weight:bold;">
-                    </div>
-                    <div>
-                        <button type="submit" name="add_by_matricule"
-                            style="background:#0984e3; color:white; padding:10px 20px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
-                            🔍 البحث والإضافة
-                        </button>
-                    </div>
-                </form>
-            </div>
+            <!-- ADD BY MATRICULE FORM (ADMIN/HR ONLY) -->
+            <?php if ($is_admin || $is_hr): ?>
+                <div class="form-box"
+                    style="margin-bottom:20px; border-left:4px solid #0984e3; background:#e3f2fd; border-radius:8px; padding:15px;">
+                    <h4 style="margin-top:0; color:#0984e3;">➕ Add Employee to Team / إضافة عامل للفريق</h4>
+                    <p style="font-size:12px; color:#555; margin-bottom:10px;">أدخل رقم التسجيل (Matricule) الخاص بالعامل
+                        لضمه إلى فريقك ليظهر في قائمة الحضور.</p>
+                    <form method="POST" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                        <?php if ($is_admin): ?>
+                            <input type="hidden" name="target_manager" value="<?= htmlspecialchars($view_cin) ?>">
+                        <?php endif; ?>
+                        <div style="flex:1; min-width:200px;">
+                            <input type="text" name="matricule" placeholder="Enter Matricule... (مثال: AB1234)" required
+                                style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-weight:bold;">
+                        </div>
+                        <div>
+                            <button type="submit" name="add_by_matricule"
+                                style="background:#0984e3; color:white; padding:10px 20px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
+                                🔍 البحث والإضافة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            <?php endif; ?>
 
             <div class="form-box" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>

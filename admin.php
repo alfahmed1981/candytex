@@ -498,12 +498,12 @@ foreach ($users as $u) {
             $l_stmt = $pdo->query("SELECT name FROM locations ORDER BY name");
             $loc_list = $l_stmt->fetchAll(PDO::FETCH_COLUMN);
 
-            $r_stmt = $pdo->query("SELECT slug, name FROM system_roles ORDER BY name");
-            $role_list = $r_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-            // Fallback for roles if table empty (initial migration)
-            if (empty($role_list)) {
-                $role_list = ['manager' => 'Manager / Chef d\'équipe', 'admin' => 'Administrator'];
-            }
+            $role_list = [
+                'admin' => 'المدير العام / General Admin',
+                'hr' => 'مدير المصنع (HR) / Factory Admin',
+                'manager' => 'رئيس فريق / Team Leader',
+                'viewer' => 'مشاهد / Viewer'
+            ];
             ?>
 
             <!-- Add User Form -->
@@ -720,9 +720,6 @@ foreach ($users as $u) {
                     <?php foreach ($role_list as $slug => $r_name): ?>
                         <option value="<?= htmlspecialchars($slug) ?>"><?= htmlspecialchars($r_name) ?></option>
                     <?php endforeach; ?>
-                    <?php if (!isset($role_list['viewer'])): ?>
-                        <option value="viewer">Viewer / مشاهد</option>
-                    <?php endif; ?>
                 </select>
 
                 <label>Department / القسم</label>

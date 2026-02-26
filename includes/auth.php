@@ -68,6 +68,18 @@ function is_hr()
     return isset($_SESSION['role']) && $_SESSION['role'] === 'hr';
 }
 
+function is_leader()
+{
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'manager';
+}
+
+function get_user_factory($pdo, $cin)
+{
+    $stmt = $pdo->prepare("SELECT location FROM users WHERE cin = ?");
+    $stmt->execute([$cin]);
+    return $stmt->fetchColumn();
+}
+
 function require_hr_or_admin()
 {
     require_login();
