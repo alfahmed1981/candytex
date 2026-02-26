@@ -41,12 +41,16 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
             <a href="hr_employees.php" <?= $current_page === 'hr_employees.php' ? 'class="active"' : '' ?>>👥 موارد بشرية</a>
             <a href="hr_attendance.php" <?= $current_page === 'hr_attendance.php' ? 'class="active"' : '' ?>>🕒 حضور يومي</a>
             <a href="hr_payroll.php" <?= $current_page === 'hr_payroll.php' ? 'class="active"' : '' ?>>💵 إدارة الرواتب</a>
+            <a href="hr_skills_matrix.php" <?= $current_page === 'hr_skills_matrix.php' ? 'class="active"' : '' ?>>🧠 مصفوفة
+                المهارات</a>
         <?php endif; ?>
         <?php if ($nav_is_admin || $nav_is_hr || $nav_is_leader): ?>
             <a href="admin_issues.php" <?= $current_page === 'admin_issues.php' ? 'class="active"' : '' ?>>🛠️ مشاكل</a>
         <?php endif; ?>
         <?php if ($nav_is_admin): ?>
             <a href="admin.php" <?= $current_page === 'admin.php' ? 'class="active"' : '' ?>>⚙️ إدارة</a>
+            <a href="iso_maintenance.php" <?= $current_page === 'iso_maintenance.php' ? 'class="active"' : '' ?>>🏭 إدارة
+                الصيانة (TPM)</a>
         <?php endif; ?>
         <a href="index.php?logout=1" class="logout">🚪 خروج</a>
     </div>
@@ -74,12 +78,14 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <a href="hr_employees.php" class="logout-btn" style="background:#0984e3;">👥 الموارد البشرية</a>
         <a href="hr_attendance.php" class="logout-btn" style="background:#00cec9;">🕒 الحضور اليومي</a>
         <a href="hr_payroll.php" class="logout-btn" style="background:#2ecc71;">💵 إدارة وتوليد الرواتب</a>
+        <a href="hr_skills_matrix.php" class="logout-btn" style="background:#8e44ad;">🧠 مصفوفة المهارات والمناصب</a>
     <?php endif; ?>
     <?php if ($nav_is_admin || $nav_is_hr || $nav_is_leader): ?>
         <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
     <?php endif; ?>
     <?php if ($nav_is_admin): ?>
         <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
+        <a href="iso_maintenance.php" class="logout-btn" style="background:#d35400;">🏭 إدارة الصيانة والمعدات</a>
     <?php endif; ?>
     <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">🚪 خروج</a>
 </div>
