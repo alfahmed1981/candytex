@@ -7,7 +7,7 @@ $nav_user_name = $_SESSION['user_name'] ?? 'User';
 $nav_is_admin = is_admin();
 $nav_is_hr = is_hr();
 $nav_is_leader = is_leader();
-$nav_is_hr_admin = is_hr_admin();
+$nav_is_hr_admin = function_exists('is_hr_admin') ? is_hr_admin() : false;
 $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
 ?>
 

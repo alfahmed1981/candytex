@@ -6,7 +6,7 @@ require 'includes/auth.php';
 // Attendance can be done by Admin, HR, HR_Admin, OR Manager for their own team
 $is_admin = is_admin();
 $is_hr = is_hr();
-$is_hr_admin_user = is_hr_admin();
+$is_hr_admin_user = function_exists('is_hr_admin') ? is_hr_admin() : false;
 if (!isset($_SESSION['user_cin'])) {
     header("Location: index.php");
     exit;

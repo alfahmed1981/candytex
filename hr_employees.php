@@ -7,7 +7,7 @@ require 'includes/auth.php';
 require_hr_or_admin();
 
 $is_hr_only = is_hr();
-$is_hr_admin_user = is_hr_admin();
+$is_hr_admin_user = function_exists('is_hr_admin') ? is_hr_admin() : false;
 $is_restricted_hr = $is_hr_only || $is_hr_admin_user; // Both HR and HR_Admin get location filtering
 $hr_location_id = null;
 if ($is_restricted_hr) {
