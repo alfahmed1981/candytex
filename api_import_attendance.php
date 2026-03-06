@@ -140,6 +140,24 @@ try {
         }
     }
 
+    // Calculate period dates early
+    $payroll_month = isset($data['target_month']) ? (int)$data['target_month'] : (int)date('m');
+    $payroll_year = isset($data['target_year']) ? (int)$data['target_year'] : (int)date('Y');
+
+    $min_date = '9999-12-31';
+    $max_date = '0000-00-00';
+    if (!empty($records)) {
+        foreach ($records as $r) {
+            if ($r['date'] < $min_date) $min_date = $r['date'];
+            if ($r['date'] > $max_date) $max_date = $r['date'];
+        }
+    } else {
+        $min_date = date("Y-m-26", strtotime("$payroll_year-$payroll_month-01 -1 month"));
+        $max_date = date("Y-m-25", strtotime("$payroll_year-$payroll_month-01"));
+    }
+    $period_start = $min_date;
+    $period_end = $max_date;
+
     // Second pass: Insert attendance and group absences
     $employee_absence_blocks = [];
     foreach ($records as $r) {
@@ -214,15 +232,21 @@ try {
 
     // Save grouped absences
     $abs_logged = 0;
+    
+    // Clear old absences in this period for these employees to prevent ghost duplicates from changed logic
+    if (!empty($emp_map)) {
+        $emp_ids = array_values($emp_map);
+        $placeholders = implode(',', array_fill(0, count($emp_ids), '?'));
+        // Delete any absence that overlaps with the current payroll period
+        $del_abs_stmt = $pdo->prepare("DELETE FROM hr_absences WHERE employee_id IN ($placeholders) AND ((start_date BETWEEN ? AND ?) OR (end_date BETWEEN ? AND ?))");
+        $params_del = array_merge($emp_ids, [$period_start, $period_end, $period_start, $period_end]);
+        $del_abs_stmt->execute($params_del);
+    }
+
     foreach ($absences_to_log as $emp_id => $blocks) {
         foreach ($blocks as $block) {
-            // Check if it already exists to avoid duplicates
-            $chk = $pdo->prepare("SELECT id FROM hr_absences WHERE employee_id = ? AND start_date = ? AND end_date = ? AND absence_type COLLATE utf8mb4_unicode_ci = ?");
-            $chk->execute([$emp_id, $block['start_date'], $block['end_date'], $block['type']]);
-            if ($chk->rowCount() == 0) {
-                $stmt_ins_abs->execute([$emp_id, $block['type'], $block['start_date'], $block['end_date'], $user_cin]);
-                $abs_logged++;
-            }
+            $stmt_ins_abs->execute([$emp_id, $block['type'], $block['start_date'], $block['end_date'], $user_cin]);
+            $abs_logged++;
         }
     }
 
@@ -247,26 +271,8 @@ try {
 
     $payroll_count = 0;
     $cnss_updates = 0;
-    
     // Explicitly use target month and year sent from the frontend
-    $payroll_month = isset($data['target_month']) ? (int)$data['target_month'] : (int)date('m');
-    $payroll_year = isset($data['target_year']) ? (int)$data['target_year'] : (int)date('Y');
-
-    // Dynamically determine the payroll period based on imported records
-    $min_date = '9999-12-31';
-    $max_date = '0000-00-00';
-    if (!empty($records)) {
-        foreach ($records as $r) {
-            if ($r['date'] < $min_date) $min_date = $r['date'];
-            if ($r['date'] > $max_date) $max_date = $r['date'];
-        }
-    } else {
-        $min_date = date("Y-m-26", strtotime("$payroll_year-$payroll_month-01 -1 month")); // fallback
-        $max_date = date("Y-m-25", strtotime("$payroll_year-$payroll_month-01"));
-    }
-
-    $period_start = $min_date;
-    $period_end = $max_date;
+    // (Already calculated above)
 
     if (isset($data['payrolls']) && is_array($data['payrolls'])) {
         foreach ($data['payrolls'] as $p) {
