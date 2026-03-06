@@ -45,6 +45,9 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <?php if ($nav_is_admin || $nav_is_hr || $nav_is_hr_admin): ?>
             <a href="hr_employees.php" <?= $current_page === 'hr_employees.php' ? 'class="active"' : '' ?>>👥 موارد بشرية</a>
             <a href="hr_attendance.php" <?= $current_page === 'hr_attendance.php' ? 'class="active"' : '' ?>>🕒 حضور يومي</a>
+            <?php if ($nav_is_admin || $nav_is_hr): ?>
+                <a href="hr_import.php" <?= $current_page === 'hr_import.php' ? 'class="active"' : '' ?>>📥 استيراد بيانات</a>
+            <?php endif; ?>
         <?php endif; ?>
         <?php if ($nav_is_admin || $nav_is_hr): ?>
             <a href="hr_payroll.php" <?= $current_page === 'hr_payroll.php' ? 'class="active"' : '' ?>>💵 إدارة الرواتب</a>
@@ -88,6 +91,9 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
     <?php if ($nav_is_admin || $nav_is_hr || $nav_is_hr_admin): ?>
         <a href="hr_employees.php" class="logout-btn" style="background:#0984e3;">👥 الموارد البشرية</a>
         <a href="hr_attendance.php" class="logout-btn" style="background:#00cec9;">🕒 الحضور اليومي</a>
+        <?php if ($nav_is_admin || $nav_is_hr): ?>
+            <a href="hr_import.php" class="logout-btn" style="background:#81ecec; color:#2d3436;">📥 استيراد البيانات</a>
+        <?php endif; ?>
     <?php endif; ?>
     <?php if ($nav_is_admin || $nav_is_hr): ?>
         <a href="hr_payroll.php" class="logout-btn" style="background:#2ecc71;">💵 إدارة وتوليد الرواتب</a>

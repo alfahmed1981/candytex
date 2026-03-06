@@ -63,14 +63,20 @@ try {
     // However, since PDO prepared statements with thousands of params can hit limits,
     // we'll chunk them.
 
-    // First, cache all matricules to IDs to avoid a subquery for every row
+    // Fetch active employees (and track those already mapped)
     $emp_map = [];
-    $stmt_emp = $pdo->query("SELECT matricule, id FROM hr_employees WHERE status = 'Active'");
+    $stmt_emp = $pdo->query("SELECT matricule, id FROM hr_employees");
     while ($row = $stmt_emp->fetch(PDO::FETCH_ASSOC)) {
         $emp_map[(string) $row['matricule']] = $row['id'];
     }
 
-    $stmt_ins = $pdo->prepare("
+    $stmt_ins_emp = $pdo->prepare("
+        INSERT INTO hr_employees 
+        (matricule, full_name, function_title, gender, hire_date, hourly_rate, payment_type, status, location_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'Active', ?)
+    ");
+
+    $stmt_ins_att = $pdo->prepare("
         INSERT INTO hr_attendance (employee_id, work_date, hours_worked, status, recorded_by) 
         VALUES (?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
@@ -78,11 +84,59 @@ try {
             status = VALUES(status)
     ");
 
+    // NEW: Auto-logging absences continuously
+    $stmt_ins_abs = $pdo->prepare("
+        INSERT INTO hr_absences (employee_id, absence_type, start_date, end_date, recorded_by)
+        VALUES (?, ?, ?, ?, ?)
+    ");
+
+    $absences_to_log = [];
+
+    // First pass: Handle missing employees
+    $current_location_id = null;
+    if (isset($_SESSION['user_cin'])) {
+        $loc_stmt = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
+        $loc_stmt->execute([$_SESSION['user_cin']]);
+        $current_location_id = $loc_stmt->fetchColumn() ?: 1; // Default to 1 if unknown
+    }
+
+    $unique_emps = [];
+    foreach ($records as $r) {
+        $mat = (string) $r['matricule'];
+        if (!isset($unique_emps[$mat])) {
+             $unique_emps[$mat] = $r;
+        }
+    }
+
+    $new_emp_count = 0;
+    foreach ($unique_emps as $mat => $r) {
+        if (!isset($emp_map[$mat]) && !empty($r['full_name'])) {
+            // Auto-create missing employee
+            $hire_date = !empty($r['hire_date']) ? $r['hire_date'] : date('Y-m-d');
+            $hourly_rate = isset($r['hourly_rate']) ? floatval($r['hourly_rate']) : 0.00;
+            $payment_type = (isset($r['sheet_type']) && $r['sheet_type'] === 'MENS') ? 'Monthly' : 'Hourly';
+            
+            $stmt_ins_emp->execute([
+                $mat, 
+                $r['full_name'], 
+                $r['function_title'], 
+                $r['gender'], 
+                $hire_date, 
+                $hourly_rate, 
+                $payment_type,
+                $current_location_id
+            ]);
+            $emp_map[$mat] = $pdo->lastInsertId();
+            $new_emp_count++;
+        }
+    }
+
+    // Second pass: Insert attendance and group absences
     foreach ($records as $r) {
         $mat = (string) $r['matricule'];
         if (!isset($emp_map[$mat])) {
             $skipped_count++;
-            continue; // Skip if employee doesn't exist or is inactive
+            continue; 
         }
 
         $emp_id = $emp_map[$mat];
@@ -90,8 +144,49 @@ try {
         $hours = floatval($r['hours']);
         $status = $r['status'];
 
-        $stmt_ins->execute([$emp_id, $date, $hours, $status, $user_cin]);
+        $stmt_ins_att->execute([$emp_id, $date, $hours, $status, $user_cin]);
         $success_count++;
+
+        // Track standard absences for bulk logging into hr_absences
+        if (in_array($status, ['M', 'MAT', 'ACC', 'A', 'AT'])) {
+            $status_code = $status === 'AT' ? 'ACC' : $status;
+            
+            if (!isset($absences_to_log[$emp_id])) {
+                 $absences_to_log[$emp_id] = [];
+            }
+
+            // If we already have a running block of the same type ending yesterday
+            $prev_date = date('Y-m-d', strtotime($date . ' -1 day'));
+            $found_block = false;
+            foreach ($absences_to_log[$emp_id] as &$block) {
+                if ($block['type'] === $status_code && $block['end_date'] === $prev_date) {
+                    $block['end_date'] = $date;
+                    $found_block = true;
+                    break;
+                }
+            }
+            if (!$found_block) {
+                $absences_to_log[$emp_id][] = [
+                    'type' => $status_code,
+                    'start_date' => $date,
+                    'end_date' => $date
+                ];
+            }
+        }
+    }
+
+    // Save grouped absences
+    $abs_logged = 0;
+    foreach ($absences_to_log as $emp_id => $blocks) {
+        foreach ($blocks as $block) {
+            // Check if it already exists to avoid duplicates
+            $chk = $pdo->prepare("SELECT id FROM hr_absences WHERE employee_id = ? AND start_date = ? AND end_date = ? AND absence_type = ?");
+            $chk->execute([$emp_id, $block['start_date'], $block['end_date'], $block['type']]);
+            if ($chk->rowCount() == 0) {
+                $stmt_ins_abs->execute([$emp_id, $block['type'], $block['start_date'], $block['end_date'], $user_cin]);
+                $abs_logged++;
+            }
+        }
     }
 
     $pdo->commit();
@@ -101,11 +196,12 @@ try {
 
     $stmt_payroll = $pdo->prepare("
         INSERT INTO hr_payroll 
-        (employee_id, payroll_month, payroll_year, period_start, period_end, cnss_deduction, advances, brut_salary, net_salary, rounded_net, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft')
+        (employee_id, payroll_month, payroll_year, period_start, period_end, cnss_deduction, advances, frais, brut_salary, net_salary, rounded_net, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft')
         ON DUPLICATE KEY UPDATE 
             cnss_deduction = VALUES(cnss_deduction),
             advances = VALUES(advances),
+            frais = VALUES(frais),
             brut_salary = VALUES(brut_salary),
             net_salary = VALUES(net_salary),
             rounded_net = VALUES(rounded_net)
@@ -140,6 +236,7 @@ try {
                 $period_end,
                 $p['cnss_deduction'], // cnss_deduction
                 $p['advances'],       // advances
+                $p['frais'],          // frais (expenses)
                 $p['brut'],           // brut_salary
                 $p['net_salary'],     // net_salary
                 $p['rounded_net']     // rounded_net
@@ -149,11 +246,11 @@ try {
     }
 
     // Log the import
-    audit_log($pdo, 'hr_excel_import', "Imported $success_count attendance & $payroll_count payrolls (CNSS Linked: $cnss_updates)");
+    audit_log($pdo, 'hr_excel_import', "Imported $success_count attendance & $payroll_count payrolls (New Emps: $new_emp_count, Absences: $abs_logged)");
 
     echo json_encode([
         'success' => true,
-        'message' => "Successfully imported $success_count attendance records and $payroll_count payroll snapshots. Linked $cnss_updates new CNSS numbers!"
+        'message' => "Successfully imported $success_count attendance records, $abs_logged absence periods, and $payroll_count payroll snapshots. Created $new_emp_count new employees!"
     ]);
 
 } catch (Exception $e) {

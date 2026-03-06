@@ -52,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
         $employees = $emp_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $ins_stmt = $pdo->prepare("INSERT INTO hr_payroll 
-            (employee_id, payroll_month, payroll_year, period_start, period_end, total_hours, brut_salary, cnss_deduction, transport_allowance, advances, net_salary, rounded_net, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft')
+            (employee_id, payroll_month, payroll_year, period_start, period_end, total_hours, brut_salary, cnss_deduction, transport_allowance, advances, frais, net_salary, rounded_net, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft')
             ON DUPLICATE KEY UPDATE 
             total_hours=VALUES(total_hours), brut_salary=VALUES(brut_salary), net_salary=VALUES(net_salary), rounded_net=VALUES(rounded_net)");
 
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
             $total_hours = floatval($hr_stmt->fetchColumn() ?: 0);
 
             // Only generate record if they actually worked, or if they already have an existing payroll record that needs updating
-            $check_stmt = $pdo->prepare("SELECT brut_salary, cnss_deduction, transport_allowance, advances FROM hr_payroll WHERE employee_id = ? AND payroll_month = ? AND payroll_year = ?");
+            $check_stmt = $pdo->prepare("SELECT brut_salary, cnss_deduction, transport_allowance, advances, frais FROM hr_payroll WHERE employee_id = ? AND payroll_month = ? AND payroll_year = ?");
             $check_stmt->execute([$eid, $sel_month, $sel_year]);
             $existing = $check_stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -77,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
                 $cnss = $existing ? floatval($existing['cnss_deduction']) : 0.00;
                 $trans = $existing ? floatval($existing['transport_allowance']) : 0.00;
                 $adv = $existing ? floatval($existing['advances']) : 0.00;
+                $frais = $existing ? floatval($existing['frais']) : 0.00;
                 $existing_brut = $existing ? floatval($existing['brut_salary']) : 0.00;
 
                 // MATH RULES based on Excel vs Manual
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
                     }
                 }
 
-                $net = $brut - $cnss - $adv + $trans;
+                $net = $brut - $cnss - $adv + $trans + $frais;
 
                 // ROUNDING RULE: (e.g. 2412.53 -> 2420)
                 $rounded_net = ceil($net / 10) * 10;
@@ -108,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
                     $cnss,
                     $trans,
                     $adv,
+                    $frais,
                     $net,
                     $rounded_net
                 ]);
@@ -129,17 +131,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_adjustments'])) 
     require_csrf();
     try {
         $pdo->beginTransaction();
-        $upd_stmt = $pdo->prepare("UPDATE hr_payroll SET cnss_deduction=?, advances=?, transport_allowance=?, 
-                                   net_salary = brut_salary - ? - ? + ?, 
-                                   rounded_net = CEIL((brut_salary - ? - ? + ?) / 10) * 10 
+        $upd_stmt = $pdo->prepare("UPDATE hr_payroll SET cnss_deduction=?, advances=?, transport_allowance=?, frais=?, 
+                                   net_salary = brut_salary - ? - ? + ? + ?, 
+                                   rounded_net = CEIL((brut_salary - ? - ? + ? + ?) / 10) * 10 
                                    WHERE id=?");
 
         foreach ($_POST['adj'] as $pid => $data) {
             $cnss = floatval($data['cnss'] ?: 0);
             $adv = floatval($data['advances'] ?: 0);
             $trans = floatval($data['transport'] ?: 0);
+            $frais = floatval($data['frais'] ?: 0);
 
-            $upd_stmt->execute([$cnss, $adv, $trans, $cnss, $adv, $trans, $cnss, $adv, $trans, $pid]);
+            $upd_stmt->execute([$cnss, $adv, $trans, $frais, $cnss, $adv, $trans, $frais, $cnss, $adv, $trans, $frais, $pid]);
         }
         $pdo->commit();
         $msg = "<script>Swal.fire('Success', 'Adjustments saved. Net salaries recalculated.', 'success');</script>";
@@ -172,6 +175,7 @@ $tot_brut = 0;
 $tot_cnss = 0;
 $tot_trans = 0;
 $tot_adv = 0;
+$tot_frais = 0;
 $tot_net = 0;
 $tot_arrond = 0;
 foreach ($payroll_records as $r) {
@@ -179,6 +183,7 @@ foreach ($payroll_records as $r) {
     $tot_cnss += floatval($r['cnss_deduction']);
     $tot_trans += floatval($r['transport_allowance']);
     $tot_adv += floatval($r['advances']);
+    $tot_frais += floatval($r['frais']);
     $tot_net += floatval($r['net_salary']);
     $tot_arrond += floatval($r['rounded_net']);
 }
@@ -335,6 +340,12 @@ foreach ($payroll_records as $r) {
                         <?= number_format($tot_adv, 2) ?>
                     </p>
                 </div>
+                <div class="summary-card" style="border-bottom: 4px solid #f39c12;">
+                    <h4>Total Frais</h4>
+                    <p>
+                        <?= number_format($tot_frais, 2) ?>
+                    </p>
+                </div>
                 <div class="summary-card" style="border-bottom: 4px solid #28a745;">
                     <h4>Total Transport</h4>
                     <p>
@@ -364,6 +375,7 @@ foreach ($payroll_records as $r) {
                                 <th style="background:#e8f5e9;">BRUT</th>
                                 <th style="background:#ffebee;">CNSS</th>
                                 <th style="background:#ffebee;">AV (Advances)</th>
+                                <th style="background:#fff3e0;">FRS (Frais)</th>
                                 <th style="background:#e3f2fd;">TRANS</th>
                                 <th style="background:#f3e5f5;">NET</th>
                                 <th style="background:#e0f7fa;">ARROND (Rounded)</th>
@@ -401,6 +413,10 @@ foreach ($payroll_records as $r) {
                                     <td style="background:#ffebee;">
                                         <input type="number" step="0.01" name="adj[<?= $r['id'] ?>][advances]"
                                             value="<?= $r['advances'] ?>" class="adj-input">
+                                    </td>
+                                    <td style="background:#fff3e0;">
+                                        <input type="number" step="0.01" name="adj[<?= $r['id'] ?>][frais]"
+                                            value="<?= $r['frais'] ?>" class="adj-input">
                                     </td>
                                     <td style="background:#e3f2fd;">
                                         <input type="number" step="0.01" name="adj[<?= $r['id'] ?>][transport]"
