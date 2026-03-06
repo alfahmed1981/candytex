@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `phone` VARCHAR(20) NOT NULL,
     `email` VARCHAR(150) DEFAULT NULL,
     `whatsapp` VARCHAR(20) DEFAULT NULL,
-    `role` ENUM('admin', 'manager', 'viewer') DEFAULT 'manager',
+    `role` VARCHAR(20) NOT NULL DEFAULT 'viewer',
     `password` VARCHAR(255) DEFAULT NULL,
     `status` ENUM('active', 'pending') DEFAULT 'active',
     `department` VARCHAR(100) DEFAULT NULL,

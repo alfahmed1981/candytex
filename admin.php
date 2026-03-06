@@ -18,6 +18,16 @@ try {
     $pdo->exec("ALTER TABLE users ADD COLUMN whatsapp VARCHAR(20) DEFAULT NULL AFTER email");
 }
 
+// --- Self-healing: ensure role column supports hr_admin ---
+try {
+    $col_info = $pdo->query("SHOW COLUMNS FROM users WHERE Field = 'role'")->fetch();
+    if ($col_info && strpos($col_info['Type'], 'hr_admin') === false) {
+        $pdo->exec("ALTER TABLE users MODIFY COLUMN role VARCHAR(20) NOT NULL DEFAULT 'viewer'");
+    }
+} catch (Exception $e) {
+    error_log("Failed to migrate role column: " . $e->getMessage());
+}
+
 // --- Handle Stop Impersonation (GET - safe, read-only session restore) ---
 if (isset($_GET['action']) && $_GET['action'] === 'stop_impersonation') {
     stop_impersonation();
