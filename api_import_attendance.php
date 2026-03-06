@@ -194,10 +194,13 @@ try {
 
         if (in_array($normalized_status, ['A', 'M', 'MAT', 'ACC'])) { 
             if ($current_block && $current_block['type'] === $normalized_status) {
-                // Check if dates are EXACTLY consecutive (1 day gap maximum)
                 $diff = strtotime($date) - strtotime($current_block['end_date']);
-                // 1 day = 86400 seconds. If gap is > 86400, it's not contiguous.
-                if ($diff <= 86400) { 
+                
+                // For unexcused Absences 'A', strictly separate them by 1 day gap
+                // For Illness, Maternity, and Accidents, allow 3-day bridging across weekends
+                $max_gap = ($normalized_status === 'A') ? 86400 : (86400 * 3);
+                
+                if ($diff <= $max_gap) { 
                     $current_block['end_date'] = $date;
                 } else {
                     // Gap detected (weekend or empty day), close current block and start a new one
