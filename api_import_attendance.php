@@ -219,6 +219,10 @@ try {
     $payroll_count = 0;
     $cnss_updates = 0;
     
+    // Explicitly use target month and year sent from the frontend
+    $payroll_month = isset($data['target_month']) ? (int)$data['target_month'] : (int)date('m');
+    $payroll_year = isset($data['target_year']) ? (int)$data['target_year'] : (int)date('Y');
+
     // Dynamically determine the payroll period based on imported records
     $min_date = '9999-12-31';
     $max_date = '0000-00-00';
@@ -228,16 +232,12 @@ try {
             if ($r['date'] > $max_date) $max_date = $r['date'];
         }
     } else {
-        $min_date = date('Y-m-26', strtotime('-1 month')); // fallback
-        $max_date = date('Y-m-25');
+        $min_date = date("Y-m-26", strtotime("$payroll_year-$payroll_month-01 -1 month")); // fallback
+        $max_date = date("Y-m-25", strtotime("$payroll_year-$payroll_month-01"));
     }
 
     $period_start = $min_date;
     $period_end = $max_date;
-    
-    // Set the payroll month and year based on the end of the period
-    $payroll_month = (int)date('m', strtotime($period_end));
-    $payroll_year = (int)date('Y', strtotime($period_end));
 
     if (isset($data['payrolls']) && is_array($data['payrolls'])) {
         foreach ($data['payrolls'] as $p) {

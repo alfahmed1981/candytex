@@ -93,6 +93,33 @@ if (empty($_SESSION['csrf_token'])) {
         
         <input type="file" id="fileInput" accept=".xlsx, .xls">
         
+        <div class="filter-group" style="margin-bottom: 20px; display: flex; justify-content: center; gap: 15px;">
+            <div>
+                <label>Month</label>
+                <select id="import_month" class="form-control" style="width:120px; display:inline-block;">
+                    <?php 
+                    $current_m = date('n');
+                    for($m=1; $m<=12; $m++): 
+                        $sel = ($m == $current_m) ? 'selected' : '';
+                        echo "<option value='".str_pad($m, 2, '0', STR_PAD_LEFT)."' $sel>".str_pad($m, 2, '0', STR_PAD_LEFT)."</option>";
+                    endfor; 
+                    ?>
+                </select>
+            </div>
+            <div>
+                <label>Year</label>
+                <select id="import_year" class="form-control" style="width:120px; display:inline-block;">
+                    <?php 
+                    $current_y = date('Y');
+                    for($y=$current_y-2; $y<=$current_y+2; $y++): 
+                        $sel = ($y == $current_y) ? 'selected' : '';
+                        echo "<option value='$y' $sel>$y</option>";
+                    endfor; 
+                    ?>
+                </select>
+            </div>
+        </div>
+
         <button id="processBtn" class="btn" style="width: 100%; padding: 15px; font-size: 1.1em; margin-top: 10px; display: none;">
             🚀 Extract and Import Data
         </button>
@@ -262,9 +289,12 @@ if (empty($_SESSION['csrf_token'])) {
                 }
 
                 // Confirm and Send to API
+                const selectedMonth = document.getElementById('import_month').value;
+                const selectedYear = document.getElementById('import_year').value;
+
                 Swal.fire({
                     title: 'Ready to Import',
-                    text: `Found ${records.length} daily pointage records and ${payrolls.length} payroll snapshots. Do you want to save them to the database?`,
+                    text: `Importing ${records.length} records and ${payrolls.length} payrolls for ${selectedMonth}/${selectedYear} ?`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Yes, Import Now',
@@ -276,7 +306,13 @@ if (empty($_SESSION['csrf_token'])) {
                                 'Content-Type': 'application/json',
                                 'X-CSRF-Token': '<?= $_SESSION['csrf_token'] ?>'
                             },
-                            body: JSON.stringify({records: records, payrolls: payrolls, csrf_token: '<?= $_SESSION['csrf_token'] ?>'})
+                            body: JSON.stringify({
+                                records: records, 
+                                payrolls: payrolls, 
+                                csrf_token: '<?= $_SESSION['csrf_token'] ?>',
+                                target_month: selectedMonth,
+                                target_year: selectedYear
+                            })
                         })
                         .then(response => {
                             if (!response.ok) {
