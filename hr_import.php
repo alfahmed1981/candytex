@@ -317,9 +317,6 @@ if (empty($_SESSION['csrf_token'])) {
                 }
 
                 // Confirm and Send to API
-                const selectedMonth = document.getElementById('import_month').value;
-                const selectedYear = document.getElementById('import_year').value;
-
                 Swal.fire({
                     title: 'Ready to Import',
                     text: `Importing ${records.length} records and ${payrolls.length} payrolls for ${selectedMonth}/${selectedYear} ?`,
