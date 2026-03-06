@@ -2,84 +2,50 @@
 /**
  * Temporary Script: Move all employees to Flora 1
  * Run once then DELETE this file.
- * Usage: https://candytex.ma/dash/migrate_to_flora1.php
  */
 session_start();
 require 'db.php';
 require 'includes/auth.php';
-require_admin(); // Only admin can run this
+require_admin();
 
-// Find Flora 1 location_id
-$stmt = $pdo->prepare("SELECT id, name FROM locations WHERE name LIKE '%Flora%1%' OR name LIKE '%flora%1%' LIMIT 1");
-$stmt->execute();
-$flora = $stmt->fetch();
+echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Migration</title></head><body style='font-family:sans-serif;max-width:700px;margin:50px auto;padding:20px;'>";
 
+// Get Flora 1 ID
+$flora = $pdo->query("SELECT id, name FROM locations WHERE name = 'Flora 1' LIMIT 1")->fetch();
 if (!$flora) {
-    die("❌ Location 'Flora 1' not found in locations table.");
+    // Try fuzzy match
+    $flora = $pdo->query("SELECT id, name FROM locations ORDER BY id")->fetchAll();
+    echo "<h2>❌ 'Flora 1' not found. Available locations:</h2><ul>";
+    foreach ($flora as $l) echo "<li>ID={$l['id']} — {$l['name']}</li>";
+    echo "</ul>";
+    die();
 }
 
 $flora_id = $flora['id'];
-$flora_name = $flora['name'];
+echo "<h2>🏭 Flora 1 → location_id = $flora_id</h2>";
 
-// Count employees before
-$count_before = $pdo->query("SELECT COUNT(*) FROM hr_employees")->fetchColumn();
-$count_already = $pdo->prepare("SELECT COUNT(*) FROM hr_employees WHERE location_id = ?");
-$count_already->execute([$flora_id]);
-$already = $count_already->fetchColumn();
-$count_other = $count_before - $already;
+// Show current state
+$stats = $pdo->query("SELECT location_id, COUNT(*) as cnt FROM hr_employees GROUP BY location_id")->fetchAll();
+echo "<h3>الحالة الحالية:</h3><table border='1' cellpadding='8'><tr><th>Location ID</th><th>عدد العمال</th></tr>";
+foreach ($stats as $s) {
+    $lid = $s['location_id'] ?? 'NULL';
+    echo "<tr><td>$lid</td><td>{$s['cnt']}</td></tr>";
+}
+echo "</table>";
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm'])) {
-    // Do the migration
-    $stmt = $pdo->prepare("UPDATE hr_employees SET location_id = ? WHERE location_id IS NULL OR location_id != ?");
-    $stmt->execute([$flora_id, $flora_id]);
+if (isset($_POST['confirm'])) {
+    // Direct UPDATE — set ALL employees to Flora 1
+    $stmt = $pdo->prepare("UPDATE hr_employees SET location_id = ?");
+    $stmt->execute([$flora_id]);
     $affected = $stmt->rowCount();
     
-    audit_log($pdo, 'bulk_migrate', "Migrated $affected employees to Flora 1 (location_id=$flora_id)");
+    audit_log($pdo, 'bulk_migrate', "Migrated $affected employees to Flora 1 (id=$flora_id)");
     
-    echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Migration Done</title></head><body style='font-family:sans-serif;max-width:600px;margin:50px auto;text-align:center;'>";
-    echo "<h1>✅ تم التحويل بنجاح</h1>";
-    echo "<p style='font-size:1.2em;'>تم تحويل <strong>$affected</strong> عامل إلى <strong>$flora_name</strong></p>";
-    echo "<p style='color:red;font-weight:bold;'>⚠️ يرجى حذف هذا الملف من السيرفر بعد الاستخدام</p>";
-    echo "<a href='hr_employees.php' style='display:inline-block;margin-top:20px;padding:10px 30px;background:#0984e3;color:white;text-decoration:none;border-radius:5px;'>← العودة للموارد البشرية</a>";
-    echo "</body></html>";
-    exit;
+    echo "<h2 style='color:green;'>✅ تم تحويل $affected عامل إلى Flora 1</h2>";
+    echo "<p style='color:red;font-weight:bold;'>⚠️ احذف هذا الملف بعد الاستخدام!</p>";
+    echo "<a href='hr_employees.php' style='padding:10px 30px;background:#0984e3;color:white;text-decoration:none;border-radius:5px;'>← العودة</a>";
+} else {
+    echo "<br><form method='POST'><button name='confirm' value='1' style='padding:15px 40px;background:#e74c3c;color:white;border:none;border-radius:8px;font-size:1.2em;cursor:pointer;' onclick=\"return confirm('تحويل جميع العمال إلى Flora 1؟')\">✅ تأكيد التحويل لـ Flora 1</button></form>";
 }
-?>
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>تحويل العمال إلى Flora 1</title>
-    <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
-        .card { background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 10px; padding: 30px; text-align: center; }
-        .stat { font-size: 2em; color: #0984e3; font-weight: bold; margin: 10px 0; }
-        .btn { display: inline-block; margin-top: 20px; padding: 15px 40px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; }
-        .btn:hover { background: #c0392b; }
-        .info { background: #fff3cd; padding: 10px; border-radius: 5px; margin: 15px 0; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1>🏭 تحويل العمال إلى <?= htmlspecialchars($flora_name) ?></h1>
-        <p>Location ID: <strong><?= $flora_id ?></strong></p>
-        
-        <div class="stat"><?= $count_before ?> عامل إجمالاً</div>
-        <p>✅ موجودون بالفعل في <?= htmlspecialchars($flora_name) ?>: <strong><?= $already ?></strong></p>
-        <p>🔄 سيتم تحويلهم: <strong><?= $count_other ?></strong></p>
-        
-        <div class="info">
-            ⚠️ هذه العملية ستقوم بتحويل جميع العمال الذين ليسوا في <?= htmlspecialchars($flora_name) ?> إلى هذا الموقع
-        </div>
-        
-        <form method="POST">
-            <button type="submit" name="confirm" value="1" class="btn" onclick="return confirm('هل أنت متأكد من تحويل <?= $count_other ?> عامل إلى <?= htmlspecialchars($flora_name) ?>?')">
-                ✅ تأكيد التحويل
-            </button>
-        </form>
-        
-        <br><br>
-        <a href="hr_employees.php">← العودة</a>
-    </div>
-</body>
-</html>
+
+echo "</body></html>";
