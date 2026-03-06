@@ -298,13 +298,18 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <h2>🕒 Daily Timesheet / سجل الحضور اليومي</h2>
                 <p>Record working hours for your team / تسجيل ساعات العمل</p>
             </div>
-            <?php if ($is_admin): ?>
-                <button class="btn-primary" onclick="openImportModal()"
-                    style="background:#28a745; display:flex; gap:5px; align-items:center;">
-                    📊 Import Excel (PAIE)
-                </button>
-            <?php endif; ?>
-        </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="hr_reports.php" class="btn-primary"
+                   style="background:#0b3c5d; display:flex; gap:5px; align-items:center; color:white; text-decoration:none; padding:10px 18px; border-radius:8px; font-weight:600;">
+                    📊 Reports / تقارير
+                </a>
+                <?php if ($is_admin): ?>
+                    <button class="btn-primary" onclick="openImportModal()"
+                        style="background:#28a745; display:flex; gap:5px; align-items:center;">
+                        📊 Import Excel (PAIE)
+                    </button>
+                <?php endif; ?>
+            </div>
 
         <!-- Date & Filters -->
         <div class="filter-card"
