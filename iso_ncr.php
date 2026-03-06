@@ -1223,6 +1223,8 @@ foreach ($ncrs as $ncr) {
 </head>
 
 <body>
+    <?php include 'includes/nav.php'; ?>
+
     <div class="container">
         <!-- Header -->
         <div class="page-header">
@@ -1232,10 +1234,6 @@ foreach ($ncrs as $ncr) {
             </div>
             <div class="nav-links">
                 <button type="button" class="btn-guide-nav" onclick="toggleGuide()">📖 دليل الاستخدام</button>
-                <a href="index.php">📊 لوحة القيادة</a>
-                <a href="admin.php">⚙️ الإدارة</a>
-                <a href="admin_issues.php">🛠️ المشاكل</a>
-                <a href="index.php?logout=1">🚪 خروج</a>
             </div>
         </div>
 

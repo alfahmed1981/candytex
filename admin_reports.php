@@ -265,15 +265,7 @@ $month_name = date('F', mktime(0, 0, 0, $selected_month, 10)); // e.g. "January"
 
 <body>
 
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>📊 Tracking Report</h3>
-        </div>
-        <div class="nav-links">
-            <a href="admin.php">🔙 Back to Admin</a>
-            <a href="index.php?logout=1" class="logout">Logout</a>
-        </div>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="container">
         <div class="header-controls">

@@ -172,15 +172,7 @@ $roles = $pdo->query("SELECT * FROM system_roles ORDER BY name")->fetchAll();
 </head>
 
 <body>
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>⚙️ Advanced Settings</h3>
-        </div>
-        <div class="nav-links">
-            <a href="admin.php">🔙 Admin Panel</a>
-            <a href="index.php?logout=1" class="logout">Logout</a>
-        </div>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="main-content">
         <div class="container">

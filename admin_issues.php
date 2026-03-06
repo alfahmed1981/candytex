@@ -505,26 +505,14 @@ foreach ($issues as $issue) {
 </head>
 
 <body>
+    <?php include 'includes/nav.php'; ?>
+
     <div class="container">
         <!-- Header -->
         <div class="page-header">
             <div>
                 <h1>🛠️ إدارة المشاكل</h1>
                 <p style="margin: 5px 0 0; opacity: 0.9;">Issues Management Dashboard</p>
-            </div>
-            <div class="nav-links">
-                <a href="index.php">📊 لوحة القيادة</a>
-                <?php if ($is_admin || $is_hr || $is_leader): ?>
-                    <a href="iso_ncr.php">📝 NCR</a>
-                    <a href="iso_risk.php">📋 مخاطر</a>
-                <?php endif; ?>
-                <?php if ($is_admin || $is_hr): ?>
-                    <a href="iso_docs.php">📄 وثائق</a>
-                <?php endif; ?>
-                <?php if ($is_admin): ?>
-                    <a href="admin.php">⚙️ الإدارة</a>
-                <?php endif; ?>
-                <a href="?logout=1">🚪 خروج</a>
             </div>
         </div>
 

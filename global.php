@@ -206,48 +206,7 @@ if ($is_admin) {
 </head>
 
 <body>
-    <!-- Mobile Top Navigation -->
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>🏭 Factory View</h3>
-        </div>
-        <div class="nav-links">
-            <a href="index.php">📊 لوحة</a>
-            <a href="global.php" class="active">🏭 عام</a>
-            <a href="iso_ncr.php">📝 NCR</a>
-            <a href="iso_risk.php">📋 مخاطر</a>
-            <a href="iso_docs.php">📄 وثائق</a>
-            <a href="meetings.php">🗓️ اجتماعات</a>
-            <a href="admin.php">⚙️ إدارة</a>
-            <a href="index.php?logout=1" class="logout">خروج</a>
-        </div>
-        <form method="GET" class="date-filter">
-            <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
-            <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
-            <button type="submit">🔍 عرض</button>
-        </form>
-    </div>
-
-    <!-- Desktop Sidebar -->
-    <div class="sidebar">
-        <div class="profile">
-            <h3>🏭 Factory View</h3>
-            <p>Global Status</p>
-        </div>
-        <hr>
-        <div class="filters">
-            <form method="GET">
-                <label>Year / السنة</label>
-                <input type="number" name="year" value="<?php echo $year; ?>">
-                <label>Month / الشهر</label>
-                <input type="number" name="month" value="<?php echo $month; ?>">
-                <button type="submit">Filter</button>
-            </form>
-        </div>
-        <a href="index.php" class="logout-btn" style="background:#007bff;">📊 Board</a>
-        <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
-        <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="main-content">
         <div class="header">

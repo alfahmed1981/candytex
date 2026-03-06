@@ -413,73 +413,7 @@ if ($show_discipline_notif) {
 </head>
 
 <body>
-    <!-- Mobile Top Navigation -->
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>📊 SQD+C Board</h3>
-            <span class="user-info">👤 <?php echo htmlspecialchars($user_name); ?></span>
-        </div>
-        <div class="nav-links">
-            <a href="index.php" class="active">📊 لوحة</a>
-            <a href="edit_profile.php">⚙️ ملفي</a>
-            <a href="guide.php">📖 دليل</a>
-            <a href="my_team.php">👥 فريقي</a>
-            <a href="global.php">🏭 المصنع</a>
-            <a href="meetings.php">🗓️ اجتماعات</a>
-            <?php if (is_admin() || is_hr() || is_leader()): ?>
-                <a href="iso_ncr.php">📝 NCR</a>
-                <a href="iso_risk.php">📋 مخاطر</a>
-                <a href="admin_issues.php">🛠️ مشاكل</a>
-            <?php endif; ?>
-            <?php if (is_admin() || is_hr()): ?>
-                <a href="iso_docs.php">📄 وثائق</a>
-            <?php endif; ?>
-            <?php if (is_admin()): ?>
-                <a href="admin.php">⚙️ إدارة</a>
-            <?php endif; ?>
-            <a href="?logout=1" class="logout">🚪 خروج</a>
-        </div>
-        <form method="GET" class="date-filter">
-            <input type="number" name="year" value="<?php echo $year; ?>" placeholder="سنة">
-            <input type="number" name="month" value="<?php echo $month; ?>" placeholder="شهر">
-            <button type="submit">🔍 عرض</button>
-        </form>
-    </div>
-
-    <!-- Desktop Sidebar (hidden on mobile) -->
-    <div class="sidebar">
-        <div class="profile">
-            <h3>👤 <?php echo htmlspecialchars($user_name); ?></h3>
-            <p><?php echo htmlspecialchars($user_cin); ?></p>
-        </div>
-        <hr>
-        <div class="filters">
-            <form method="GET">
-                <label>Year / سنة</label>
-                <input type="number" name="year" value="<?php echo $year; ?>">
-                <label>Month / شهر</label>
-                <input type="number" name="month" value="<?php echo $month; ?>">
-                <button type="submit">Filter / تصفية</button>
-            </form>
-        </div>
-        <a href="edit_profile.php" class="logout-btn" style="background:#667eea;">⚙️ ملفي الشخصي</a>
-        <a href="guide.php" class="logout-btn" style="background:#28a745;">📖 دليل الاستخدام</a>
-        <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
-        <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
-        <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
-        <?php if (is_admin() || is_hr() || is_leader()): ?>
-            <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
-            <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
-            <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
-        <?php endif; ?>
-        <?php if (is_admin() || is_hr()): ?>
-            <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
-        <?php endif; ?>
-        <?php if (is_admin()): ?>
-            <a href="admin.php" class="logout-btn" style="background:#6f42c1;">⚙️ إدارة النظام</a>
-        <?php endif; ?>
-        <a href="?logout=1" class="logout-btn" style="background:#dc3545;">🚪 خروج</a>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="main-content">
         <!-- Live Clock Bar -->

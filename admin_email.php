@@ -560,17 +560,7 @@ function send_smtp_test($cfg, $to)
 </head>
 
 <body>
-    <!-- Top Navigation -->
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>📧 Email Settings</h3>
-        </div>
-        <div class="nav-links">
-            <a href="admin.php">🔙 Admin Panel</a>
-            <a href="admin_advanced.php">⚙️ Advanced</a>
-            <a href="index.php?logout=1" class="logout">Logout</a>
-        </div>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="main-content">
         <div class="email-container">
