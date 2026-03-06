@@ -3,6 +3,14 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
+// --- Self-healing: ensure photo and status columns exist ---
+try { $pdo->query("SELECT photo FROM hr_employees LIMIT 1"); } catch (Exception $e) {
+    $pdo->exec("ALTER TABLE hr_employees ADD COLUMN photo VARCHAR(255) DEFAULT NULL");
+}
+try { $pdo->query("SELECT status FROM hr_employees LIMIT 1"); } catch (Exception $e) {
+    $pdo->exec("ALTER TABLE hr_employees ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'Active'");
+}
+
 // Inline fallback: ensure is_hr_admin() exists before it's used
 if (!function_exists('is_hr_admin')) {
     function is_hr_admin() {
