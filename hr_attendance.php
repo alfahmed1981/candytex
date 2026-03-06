@@ -3,9 +3,10 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
-// Attendance can be done by Admin, HR, OR Manager for their own team
+// Attendance can be done by Admin, HR, HR_Admin, OR Manager for their own team
 $is_admin = is_admin();
 $is_hr = is_hr();
+$is_hr_admin_user = is_hr_admin();
 if (!isset($_SESSION['user_cin'])) {
     header("Location: index.php");
     exit;
@@ -91,7 +92,7 @@ $query = "SELECT e.id, e.matricule, e.full_name, e.function_title, e.department,
           WHERE e.status = 'Active'";
 $params = [$selected_date, $selected_date, $selected_date];
 
-if (!$is_admin && !$is_hr) {
+if (!$is_admin && !$is_hr && !$is_hr_admin_user) {
     // Manager only sees their department (Assuming manager's department is in users table)
     $stmt_mgr = $pdo->prepare("SELECT department FROM users WHERE cin = ?");
     $stmt_mgr->execute([$user_cin]);
@@ -104,8 +105,8 @@ if (!$is_admin && !$is_hr) {
         // Fallback: If manager has no dept set, they see nobody.
         $query .= " AND 1=0";
     }
-} else if ($is_hr) {
-    // HR only sees their factory's employees
+} else if ($is_hr || $is_hr_admin_user) {
+    // HR and HR_Admin only see their factory's employees
     $stmt_hr = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
     $stmt_hr->execute([$user_cin]);
     $hr_loc = $stmt_hr->fetchColumn();

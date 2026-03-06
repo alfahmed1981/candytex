@@ -7,8 +7,10 @@ require 'includes/auth.php';
 require_hr_or_admin();
 
 $is_hr_only = is_hr();
+$is_hr_admin_user = is_hr_admin();
+$is_restricted_hr = $is_hr_only || $is_hr_admin_user; // Both HR and HR_Admin get location filtering
 $hr_location_id = null;
-if ($is_hr_only) {
+if ($is_restricted_hr) {
     $stmt = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
     $stmt->execute([$_SESSION['user_cin']]);
     $hr_location_id = $stmt->fetchColumn();
@@ -123,8 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $func = trim($_POST['function_title']);
         $dept = trim($_POST['department']);
         $location_id = !empty($_POST['location_id']) ? intval($_POST['location_id']) : null;
-        if ($is_hr_only) {
-            $location_id = $hr_location_id; // Force HR to add to their own factory
+        if ($is_restricted_hr) {
+            $location_id = $hr_location_id; // Force HR/HR_Admin to add to their own factory
         }
         $h_date = !empty($_POST['hire_date']) ? $_POST['hire_date'] : null;
         $payment_type = $_POST['payment_type'] ?? 'Hourly';
@@ -143,11 +145,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $photo = processBase64Upload($_POST['photo_b64'] ?? '', 'photo_' . $cin);
 
         try {
+            // HR_Admin adds employees as pending_approval
+            $emp_status = $is_hr_admin_user ? 'pending_approval' : 'Active';
+
             $stmt = $pdo->prepare("INSERT INTO hr_employees 
                 (location_id, matricule, first_name, last_name, full_name, cin, date_of_birth, gender, marital_status, children_count, 
                  phone_number, address, function_title, department, manager_cin, current_shift, hire_date, payment_type, hourly_rate, cnss_number, contract_type, 
-                 blood_group, emergency_contact, emergency_phone, id_card_front, id_card_back, photo) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 blood_group, emergency_contact, emergency_phone, id_card_front, id_card_back, photo, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $stmt->execute([
                 $location_id,
@@ -176,7 +181,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $em_phone,
                 $id_card_front,
                 $id_card_back,
-                $photo
+                $photo,
+                $emp_status
             ]);
 
             $new_emp_id = $pdo->lastInsertId();
@@ -191,8 +197,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute([$new_emp_id, $func, $_SESSION['user_cin']]);
             }
 
-            audit_log($pdo, 'hr_add_employee', "Added Employee: $full_name ($mat)");
-            $msg = "<script>Swal.fire('Success', 'Employee profile created successfully', 'success');</script>";
+            audit_log($pdo, 'hr_add_employee', "Added Employee: $full_name ($mat)" . ($is_hr_admin_user ? ' [pending_approval]' : ''));
+            $success_msg = $is_hr_admin_user ? 'Employee added as pending approval. Admin must approve before activation.' : 'Employee profile created successfully';
+            $msg = "<script>Swal.fire('Success', '$success_msg', 'success');</script>";
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) { // Integrity constraint violation (Duplicate Matricule)
                 $msg = "<script>Swal.fire('Error', 'Matricule/ID already exists!', 'error');</script>";
@@ -203,8 +210,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Edit Employee
     elseif (isset($_POST['edit_emp'])) {
-        if ($is_hr_only)
-            die("Unauthorized Action: HR Managers can only add employees, not edit them.");
+        if ($is_restricted_hr)
+            die("Unauthorized Action: HR Managers cannot edit employees.");
         $id = intval($_POST['emp_id']);
         $mat = trim($_POST['matricule']);
         $fname = trim($_POST['first_name']);
@@ -317,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Delete Employee
     elseif (isset($_POST['delete_emp'])) {
-        if ($is_hr_only)
+        if ($is_restricted_hr)
             die("Unauthorized Action: HR Managers cannot delete employees.");
         $id = intval($_POST['emp_id']);
         try {
@@ -363,7 +370,7 @@ if ($func_filter) {
 }
 
 // Enforce Location Filtering
-if ($is_hr_only) {
+if ($is_restricted_hr) {
     $query .= " AND location_id = ?";
     $params[] = $hr_location_id;
 } else if ($location_filter) {
@@ -802,6 +809,7 @@ try {
                             </div>
                         </div>
                         <div class="emp-actions">
+                            <?php if (!$is_restricted_hr): ?>
                             <button class="btn-save btn-sm" style="background:#0984e3;"
                                 onclick='openEditModal(<?= json_encode($emp) ?>)'>✏️ Edit Profile</button>
                             <form method="POST"
@@ -812,6 +820,7 @@ try {
                                 <button type="submit" name="delete_emp" class="btn-save btn-sm" style="background:#d63031;">🗑️
                                     Delete</button>
                             </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>

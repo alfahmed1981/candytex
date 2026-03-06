@@ -64,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $_SESSION['user_cin'] = $user['cin'];
                         $_SESSION['user_name'] = $user['name'];
                         $_SESSION['role'] = $user['role'];
+                        $_SESSION['user_department'] = $user['department'] ?? '';
                         audit_log($pdo, 'login', "User logged in: " . $user['cin']);
 
                         if ($user['role'] === 'admin') {

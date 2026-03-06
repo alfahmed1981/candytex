@@ -73,6 +73,11 @@ function is_leader()
     return isset($_SESSION['role']) && $_SESSION['role'] === 'manager';
 }
 
+function is_hr_admin()
+{
+    return isset($_SESSION['user_department']) && $_SESSION['user_department'] === 'HR_Admin';
+}
+
 function get_user_factory($pdo, $cin)
 {
     $stmt = $pdo->prepare("SELECT location FROM users WHERE cin = ?");
@@ -83,7 +88,7 @@ function get_user_factory($pdo, $cin)
 function require_hr_or_admin()
 {
     require_login();
-    if (!is_admin() && !is_hr()) {
+    if (!is_admin() && !is_hr() && !is_hr_admin()) {
         http_response_code(403);
         die("⛔ Access Denied. HR or Admin clearance required.");
     }

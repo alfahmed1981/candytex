@@ -89,6 +89,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header("Location: admin.php?msg=Updated");
         exit;
     }
+
+    // --- APPROVE PENDING EMPLOYEE (added by HR_Admin) ---
+    if ($_POST['action'] === 'approve_employee' && isset($_POST['emp_id'])) {
+        $emp_id = intval($_POST['emp_id']);
+        audit_log($pdo, 'approve_employee', "Approved pending employee ID: $emp_id");
+        $stmt = $pdo->prepare("UPDATE hr_employees SET status = 'Active' WHERE id = ? AND status = 'pending_approval'");
+        $stmt->execute([$emp_id]);
+        header("Location: admin.php?msg=Employee+Approved");
+        exit;
+    }
+
+    // --- REJECT PENDING EMPLOYEE ---
+    if ($_POST['action'] === 'reject_employee' && isset($_POST['emp_id'])) {
+        $emp_id = intval($_POST['emp_id']);
+        audit_log($pdo, 'reject_employee', "Rejected pending employee ID: $emp_id");
+        $stmt = $pdo->prepare("DELETE FROM hr_employees WHERE id = ? AND status = 'pending_approval'");
+        $stmt->execute([$emp_id]);
+        header("Location: admin.php?msg=Employee+Rejected");
+        exit;
+    }
 }
 
 // --- ADD USER ---
@@ -456,6 +476,65 @@ foreach ($users as $u) {
                                 </td>
                             </tr>
                         <?php endforeach; ?>
+                    </table>
+                </div>
+            <?php endif; ?>
+
+            <!-- PENDING EMPLOYEES (added by HR_Admin) -->
+            <?php
+            try {
+                $pending_emp_stmt = $pdo->query("SELECT e.*, l.name as location_name FROM hr_employees e LEFT JOIN locations l ON e.location_id = l.id WHERE e.status = 'pending_approval' ORDER BY e.id DESC");
+                $pending_employees = $pending_emp_stmt->fetchAll();
+            } catch (Exception $e) {
+                $pending_employees = [];
+            }
+            ?>
+            <?php if (count($pending_employees) > 0): ?>
+                <div
+                    style="background:#e8f4fd; color:#0c5460; padding:15px; border:1px solid #bee5eb; border-radius:8px; margin-bottom:20px;">
+                    <h3>👥 Pending Employees (<?= count($pending_employees) ?>) / موظفون بانتظار الموافقة</h3>
+                    <p style="font-size:0.85em; margin:5px 0 10px;">تمت إضافتهم من طرف HR_Admin — يحتاجون لموافقتك قبل التفعيل</p>
+                    <table style="width:100%; margin-top:10px; background:white; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f0f0f0;">
+                                <th style="padding:8px; text-align:left;">Employee</th>
+                                <th style="padding:8px; text-align:left;">Matricule</th>
+                                <th style="padding:8px; text-align:left;">Location</th>
+                                <th style="padding:8px; text-align:left;">Department</th>
+                                <th style="padding:8px; text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($pending_employees as $pe): ?>
+                            <tr style="border-bottom:1px solid #eee;">
+                                <td style="padding:10px;">
+                                    <strong><?= htmlspecialchars($pe['full_name']) ?></strong><br>
+                                    <small>CIN: <?= htmlspecialchars($pe['cin']) ?></small>
+                                </td>
+                                <td style="padding:10px;"><?= htmlspecialchars($pe['matricule']) ?></td>
+                                <td style="padding:10px;"><?= htmlspecialchars($pe['location_name'] ?? 'N/A') ?></td>
+                                <td style="padding:10px;"><?= htmlspecialchars($pe['department'] ?? 'N/A') ?></td>
+                                <td style="text-align:right; padding:10px; display:flex; gap:5px; justify-content:flex-end;">
+                                    <form method="POST" style="display:inline;">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="action" value="approve_employee">
+                                        <input type="hidden" name="emp_id" value="<?= $pe['id'] ?>">
+                                        <button type="submit" class="btn btn-green" style="padding:5px 10px; font-size:12px;">✅
+                                            Approve</button>
+                                    </form>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Reject and delete this employee?')">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="action" value="reject_employee">
+                                        <input type="hidden" name="emp_id" value="<?= $pe['id'] ?>">
+                                        <button type="submit" class="btn btn-red" style="padding:5px 10px; font-size:12px;">❌
+                                            Reject</button>
+                                    </form>
+                                    <a href="hr_employees.php?status=All&search=<?= urlencode($pe['cin']) ?>" 
+                                       class="btn" style="padding:5px 10px; font-size:12px; background:#17a2b8; color:white; border-radius:4px; text-decoration:none;">👁️ View</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
                     </table>
                 </div>
             <?php endif; ?>

@@ -7,6 +7,7 @@ $nav_user_name = $_SESSION['user_name'] ?? 'User';
 $nav_is_admin = is_admin();
 $nav_is_hr = is_hr();
 $nav_is_leader = is_leader();
+$nav_is_hr_admin = is_hr_admin();
 $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
 ?>
 
@@ -39,8 +40,12 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <a href="iso_risk.php" <?= $current_page === 'iso_risk.php' ? 'class="active"' : '' ?>>📋 مخاطر</a>
         <?php if ($nav_is_admin || $nav_is_hr): ?>
             <a href="iso_docs.php" <?= $current_page === 'iso_docs.php' ? 'class="active"' : '' ?>>📄 وثائق</a>
+        <?php endif; ?>
+        <?php if ($nav_is_admin || $nav_is_hr || $nav_is_hr_admin): ?>
             <a href="hr_employees.php" <?= $current_page === 'hr_employees.php' ? 'class="active"' : '' ?>>👥 موارد بشرية</a>
             <a href="hr_attendance.php" <?= $current_page === 'hr_attendance.php' ? 'class="active"' : '' ?>>🕒 حضور يومي</a>
+        <?php endif; ?>
+        <?php if ($nav_is_admin || $nav_is_hr): ?>
             <a href="hr_payroll.php" <?= $current_page === 'hr_payroll.php' ? 'class="active"' : '' ?>>💵 إدارة الرواتب</a>
             <a href="hr_skills_matrix.php" <?= $current_page === 'hr_skills_matrix.php' ? 'class="active"' : '' ?>>🧠 مصفوفة
                 المهارات</a>
@@ -78,8 +83,12 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
     <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
     <?php if ($nav_is_admin || $nav_is_hr): ?>
         <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
+    <?php endif; ?>
+    <?php if ($nav_is_admin || $nav_is_hr || $nav_is_hr_admin): ?>
         <a href="hr_employees.php" class="logout-btn" style="background:#0984e3;">👥 الموارد البشرية</a>
         <a href="hr_attendance.php" class="logout-btn" style="background:#00cec9;">🕒 الحضور اليومي</a>
+    <?php endif; ?>
+    <?php if ($nav_is_admin || $nav_is_hr): ?>
         <a href="hr_payroll.php" class="logout-btn" style="background:#2ecc71;">💵 إدارة وتوليد الرواتب</a>
         <a href="hr_skills_matrix.php" class="logout-btn" style="background:#8e44ad;">🧠 مصفوفة المهارات والمناصب</a>
     <?php endif; ?>
