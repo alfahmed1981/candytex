@@ -157,16 +157,43 @@ if (empty($_SESSION['csrf_token'])) {
                 const records = [];
                 const payrolls = [];
 
-                // Dates mapping (Nov 26 to Dec 25 mapped to cols 7 to 36)
-                const dates = [];
-                for (let d = 26; d <= 30; d++) dates.push(`2025-11-${d}`);
-                for (let d = 1; d <= 25; d++) dates.push(`2025-12-${String(d).padStart(2, '0')}`);
+                const selectedMonth = parseInt(document.getElementById('import_month').value, 10);
+                const selectedYear = parseInt(document.getElementById('import_year').value, 10);
+
+                let prevMonth = selectedMonth - 1;
+                let prevYear = selectedYear;
+                if (prevMonth === 0) {
+                    prevMonth = 12;
+                    prevYear = selectedYear - 1;
+                }
 
                 sheetNamesToProcess.forEach(sheetName => {
                     if (workbook.Sheets[sheetName]) {
                         foundAnySheet = true;
                         const sheet = workbook.Sheets[sheetName];
                         const rowData = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: null});
+
+                        // Extract dynamic date columns from header (row index 1 in Excel, which is index 1 of array if header:1)
+                        // Example header row 1: [..., 26, 27, 28, 29, 30, 31, 1, 2, ...]
+                        const dateCols = [];
+                        if (rowData[1]) {
+                            for (let col = 7; col <= 40; col++) {
+                                let dayVal = rowData[1][col];
+                                if (dayVal !== undefined && dayVal !== null && String(dayVal).trim() !== '') {
+                                    let dayInt = parseInt(dayVal, 10);
+                                    if (!isNaN(dayInt) && dayInt >= 1 && dayInt <= 31) {
+                                        let y = selectedYear;
+                                        let m = selectedMonth;
+                                        if (dayInt >= 26) {
+                                            y = prevYear;
+                                            m = prevMonth;
+                                        }
+                                        const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(dayInt).padStart(2, '0')}`;
+                                        dateCols.push({ col: col, date: dateStr });
+                                    }
+                                }
+                            }
+                        }
 
                         // Data starts at row index 3
                         for (let i = 3; i < rowData.length; i++) {
@@ -233,9 +260,10 @@ if (empty($_SESSION['csrf_token'])) {
                                 rounded_net: rounded_net
                             });
 
-                            // Extract Attendance grid
-                            for (let col = 7; col <= 36; col++) {
-                                const dateStr = dates[col-7];
+                            // Extract Attendance grid dynamically
+                            for (let idx = 0; idx < dateCols.length; idx++) {
+                                const col = dateCols[idx].col;
+                                const dateStr = dateCols[idx].date;
                                 let cellValue = row[col];
 
                                 if (cellValue === null || cellValue === undefined || cellValue === '') continue; // skip blank
