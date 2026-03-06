@@ -13,13 +13,14 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
 
 <?php if ($nav_is_impersonating): ?>
     <div
-        style="background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white; padding: 10px 20px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 1100;">
+        style="background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white; padding: 10px 20px; text-align: center; font-weight: bold; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999;">
         🕵️ أنت تتصفح كـ <strong>
             <?= htmlspecialchars($nav_user_name) ?>
         </strong>
         | <a href="admin.php?action=stop_impersonation" style="color: white; text-decoration: underline;">🔙 العودة لحساب
             المدير</a>
     </div>
+    <div style="height: 45px;"></div>
 <?php endif; ?>
 
 <!-- Mobile Top Navigation -->
