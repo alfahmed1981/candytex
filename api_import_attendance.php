@@ -264,8 +264,15 @@ try {
     ]);
 
 } catch (Exception $e) {
-    $pdo->rollBack();
+    if ($pdo && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     ob_clean();
     http_response_code(500);
-    echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+    // DEBUG: Output exact error message to JSON
+    echo json_encode([
+        'error' => 'Database error: ' . $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
 }
