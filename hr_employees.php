@@ -3,12 +3,19 @@ session_start();
 require 'db.php';
 require 'includes/auth.php';
 
-// --- Self-healing: ensure photo and status columns exist ---
+// --- Self-healing: ensure photo and status columns exist and support pending_approval ---
 try { $pdo->query("SELECT photo FROM hr_employees LIMIT 1"); } catch (Exception $e) {
     $pdo->exec("ALTER TABLE hr_employees ADD COLUMN photo VARCHAR(255) DEFAULT NULL");
 }
-try { $pdo->query("SELECT status FROM hr_employees LIMIT 1"); } catch (Exception $e) {
-    $pdo->exec("ALTER TABLE hr_employees ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'Active'");
+try {
+    $col = $pdo->query("SHOW COLUMNS FROM hr_employees WHERE Field = 'status'")->fetch();
+    if (!$col) {
+        $pdo->exec("ALTER TABLE hr_employees ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'Active'");
+    } elseif (strpos($col['Type'], 'enum') !== false || strpos($col['Type'], 'pending_approval') === false) {
+        $pdo->exec("ALTER TABLE hr_employees MODIFY COLUMN status VARCHAR(20) NOT NULL DEFAULT 'Active'");
+    }
+} catch (Exception $e) {
+    error_log("Failed to migrate hr_employees.status: " . $e->getMessage());
 }
 
 // Inline fallback: ensure is_hr_admin() exists before it's used
