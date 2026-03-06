@@ -310,6 +310,7 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </button>
                 <?php endif; ?>
             </div>
+        </div>
 
         <!-- Date & Filters -->
         <div class="filter-card"
