@@ -34,6 +34,7 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <a href="guide.php" <?= $current_page === 'guide.php' ? 'class="active"' : '' ?>>📖 دليل</a>
         <a href="my_team.php" <?= $current_page === 'my_team.php' ? 'class="active"' : '' ?>>👥 فريقي</a>
         <a href="global.php" <?= $current_page === 'global.php' ? 'class="active"' : '' ?>>🏭 المصنع</a>
+        <a href="meetings.php" <?= $current_page === 'meetings.php' ? 'class="active"' : '' ?>>🗓️ اجتماعات</a>
         <a href="iso_ncr.php" <?= $current_page === 'iso_ncr.php' ? 'class="active"' : '' ?>>📝 NCR/CAR</a>
         <a href="iso_risk.php" <?= $current_page === 'iso_risk.php' ? 'class="active"' : '' ?>>📋 مخاطر</a>
         <?php if ($nav_is_admin || $nav_is_hr): ?>
@@ -45,6 +46,7 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
                 المهارات</a>
         <?php endif; ?>
         <?php if ($nav_is_admin || $nav_is_hr || $nav_is_leader): ?>
+            <a href="admin_daily.php" <?= $current_page === 'admin_daily.php' ? 'class="active"' : '' ?>>📸 يومي</a>
             <a href="admin_issues.php" <?= $current_page === 'admin_issues.php' ? 'class="active"' : '' ?>>🛠️ مشاكل</a>
         <?php endif; ?>
         <?php if ($nav_is_admin): ?>
@@ -71,6 +73,7 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
     <a href="guide.php" class="logout-btn" style="background:#28a745;">📖 دليل الاستخدام</a>
     <a href="my_team.php" class="logout-btn" style="background:#17a2b8;">👥 فريقي</a>
     <a href="global.php" class="logout-btn" style="background:#fd7e14;">🏭 وضع المصنع</a>
+    <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
     <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
     <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
     <?php if ($nav_is_admin || $nav_is_hr): ?>
@@ -81,6 +84,7 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <a href="hr_skills_matrix.php" class="logout-btn" style="background:#8e44ad;">🧠 مصفوفة المهارات والمناصب</a>
     <?php endif; ?>
     <?php if ($nav_is_admin || $nav_is_hr || $nav_is_leader): ?>
+        <a href="admin_daily.php" class="logout-btn" style="background:#f39c12;">📸 النظرة اليومية</a>
         <a href="admin_issues.php" class="logout-btn" style="background:#e91e63;">🛠️ إدارة المشاكل</a>
     <?php endif; ?>
     <?php if ($nav_is_admin): ?>

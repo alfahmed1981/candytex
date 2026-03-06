@@ -483,19 +483,7 @@ function mask_cin($cin)
 
 <body>
 
-    <div class="top-nav no-print">
-        <div class="top-nav-header">
-            <h3>📊 Daily Snapshot</h3>
-        </div>
-        <div class="nav-links">
-            <a href="index.php">📊 لوحة القيادة</a>
-            <?php if ($is_admin || $is_hr): ?>
-                <a href="admin.php">🔙 Admin</a>
-                <a href="admin_reports.php">📅 Monthly Report</a>
-            <?php endif; ?>
-            <a href="index.php?logout=1" class="logout">Logout</a>
-        </div>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="container">
         <!-- PRINT HEADER (ISO) -->

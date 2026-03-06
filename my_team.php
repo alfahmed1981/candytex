@@ -341,29 +341,7 @@ if ($view_cin !== $user_cin && $is_admin) {
 </head>
 
 <body>
-    <!-- Mobile Top Navigation -->
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>👥 My Team</h3>
-        </div>
-        <div class="nav-links">
-            <a href="index.php">📊 لوحة</a>
-            <a href="my_team.php" class="active">👥 فريق</a>
-            <a href="guide.php">📖 دليل</a>
-            <a href="index.php?logout=1" class="logout">خروج</a>
-        </div>
-    </div>
-
-    <!-- Desktop Sidebar -->
-    <div class="sidebar">
-        <div class="profile">
-            <h3>👥 HR Manager</h3>
-            <p><?php echo $_SESSION['user_name']; ?></p>
-        </div>
-        <hr>
-        <a href="index.php" class="logout-btn" style="background:#007bff;">📊 Board</a>
-        <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="main-content">
         <div class="container">

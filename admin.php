@@ -396,37 +396,7 @@ foreach ($users as $u) {
 </head>
 
 <body>
-    <!-- Mobile Top Navigation -->
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>⚙️ Admin Panel</h3>
-        </div>
-        <div class="nav-links">
-            <a href="index.php">📊 لوحة</a>
-            <a href="admin.php" class="active">⚙️ إدارة</a>
-            <a href="global.php">🏭 عام</a>
-            <a href="iso_ncr.php">📝 NCR</a>
-            <a href="iso_risk.php">📋 مخاطر</a>
-            <a href="iso_docs.php">📄 وثائق</a>
-            <a href="meetings.php">🗓️ اجتماعات</a>
-            <a href="index.php?logout=1" class="logout">خروج</a>
-        </div>
-    </div>
-
-    <!-- Desktop Sidebar -->
-    <div class="sidebar">
-        <h3>⚙️ Admin Panel</h3>
-        <p>Managing Users</p>
-        <hr>
-        <a href="index.php" class="logout-btn" style="background:#007bff;">📊 Board</a>
-        <a href="global.php" class="logout-btn" style="background:#6f42c1;">🏭 Global</a>
-        <a href="iso_ncr.php" class="logout-btn" style="background:#1a237e;">📝 NCR / CAR</a>
-        <a href="iso_risk.php" class="logout-btn" style="background:#c0392b;">📋 سجل المخاطر</a>
-        <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 التحكم بالوثائق</a>
-        <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
-        <a href="hr_employees.php" class="logout-btn" style="background:#17a2b8;">👥 الموارد البشرية (HR)</a>
-        <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">Logout</a>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="main-content">
         <div class="container">

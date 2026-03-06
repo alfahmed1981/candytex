@@ -702,38 +702,7 @@ $status_colors = ['planned' => '#007bff', 'completed' => '#28a745', 'cancelled' 
 </head>
 
 <body>
-    <!-- Mobile Top Navigation -->
-    <div class="top-nav">
-        <div class="top-nav-header">
-            <h3>🗓️ الاجتماعات</h3>
-        </div>
-        <div class="nav-links">
-            <a href="index.php">📊 لوحة</a>
-            <a href="global.php">🏭 عام</a>
-            <a href="iso_ncr.php">📝 NCR</a>
-            <a href="iso_risk.php">📋 مخاطر</a>
-            <a href="iso_docs.php">📄 وثائق</a>
-            <a href="meetings.php" class="active">🗓️ اجتماعات</a>
-            <?php if ($is_admin): ?><a href="admin.php">⚙️ إدارة</a><?php endif; ?>
-            <a href="index.php?logout=1" class="logout">خروج</a>
-        </div>
-    </div>
-
-    <!-- Desktop Sidebar -->
-    <div class="sidebar">
-        <div class="profile">
-            <h3>🗓️ الاجتماعات</h3>
-            <p>إدارة الاجتماعات</p>
-        </div>
-        <hr>
-        <a href="index.php" class="logout-btn" style="background:#007bff;">📊 لوحة القيادة</a>
-        <a href="global.php" class="logout-btn" style="background:#6f42c1;">🏭 النظرة العامة</a>
-        <a href="iso_docs.php" class="logout-btn" style="background:#2e7d32;">📄 الوثائق</a>
-        <a href="meetings.php" class="logout-btn" style="background:#e65100;">🗓️ الاجتماعات</a>
-        <?php if ($is_admin): ?><a href="admin.php" class="logout-btn" style="background:#455a64;">⚙️
-                الإدارة</a><?php endif; ?>
-        <a href="index.php?logout=1" class="logout-btn" style="background:#dc3545;">خروج</a>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="main-content">
         <div class="meetings-container">

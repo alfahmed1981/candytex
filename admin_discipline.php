@@ -573,18 +573,7 @@ usort($monthly_ranking, fn($a, $b) => $b['score'] - $a['score'] ?: $a['avg_min']
 </head>
 
 <body>
-    <!-- NAV -->
-    <div class="top-nav no-print">
-        <div class="top-nav-header">
-            <h3>🏆 ترتيب الانضباط</h3>
-        </div>
-        <div class="nav-links">
-            <a href="admin.php">🔙 Admin</a>
-            <a href="admin_daily.php?date=<?= $selected_date ?>">📊 Daily Snapshot</a>
-            <a href="admin_reports.php">📅 Monthly Report</a>
-            <a href="index.php?logout=1" class="logout">Logout</a>
-        </div>
-    </div>
+    <?php include 'includes/nav.php'; ?>
 
     <div class="container">
         <!-- PRINT HEADER -->
