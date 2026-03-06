@@ -706,6 +706,8 @@ try {
                 <p>Employee Profiles, ISO & CNSS / Profils des Employés / ملفات الموظفين المفصلة</p>
             </div>
             <div style="display:flex; gap:10px;">
+                <a href="hr_reports.php?report=NEW" class="btn-save"
+                   style="background:#0b3c5d; color:white; text-decoration:none; display:flex; align-items:center; gap:5px;">📊 Reports</a>
                 <button class="btn-save" style="background:#28a745;" onclick="exportEmployeesToExcel()">📥 Export
                     Excel</button>
                 <button class="btn-save" onclick="openAddModal()">➕ Add / Ajouter</button>
