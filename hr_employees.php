@@ -1,7 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 session_start();
 require 'db.php';
 require 'includes/auth.php';
@@ -21,7 +18,7 @@ $is_hr_admin_user = is_hr_admin();
 $is_restricted_hr = $is_hr_only || $is_hr_admin_user; // Both HR and HR_Admin get location filtering
 $hr_location_id = null;
 if ($is_restricted_hr) {
-    $stmt = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
+    $stmt = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location COLLATE utf8mb4_unicode_ci = l.name COLLATE utf8mb4_unicode_ci WHERE u.cin = ?");
     $stmt->execute([$_SESSION['user_cin']]);
     $hr_location_id = $stmt->fetchColumn();
     if (!$hr_location_id) {

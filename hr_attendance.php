@@ -107,7 +107,7 @@ if (!$is_admin && !$is_hr && !$is_hr_admin_user) {
     }
 } else if ($is_hr || $is_hr_admin_user) {
     // HR and HR_Admin only see their factory's employees
-    $stmt_hr = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
+    $stmt_hr = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location COLLATE utf8mb4_unicode_ci = l.name COLLATE utf8mb4_unicode_ci WHERE u.cin = ?");
     $stmt_hr->execute([$user_cin]);
     $hr_loc = $stmt_hr->fetchColumn();
 

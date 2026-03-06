@@ -9,7 +9,7 @@ require_hr_or_admin();
 $is_hr = is_hr();
 $hr_location_id = null;
 if ($is_hr) {
-    $stmt_hr = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
+    $stmt_hr = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location COLLATE utf8mb4_unicode_ci = l.name COLLATE utf8mb4_unicode_ci WHERE u.cin = ?");
     $stmt_hr->execute([$_SESSION['user_cin']]);
     $hr_location_id = $stmt_hr->fetchColumn();
     if (!$hr_location_id) {
