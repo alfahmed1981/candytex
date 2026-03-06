@@ -23,12 +23,13 @@ if ($is_restricted) {
 
 $report_types = [
     'NEW' => ['label' => 'تقرير العمال الجدد / Nouvelles Recrues', 'types' => [], 'icon' => '🆕', 'color' => '#4caf50'],
-    'ABS' => ['label' => 'تقرير الغيابات / Absences', 'types' => ['M'], 'icon' => '🏥', 'color' => '#e74c3c'],
+    'ABS' => ['label' => 'الغياب غير المبرر / Absences Injustifiées', 'types' => ['A'], 'icon' => '❓', 'color' => '#8e44ad'],
+    'MAL' => ['label' => 'تقرير المرض / Maladie', 'types' => ['M'], 'icon' => '🏥', 'color' => '#e74c3c'],
     'MAT' => ['label' => 'تقرير الأمومة / Maternité', 'types' => ['MAT'], 'icon' => '🤱', 'color' => '#e91e63'],
     'ACC' => ['label' => 'تقرير حوادث الشغل / Accidents', 'types' => ['ACC'], 'icon' => '⚠️', 'color' => '#ff9800'],
     'CP'  => ['label' => 'تقرير الإجازات / Congés', 'types' => ['CP'], 'icon' => '🏖️', 'color' => '#2196f3'],
     'MP'  => ['label' => 'تقرير الإيقاف / Mise à Pied', 'types' => ['MP'], 'icon' => '🚫', 'color' => '#795548'],
-    'ALL' => ['label' => 'تقرير شامل / Complet', 'types' => ['M','MAT','ACC','CP','MP','AUT'], 'icon' => '📋', 'color' => '#0b3c5d'],
+    'ALL' => ['label' => 'تقرير شامل / Complet', 'types' => ['A','M','MAT','ACC','CP','MP','AUT'], 'icon' => '📋', 'color' => '#0b3c5d'],
 ];
 
 $report_type = $_GET['report'] ?? '';
@@ -41,7 +42,7 @@ $is_newhires = ($report_type === 'NEW');
 $locations = $pdo->query("SELECT id, name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 $type_labels = [
-    'M' => 'Maladie / مرض', 'MAT' => 'Maternité / أمومة', 'ACC' => 'Accident / حادث',
+    'A' => 'Absence / غياب', 'M' => 'Maladie / مرض', 'MAT' => 'Maternité / أمومة', 'ACC' => 'Accident / حادث',
     'CP' => 'Congé / إجازة', 'MP' => 'Mise à Pied / إيقاف', 'AUT' => 'Autorisation / إذن',
 ];
 
