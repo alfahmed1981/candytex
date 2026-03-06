@@ -1,13 +1,23 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 require 'db.php';
 require 'includes/auth.php';
+
+// Inline fallback: ensure is_hr_admin() exists before it's used
+if (!function_exists('is_hr_admin')) {
+    function is_hr_admin() {
+        return isset($_SESSION['role']) && $_SESSION['role'] === 'hr_admin';
+    }
+}
 
 // HR Module access: Admins or dedicated HR role.
 require_hr_or_admin();
 
 $is_hr_only = is_hr();
-$is_hr_admin_user = function_exists('is_hr_admin') ? is_hr_admin() : false;
+$is_hr_admin_user = is_hr_admin();
 $is_restricted_hr = $is_hr_only || $is_hr_admin_user; // Both HR and HR_Admin get location filtering
 $hr_location_id = null;
 if ($is_restricted_hr) {
