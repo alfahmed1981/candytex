@@ -253,12 +253,20 @@ if ($report_type && isset($report_types[$report_type])) {
     <div class="summary-bar no-print">
         <div class="summary-item"><div class="num" style="color:<?= $rt['color'] ?>;"><?= count($records) ?></div><div class="lbl">إجمالي السجلات</div></div>
         <?php
-        $unique_emps = count(array_unique(array_column($records, 'employee_id')));
+        $emp_total_days = [];
+        $unique_emps = 0;
         $total_days = 0;
         foreach ($records as $r) {
+            $eid = $r['employee_id'];
+            if (!isset($emp_total_days[$eid])) {
+                $emp_total_days[$eid] = 0;
+                $unique_emps++;
+            }
             $d1 = max(strtotime($date_from), strtotime($r['start_date']));
             $d2 = min(strtotime($date_to), strtotime($r['end_date']));
-            $total_days += max(0, ($d2 - $d1) / 86400 + 1);
+            $dys = max(0, ($d2 - $d1) / 86400 + 1);
+            $emp_total_days[$eid] += $dys;
+            $total_days += $dys;
         }
         ?>
         <div class="summary-item"><div class="num" style="color:#0984e3;"><?= $unique_emps ?></div><div class="lbl">عامل</div></div>
@@ -270,8 +278,17 @@ if ($report_type && isset($report_types[$report_type])) {
     <?php else: ?>
         <table class="results-table">
             <thead><tr>
-                <th>#</th><th>الاسم</th><th>الرقم</th><th>CIN</th><th>الوظيفة</th><th>الموقع</th>
-                <th>النوع</th><th>من</th><th>إلى</th><th>أيام</th><th>رقم الشهادة</th><th>ملاحظات</th>
+                <th onclick="sortTable(0)" style="cursor:pointer;" title="Sort"># ↕</th>
+                <th onclick="sortTable(1)" style="cursor:pointer;" title="Sort">الاسم ↕</th>
+                <th onclick="sortTable(2)" style="cursor:pointer;" title="Sort">الرقم ↕</th>
+                <th onclick="sortTable(3)" style="cursor:pointer;" title="Sort">CIN ↕</th>
+                <th onclick="sortTable(4)" style="cursor:pointer;" title="Sort">الوظيفة ↕</th>
+                <th onclick="sortTable(5)" style="cursor:pointer;" title="Sort">الموقع ↕</th>
+                <th onclick="sortTable(6)" style="cursor:pointer;" title="Sort">النوع ↕</th>
+                <th onclick="sortTable(7)" style="cursor:pointer;" title="Sort">من ↕</th>
+                <th onclick="sortTable(8)" style="cursor:pointer;" title="Sort">إلى ↕</th>
+                <th onclick="sortTable(9)" style="cursor:pointer;" title="Sort">أيام ↕</th>
+                <th>رقم الشهادة</th><th>ملاحظات</th>
             </tr></thead>
             <tbody>
                 <?php $n=0; foreach ($records as $r): $n++;
@@ -279,9 +296,17 @@ if ($report_type && isset($report_types[$report_type])) {
                     $tc = '#666';
                     if ($r['absence_type']==='M') $tc='#e74c3c'; elseif ($r['absence_type']==='MAT') $tc='#e91e63';
                     elseif ($r['absence_type']==='ACC') $tc='#ff9800'; elseif ($r['absence_type']==='CP') $tc='#2196f3';
-                    elseif ($r['absence_type']==='MP') $tc='#795548';
+                    elseif ($r['absence_type']==='MP') $tc='#795548'; elseif ($r['absence_type']==='A') $tc='#8e44ad';
+                    
+                    $tot_abs = $emp_total_days[$r['employee_id']];
+                    $row_bg = '';
+                    if (in_array($report_type, ['ABS', 'MAL', 'ALL'])) {
+                        if ($tot_abs >= 5) $row_bg = 'background-color: #ffebee;'; // Red / Severe
+                        elseif ($tot_abs >= 3) $row_bg = 'background-color: #fff3e0;'; // Orange / Warning
+                        elseif ($tot_abs >= 2) $row_bg = 'background-color: #fffde7;'; // Yellow / Notice
+                    }
                 ?>
-                <tr>
+                <tr style="<?= $row_bg ?>">
                     <td><?= $n ?></td>
                     <td><strong><?= htmlspecialchars($r['full_name']) ?></strong></td>
                     <td><?= htmlspecialchars($r['matricule']) ?></td>
@@ -310,5 +335,54 @@ if ($report_type && isset($report_types[$report_type])) {
     </div>
 </div>
 </div>
+<script>
+function sortTable(n) {
+  var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+  table = document.querySelector(".results-table");
+  if (!table) return;
+  switching = true;
+  dir = "asc"; 
+  while (switching) {
+    switching = false;
+    rows = table.rows;
+    // skip header row and footer row
+    for (i = 1; i < (rows.length - 2); i++) {
+      shouldSwitch = false;
+      x = rows[i].getElementsByTagName("TD")[n];
+      y = rows[i + 1].getElementsByTagName("TD")[n];
+      if (!x || !y) continue;
+      
+      let xContent = x.innerHTML.replace(/<[^>]*>?/gm, '').trim();
+      let yContent = y.innerHTML.replace(/<[^>]*>?/gm, '').trim();
+      
+      let xNum = parseFloat(xContent);
+      let yNum = parseFloat(yContent);
+      let isNum = !isNaN(xNum) && !isNaN(yNum) && xContent.match(/^[0-9.]+$/) && yContent.match(/^[0-9.]+$/);
+      
+      if (dir == "asc") {
+        if (isNum ? (xNum > yNum) : (xContent.toLowerCase() > yContent.toLowerCase())) {
+          shouldSwitch = true;
+          break;
+        }
+      } else if (dir == "desc") {
+        if (isNum ? (xNum < yNum) : (xContent.toLowerCase() < yContent.toLowerCase())) {
+          shouldSwitch = true;
+          break;
+        }
+      }
+    }
+    if (shouldSwitch) {
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+      switchcount ++;      
+    } else {
+      if (switchcount == 0 && dir == "asc") {
+        dir = "desc";
+        switching = true;
+      }
+    }
+  }
+}
+</script>
 </body>
 </html>
