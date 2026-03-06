@@ -141,6 +141,7 @@ try {
     }
 
     // Second pass: Insert attendance and group absences
+    $employee_absence_blocks = [];
     foreach ($records as $r) {
         $mat = (string) $r['matricule'];
         if (!isset($emp_map[$mat])) {
@@ -156,33 +157,60 @@ try {
         $stmt_ins_att->execute([$emp_id, $date, $hours, $status, $user_cin]);
         $success_count++;
 
-        // Track standard absences for bulk logging into hr_absences
-        if (in_array($status, ['M', 'MAT', 'ACC', 'A', 'AT'])) {
-            $status_code = $status === 'AT' ? 'ACC' : $status;
-            
-            if (!isset($absences_to_log[$emp_id])) {
-                 $absences_to_log[$emp_id] = [];
-            }
+        // Initialize current_block for this employee if not set
+        if (!isset($employee_absence_blocks[$emp_id])) {
+            $employee_absence_blocks[$emp_id] = [
+                'current_block' => null,
+                'blocks' => []
+            ];
+        }
+        $current_block = &$employee_absence_blocks[$emp_id]['current_block'];
+        $blocks = &$employee_absence_blocks[$emp_id]['blocks'];
 
-            // If we already have a running block of the same type ending yesterday
-            $prev_date = date('Y-m-d', strtotime($date . ' -1 day'));
-            $found_block = false;
-            foreach ($absences_to_log[$emp_id] as &$block) {
-                if ($block['type'] === $status_code && $block['end_date'] === $prev_date) {
-                    $block['end_date'] = $date;
-                    $found_block = true;
-                    break;
+        // Track standard absences for bulk logging into hr_absences
+        // Normalize status for ACC/AT
+        $normalized_status = $status;
+        if ($status === 'AT') {
+            $normalized_status = 'ACC';
+        }
+
+        if (in_array($normalized_status, ['A', 'M', 'MAT', 'ACC'])) { 
+            if ($current_block && $current_block['type'] === $normalized_status) {
+                // Check if dates are consecutive (allowing weekends to be skipped or included)
+                $diff = strtotime($date) - strtotime($current_block['end_date']);
+                // Consider dates consecutive if the gap is 3 days or less (e.g., Friday to Monday)
+                if ($diff <= 86400 * 3) { 
+                    $current_block['end_date'] = $date;
+                } else {
+                    // Gap too large, close current block and start a new one
+                    $blocks[] = $current_block;
+                    $current_block = ['type' => $normalized_status, 'start_date' => $date, 'end_date' => $date];
                 }
+            } else {
+                // Different type of absence or no current block, close previous and start new
+                if ($current_block) {
+                    $blocks[] = $current_block;
+                }
+                $current_block = ['type' => $normalized_status, 'start_date' => $date, 'end_date' => $date];
             }
-            if (!$found_block) {
-                $absences_to_log[$emp_id][] = [
-                    'type' => $status_code,
-                    'start_date' => $date,
-                    'end_date' => $date
-                ];
+        } elseif ($status === 'P') {
+            // If the employee is present, break any ongoing absence block immediately
+            if ($current_block) {
+                $blocks[] = $current_block;
+                $current_block = null;
             }
         }
     }
+
+    // After processing all records, close any remaining open absence blocks
+    foreach ($employee_absence_blocks as $emp_id => &$data_for_emp) {
+        if ($data_for_emp['current_block']) {
+            $data_for_emp['blocks'][] = $data_for_emp['current_block'];
+        }
+        // Move the finalized blocks to absences_to_log
+        $absences_to_log[$emp_id] = $data_for_emp['blocks'];
+    }
+
 
     // Save grouped absences
     $abs_logged = 0;
