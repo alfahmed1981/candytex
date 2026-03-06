@@ -368,18 +368,18 @@ $func_filter = $_GET['function_title'] ?? '';
 $location_filter = $_GET['location_id'] ?? '';
 $sort_by = $_GET['sort_by'] ?? 'id_desc';
 
-$query = "SELECT * FROM hr_employees WHERE 1=1";
+$query = "SELECT e.*, l.name as location_name FROM hr_employees e LEFT JOIN locations l ON e.location_id = l.id WHERE 1=1";
 $params = [];
 
 if ($search) {
-    $query .= " AND (full_name LIKE ? OR matricule LIKE ? OR cin LIKE ? OR phone_number LIKE ?)";
+    $query .= " AND (e.full_name LIKE ? OR e.matricule LIKE ? OR e.cin LIKE ? OR e.phone_number LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
 if ($status_filter !== 'All') {
-    $query .= " AND status = ?";
+    $query .= " AND e.status = ?";
     $params[] = $status_filter;
 }
 if ($dept_filter) {
@@ -393,10 +393,10 @@ if ($func_filter) {
 
 // Enforce Location Filtering
 if ($is_restricted_hr) {
-    $query .= " AND location_id = ?";
+    $query .= " AND e.location_id = ?";
     $params[] = $hr_location_id;
 } else if ($location_filter) {
-    $query .= " AND location_id = ?";
+    $query .= " AND e.location_id = ?";
     $params[] = $location_filter;
 }
 
@@ -414,10 +414,10 @@ switch ($sort_by) {
         $query .= " ORDER BY hourly_rate ASC";
         break;
     case 'id_asc':
-        $query .= " ORDER BY id ASC";
+        $query .= " ORDER BY e.id ASC";
         break;
     default:
-        $query .= " ORDER BY id DESC";
+        $query .= " ORDER BY e.id DESC";
         break;
 }
 
@@ -817,6 +817,8 @@ try {
                                 <span title="Matricule" class="field-mat">🆔 <?= htmlspecialchars($emp['matricule']) ?></span>
                                 <span title="Function" class="field-func">💼
                                     <?= htmlspecialchars($emp['function_title'] ?: 'N/A') ?></span>
+                                <span title="Location" class="field-loc">🏭
+                                    <?= htmlspecialchars($emp['location_name'] ?? 'N/A') ?></span>
                                 <span title="Department" class="field-dept">🏢
                                     <?= htmlspecialchars($emp['department'] ?: 'N/A') ?></span>
                                 <span title="Salary" class="field-rate">💰 <?= number_format($emp['hourly_rate'], 2) ?>
