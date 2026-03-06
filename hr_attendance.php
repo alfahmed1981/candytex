@@ -57,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_attendance'])) {
 
 // Filters
 $selected_date = $_GET['date'] ?? date('Y-m-d');
+$search_filter = $_GET['search'] ?? '';
 $department_filter = $_GET['department'] ?? 'All';
 $location_filter = $_GET['location_id'] ?? '';
 $function_filter = $_GET['function_title'] ?? '';
@@ -91,6 +92,14 @@ $query = "SELECT e.id, e.matricule, e.full_name, e.function_title, e.department,
           LEFT JOIN hr_attendance a ON e.id = a.employee_id AND a.work_date = ? 
           WHERE e.status = 'Active'";
 $params = [$selected_date, $selected_date, $selected_date];
+
+// Search filter (applies to all roles)
+if ($search_filter) {
+    $query .= " AND (e.full_name LIKE ? OR e.matricule LIKE ? OR e.cin LIKE ?)";
+    $params[] = "%$search_filter%";
+    $params[] = "%$search_filter%";
+    $params[] = "%$search_filter%";
+}
 
 if (!$is_admin && !$is_hr && !$is_hr_admin_user) {
     // Manager only sees their department (Assuming manager's department is in users table)
@@ -297,10 +306,17 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <?php endif; ?>
         </div>
 
-        <!-- Date & Department Filter -->
+        <!-- Date & Filters -->
         <div class="filter-card"
             style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <form method="GET" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div class="form-group" style="margin: 0; flex: 1; min-width: 180px;">
+                    <label><strong>Search / Recherche</strong></label>
+                    <input type="text" name="search" value="<?= htmlspecialchars($search_filter) ?>"
+                        placeholder="Name, ID, CIN..."
+                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+                </div>
+
                 <div class="form-group" style="margin: 0;">
                     <label>Work Date / التاريخ</label>
                     <input type="date" name="date" value="<?= htmlspecialchars($selected_date) ?>" required
@@ -320,31 +336,33 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <?php endforeach; ?>
                         </select>
                     </div>
+                <?php endif; ?>
 
-                    <div class="form-group" style="margin: 0;">
-                        <label>Department (CNSS) / القسم</label>
-                        <select name="department"
-                            style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
-                            <option value="All">-- All --</option>
-                            <?php foreach ($departments as $dept): ?>
-                                <option value="<?= htmlspecialchars($dept) ?>" <?= $department_filter === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Department / القسم</label>
+                    <select name="department"
+                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
+                        <option value="All">-- All Depts --</option>
+                        <?php foreach ($departments as $dept): ?>
+                            <option value="<?= htmlspecialchars($dept) ?>" <?= $department_filter === $dept ? 'selected' : '' ?>><?= htmlspecialchars($dept) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                    <div class="form-group" style="margin: 0;">
-                        <label>Function / الوظيفة</label>
-                        <select name="function_title"
-                            style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
-                            <option value="">-- All Functions --</option>
-                            <?php foreach ($all_functions as $func): ?>
-                                <option value="<?= htmlspecialchars($func) ?>" <?= $function_filter === $func ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($func) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Function / الوظيفة</label>
+                    <select name="function_title"
+                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px;">
+                        <option value="">-- All Functions --</option>
+                        <?php foreach ($all_functions as $func): ?>
+                            <option value="<?= htmlspecialchars($func) ?>" <?= $function_filter === $func ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($func) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
+                <?php if ($is_admin): ?>
                     <div class="form-group" style="margin: 0;">
                         <label>Team Leader / مسؤول الفريق</label>
                         <select name="manager_cin"
@@ -357,7 +375,8 @@ $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 <?php endif; ?>
 
-                <button type="submit" class="btn-save" style="background:#0b3c5d;">🔍 Load / عرض</button>
+                <button type="submit" class="btn-save" style="background:#0b3c5d;">🔍 Filter</button>
+                <a href="hr_attendance.php" style="color:#0984e3; font-size: 0.9em;">Reset</a>
             </form>
         </div>
 
