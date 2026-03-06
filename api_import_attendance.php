@@ -218,10 +218,26 @@ try {
 
     $payroll_count = 0;
     $cnss_updates = 0;
-    $payroll_month = 12;
-    $payroll_year = 2025;
-    $period_start = "2025-11-26";
-    $period_end = "2025-12-25";
+    
+    // Dynamically determine the payroll period based on imported records
+    $min_date = '9999-12-31';
+    $max_date = '0000-00-00';
+    if (!empty($records)) {
+        foreach ($records as $r) {
+            if ($r['date'] < $min_date) $min_date = $r['date'];
+            if ($r['date'] > $max_date) $max_date = $r['date'];
+        }
+    } else {
+        $min_date = date('Y-m-26', strtotime('-1 month')); // fallback
+        $max_date = date('Y-m-25');
+    }
+
+    $period_start = $min_date;
+    $period_end = $max_date;
+    
+    // Set the payroll month and year based on the end of the period
+    $payroll_month = (int)date('m', strtotime($period_end));
+    $payroll_year = (int)date('Y', strtotime($period_end));
 
     if (isset($data['payrolls']) && is_array($data['payrolls'])) {
         foreach ($data['payrolls'] as $p) {
