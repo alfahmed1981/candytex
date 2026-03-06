@@ -550,6 +550,7 @@ foreach ($users as $u) {
             $role_list = [
                 'admin' => 'المدير العام / General Admin',
                 'hr' => 'مدير المصنع (HR) / Factory Admin',
+                'hr_admin' => 'مدير موارد بشرية (بحسب الموقع) / HR Manager (Location)',
                 'manager' => 'رئيس فريق / Team Leader',
                 'viewer' => 'مشاهد / Viewer'
             ];

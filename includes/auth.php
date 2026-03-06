@@ -75,7 +75,7 @@ function is_leader()
 
 function is_hr_admin()
 {
-    return isset($_SESSION['user_department']) && $_SESSION['user_department'] === 'HR_Admin';
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'hr_admin';
 }
 
 function get_user_factory($pdo, $cin)
