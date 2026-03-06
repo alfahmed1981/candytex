@@ -5,8 +5,14 @@ require 'includes/auth.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+// Ensure no PHP warnings/notices corrupt the JSON output
+error_reporting(0);
+ini_set('display_errors', 0);
+ob_start();
+
 // Only Admins or HR can import bulk attendance
 if (!isset($_SESSION['user_cin']) || (!is_admin() && !is_hr())) {
+    ob_clean();
     http_response_code(403);
     echo json_encode(['error' => 'Unauthorized. Admin or HR access required.']);
     exit;
@@ -17,6 +23,7 @@ $rawData = file_get_contents("php://input");
 $data = json_decode($rawData, true);
 
 if (!isset($data['records']) || !is_array($data['records'])) {
+    ob_clean();
     http_response_code(400);
     echo json_encode(['error' => 'Invalid payload format.']);
     exit;
@@ -39,12 +46,14 @@ if (empty($csrf_token) && isset($data['csrf_token'])) {
 }
 
 if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrf_token)) {
+    ob_clean();
     http_response_code(403);
     echo json_encode(['error' => 'Invalid CSRF token']);
     exit;
 }
 
 if (!isset($data['records']) || !is_array($data['records'])) {
+    ob_clean();
     http_response_code(400);
     echo json_encode(['error' => 'Invalid payload format. Missing records array.']);
     exit;
@@ -248,6 +257,7 @@ try {
     // Log the import
     audit_log($pdo, 'hr_excel_import', "Imported $success_count attendance & $payroll_count payrolls (New Emps: $new_emp_count, Absences: $abs_logged)");
 
+    ob_clean();
     echo json_encode([
         'success' => true,
         'message' => "Successfully imported $success_count attendance records, $abs_logged absence periods, and $payroll_count payroll snapshots. Created $new_emp_count new employees!"
@@ -255,6 +265,7 @@ try {
 
 } catch (Exception $e) {
     $pdo->rollBack();
+    ob_clean();
     http_response_code(500);
     echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
 }
