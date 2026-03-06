@@ -231,12 +231,12 @@ if (empty($_SESSION['csrf_token'])) {
 
                                 hourly_rate = parseFloat(row[6]) || 0;
 
-                                brut = parseFloat(row[39]) || 0;
-                                cnss_ded = parseFloat(row[40]) || 0;
-                                advance = parseFloat(row[42]) || 0;
-                                frais = parseFloat(row[43]) || 0;
-                                net = parseFloat(row[44]) || 0;
-                                rounded_net = parseFloat(row[45]) || 0;
+                                brut = parseFloat(row[40]) || 0;
+                                cnss_ded = parseFloat(row[41]) || 0;
+                                advance = parseFloat(row[43]) || 0;
+                                frais = parseFloat(row[44]) || 0;
+                                net = parseFloat(row[45]) || 0;
+                                rounded_net = parseFloat(row[46]) || 0;
                             } else {
                                 cnss = row[4];
                                 frais = parseFloat(row[37]) || 0;
