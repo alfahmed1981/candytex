@@ -194,13 +194,13 @@ try {
 
         if (in_array($normalized_status, ['A', 'M', 'MAT', 'ACC'])) { 
             if ($current_block && $current_block['type'] === $normalized_status) {
-                // Check if dates are consecutive (allowing weekends to be skipped or included)
+                // Check if dates are EXACTLY consecutive (1 day gap maximum)
                 $diff = strtotime($date) - strtotime($current_block['end_date']);
-                // Consider dates consecutive if the gap is 3 days or less (e.g., Friday to Monday)
-                if ($diff <= 86400 * 3) { 
+                // 1 day = 86400 seconds. If gap is > 86400, it's not contiguous.
+                if ($diff <= 86400) { 
                     $current_block['end_date'] = $date;
                 } else {
-                    // Gap too large, close current block and start a new one
+                    // Gap detected (weekend or empty day), close current block and start a new one
                     $blocks[] = $current_block;
                     $current_block = ['type' => $normalized_status, 'start_date' => $date, 'end_date' => $date];
                 }
