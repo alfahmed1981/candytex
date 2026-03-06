@@ -205,9 +205,10 @@ try {
 
     $stmt_payroll = $pdo->prepare("
         INSERT INTO hr_payroll 
-        (employee_id, payroll_month, payroll_year, period_start, period_end, cnss_deduction, advances, frais, brut_salary, net_salary, rounded_net, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft')
+        (employee_id, payroll_month, payroll_year, period_start, period_end, total_hours, cnss_deduction, advances, frais, brut_salary, net_salary, rounded_net, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft')
         ON DUPLICATE KEY UPDATE 
+            total_hours = VALUES(total_hours),
             cnss_deduction = VALUES(cnss_deduction),
             advances = VALUES(advances),
             frais = VALUES(frais),
@@ -259,6 +260,7 @@ try {
                 $payroll_year,
                 $period_start,
                 $period_end,
+                isset($p['total_hours']) ? (float)$p['total_hours'] : 0, // total_hours
                 $p['cnss_deduction'], // cnss_deduction
                 $p['advances'],       // advances
                 $p['frais'],          // frais (expenses)
