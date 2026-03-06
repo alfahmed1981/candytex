@@ -95,7 +95,7 @@ try {
     // First pass: Handle missing employees
     $current_location_id = null;
     if (isset($_SESSION['user_cin'])) {
-        $loc_stmt = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location = l.name WHERE u.cin = ?");
+        $loc_stmt = $pdo->prepare("SELECT l.id FROM users u JOIN locations l ON u.location COLLATE utf8mb4_unicode_ci = l.name COLLATE utf8mb4_unicode_ci WHERE u.cin = ?");
         $loc_stmt->execute([$_SESSION['user_cin']]);
         $current_location_id = $loc_stmt->fetchColumn() ?: 1; // Default to 1 if unknown
     }
@@ -180,7 +180,7 @@ try {
     foreach ($absences_to_log as $emp_id => $blocks) {
         foreach ($blocks as $block) {
             // Check if it already exists to avoid duplicates
-            $chk = $pdo->prepare("SELECT id FROM hr_absences WHERE employee_id = ? AND start_date = ? AND end_date = ? AND absence_type = ?");
+            $chk = $pdo->prepare("SELECT id FROM hr_absences WHERE employee_id = ? AND start_date = ? AND end_date = ? AND absence_type COLLATE utf8mb4_unicode_ci = ?");
             $chk->execute([$emp_id, $block['start_date'], $block['end_date'], $block['type']]);
             if ($chk->rowCount() == 0) {
                 $stmt_ins_abs->execute([$emp_id, $block['type'], $block['start_date'], $block['end_date'], $user_cin]);
