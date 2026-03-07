@@ -217,6 +217,7 @@ if (empty($_SESSION['csrf_token'])) {
                             let frais = 0;
                             let net = 0;
                             let rounded_net = 0;
+                            let total_hours = 0;
 
                             if (sheetName.toUpperCase() === 'HORAIRE') {
                                 cnss = row[3];
@@ -230,6 +231,7 @@ if (empty($_SESSION['csrf_token'])) {
                                 }
 
                                 hourly_rate = parseFloat(row[6]) || 0;
+                                total_hours = parseFloat(row[38]) || 0;
 
                                 brut = parseFloat(row[40]) || 0;
                                 cnss_ded = parseFloat(row[41]) || 0;
@@ -238,9 +240,11 @@ if (empty($_SESSION['csrf_token'])) {
                                 net = parseFloat(row[45]) || 0;
                                 rounded_net = parseFloat(row[46]) || 0;
                             } else {
+                                // MENS sheet
                                 cnss = row[4];
-                                frais = parseFloat(row[37]) || 0;
-                                advance = parseFloat(row[36]) || 0;
+                                hourly_rate = parseFloat(row[6]) || 0;
+                                advance = parseFloat(row[36]) || 0; // AV
+                                frais = 0; // Usually no FRAIS in mens, maybe VIR is 37
                             }
 
                             payrolls.push({
@@ -252,6 +256,7 @@ if (empty($_SESSION['csrf_token'])) {
                                 hourly_rate: hourly_rate,
                                 sheet_type: sheetName.toUpperCase(),
                                 cnss: String(cnss || '').trim(),
+                                total_hours: total_hours,
                                 brut: brut,
                                 cnss_deduction: cnss_ded,
                                 advances: advance,
