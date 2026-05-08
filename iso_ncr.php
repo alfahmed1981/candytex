@@ -1080,8 +1080,8 @@ foreach ($ncrs as $ncr) {
                 left: 0;
                 width: 210mm;
                 margin: 0;
-                padding: 12mm 15mm;
-                font-size: 11pt;
+                padding: 6mm 10mm;
+                font-size: 9pt;
                 color: #000;
                 direction: ltr;
                 text-align: left;
@@ -1091,19 +1091,19 @@ foreach ($ncrs as $ncr) {
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                border-bottom: 3px solid #0b3c5d;
-                padding-bottom: 10px;
-                margin-bottom: 15px;
+                border-bottom: 2px solid #0b3c5d;
+                padding-bottom: 6px;
+                margin-bottom: 8px;
             }
 
             .print-header .company {
-                font-size: 18pt;
+                font-size: 14pt;
                 font-weight: 700;
                 color: #0b3c5d;
             }
 
             .print-header .company small {
-                font-size: 9pt;
+                font-size: 7.5pt;
                 font-weight: 400;
                 color: #555;
                 display: block;
@@ -1111,23 +1111,24 @@ foreach ($ncrs as $ncr) {
 
             .print-header .doc-meta {
                 text-align: right;
-                font-size: 9pt;
+                font-size: 7.5pt;
                 color: #333;
+                line-height: 1.4;
             }
 
             .print-header .doc-meta .doc-num {
-                font-size: 14pt;
+                font-size: 12pt;
                 font-weight: 700;
                 color: #c62828;
             }
 
             .print-title {
                 text-align: center;
-                font-size: 16pt;
+                font-size: 13pt;
                 font-weight: 700;
                 color: #0b3c5d;
-                margin: 10px 0 15px;
-                padding: 8px;
+                margin: 5px 0 8px;
+                padding: 5px;
                 border: 2px solid #0b3c5d;
                 background: #f5f9ff;
             }
@@ -1135,14 +1136,15 @@ foreach ($ncrs as $ncr) {
             .print-table {
                 width: 100%;
                 border-collapse: collapse;
-                margin-bottom: 15px;
+                margin-bottom: 6px;
+                page-break-inside: avoid;
             }
 
             .print-table th,
             .print-table td {
                 border: 1px solid #333;
-                padding: 6px 10px;
-                font-size: 10pt;
+                padding: 3px 8px;
+                font-size: 8.5pt;
             }
 
             .print-table th {
@@ -1161,42 +1163,42 @@ foreach ($ncrs as $ncr) {
                 color: #fff;
                 text-align: center;
                 font-weight: 700;
-                font-size: 11pt;
+                font-size: 9pt;
             }
 
             .print-signatures {
                 display: flex;
                 justify-content: space-between;
-                margin-top: 30px;
+                margin-top: 12px;
                 page-break-inside: avoid;
             }
 
             .print-sig-box {
                 border: 1px solid #555;
-                padding: 12px;
+                padding: 8px;
                 width: 45%;
-                min-height: 80px;
+                min-height: 55px;
             }
 
             .print-sig-box h4 {
-                margin: 0 0 5px;
-                font-size: 10pt;
+                margin: 0 0 3px;
+                font-size: 8.5pt;
                 color: #0b3c5d;
             }
 
             .print-sig-box .sig-line {
                 border-bottom: 1px dotted #999;
-                margin-top: 40px;
+                margin-top: 20px;
                 height: 1px;
             }
 
             .print-footer {
                 text-align: center;
-                font-size: 8pt;
+                font-size: 7pt;
                 color: #888;
                 border-top: 1px solid #ccc;
-                padding-top: 8px;
-                margin-top: 20px;
+                padding-top: 4px;
+                margin-top: 8px;
             }
 
             .btn-print {
@@ -2441,7 +2443,7 @@ foreach ($ncrs as $ncr) {
 
             <div class="print-title">
                 NON-CONFORMITY REPORT (NCR)<br>
-                <span style="font-size:12pt;">تقرير عدم المطابقة</span>
+                <span style="font-size:10pt;">تقرير عدم المطابقة</span>
             </div>
 
             <table class="print-table">
