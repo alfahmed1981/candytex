@@ -1352,10 +1352,24 @@ foreach ($ncrs as $ncr) {
                         </ul>
                     </div>
 
+                    <!-- Immediate Action -->
+                    <div class="guide-card">
+                        <h3>🚑 الإجراء الفوري <small>/ Immediate Action</small></h3>
+                        <p>ردة الفعل السريعة فور اكتشاف المشكلة (لاحتوائها):</p>
+                        <ul>
+                            <li><span class="term">Quarantine — حجز/عزل</span>: عزل المنتج المعيب لمنع استخدامه</li>
+                            <li><span class="term">100% Sorting — فرز شامل</span>: فحص الشحنة بالكامل لفصل المعيب</li>
+                            <li><span class="term">Machine Adjustment — تعديل الآلة</span>: إيقاف الآلة وتصحيح إعداداتها</li>
+                        </ul>
+                        <div style="margin-top:10px; padding:8px; background:#e3f2fd; border-radius:6px; font-size:0.85em; color:#1565c0;">
+                            <strong>💡 الفرق:</strong> الإجراء الفوري هو التدخل الميداني العاجل لاحتواء المشكلة، بينما "القرار المتخذ" أدناه هو المصير الإداري النهائي للمنتج.
+                        </div>
+                    </div>
+
                     <!-- Disposition -->
                     <div class="guide-card">
                         <h3>⚖️ القرار المتخذ <small>/ Disposition</small></h3>
-                        <p>ماذا نفعل بالمنتج غير المطابق:</p>
+                        <p>المصير النهائي للمنتج غير المطابق:</p>
                         <ul>
                             <li><span class="term">Pending — معلق</span>: لم يُتخذ قرار بعد</li>
                             <li><span class="term">Rework — إعادة تشغيل</span>: إصلاح المنتج وإعادته للإنتاج</li>
