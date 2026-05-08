@@ -1064,23 +1064,28 @@ foreach ($ncrs as $ncr) {
         }
 
         @media print {
-            body * {
-                visibility: hidden !important;
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
             }
 
-            #print-area,
-            #print-area * {
-                visibility: visible !important;
+            body {
+                background: #fff;
+                margin: 0;
+                padding: 0;
+            }
+
+            /* Hide everything in the body except the print area */
+            body > *:not(#print-area):not(script) {
+                display: none !important;
             }
 
             #print-area {
                 display: block !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 210mm;
+                position: relative;
+                width: 100%;
                 margin: 0;
-                padding: 6mm 10mm;
+                padding: 0;
                 font-size: 9pt;
                 color: #000;
                 direction: ltr;
