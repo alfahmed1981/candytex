@@ -2614,6 +2614,9 @@ foreach ($ncrs as $ncr) {
             const deptText = dept ? (dept.options[dept.selectedIndex]?.text || '-') : '-';
             const assignedText = assigned ? (assigned.options[assigned.selectedIndex]?.text || '-') : '-';
 
+            // Close the selection modal first to avoid overlay issues
+            closeModal('ncr-modal');
+
             Swal.fire({
                 title: 'تأكيد البيانات قبل الإرسال',
                 html: `
@@ -2645,6 +2648,9 @@ foreach ($ncrs as $ncr) {
                     hidden.value = '1';
                     form.appendChild(hidden);
                     form.submit();
+                } else {
+                    // If user cancels/reviews, re-open the selection modal
+                    openModal('ncr-modal');
                 }
             });
         }
@@ -2664,6 +2670,9 @@ foreach ($ncrs as $ncr) {
             const responsible = getSelText('car_responsible');
             const deadline = form.querySelector('[name="car_deadline"]')?.value || 'غير محدد';
             const ncrRef = document.getElementById('car-ncr-ref')?.textContent || '-';
+
+            // Close the selection modal first
+            closeModal('car-modal');
 
             Swal.fire({
                 title: 'تأكيد بيانات الإجراء التصحيحي قبل الإرسال',
@@ -2694,6 +2703,9 @@ foreach ($ncrs as $ncr) {
                     hidden.value = '1';
                     form.appendChild(hidden);
                     form.submit();
+                } else {
+                    // Re-open if reviewed
+                    openModal('car-modal');
                 }
             });
         }
