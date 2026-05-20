@@ -56,9 +56,15 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS `car_reports` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-// --- Ensure disposition column size is enough for custom user input ---
+// --- Ensure disposition and other columns size is enough for custom user input ---
 try {
     $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `disposition` VARCHAR(255) DEFAULT 'Pending'");
+    $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `category` VARCHAR(100) DEFAULT 'Product'");
+    $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `severity` VARCHAR(50) DEFAULT 'Minor'");
+    $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `source` VARCHAR(100) DEFAULT 'Production'");
+    $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `location` VARCHAR(255) DEFAULT NULL");
+    $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `department` VARCHAR(255) DEFAULT NULL");
+    $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `assigned_to` VARCHAR(255) DEFAULT NULL");
 } catch (PDOException $e) {
     // Silently continue if ALTER fails
 }
@@ -136,6 +142,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $desc_ar = $desc_map[$desc_en_raw] ?? trim($_POST['description_ar'] ?? '');
         }
 
+        $category_raw = $_POST['category'] ?? 'Product';
+        $category = ($category_raw === '__OTHER__') ? trim($_POST['category_custom'] ?? 'Other') : $category_raw;
+        if (mb_strlen($category) > 100) $category = mb_substr($category, 0, 95) . '...';
+
+        $severity_raw = $_POST['severity'] ?? 'Minor';
+        $severity = ($severity_raw === '__OTHER__') ? trim($_POST['severity_custom'] ?? 'Minor') : $severity_raw;
+        if (mb_strlen($severity) > 50) $severity = mb_substr($severity, 0, 45) . '...';
+
+        $source_raw = $_POST['source'] ?? 'Production';
+        $source = ($source_raw === '__OTHER__') ? trim($_POST['source_custom'] ?? 'Production') : $source_raw;
+        if (mb_strlen($source) > 100) $source = mb_substr($source, 0, 95) . '...';
+
+        $location_raw = $_POST['location'] ?? '';
+        $location = ($location_raw === '__OTHER__') ? trim($_POST['location_custom'] ?? '') : $location_raw;
+        if (mb_strlen($location) > 255) $location = mb_substr($location, 0, 250) . '...';
+
+        $department_raw = $_POST['department'] ?? '';
+        $department = ($department_raw === '__OTHER__') ? trim($_POST['department_custom'] ?? '') : $department_raw;
+        if (mb_strlen($department) > 255) $department = mb_substr($department, 0, 250) . '...';
+
+        $immediate_action_raw = trim($_POST['immediate_action'] ?? '');
+        $immediate_action = ($immediate_action_raw === '__OTHER__') ? trim($_POST['immediate_action_custom'] ?? '') : $immediate_action_raw;
+
+        $assigned_to_raw = trim($_POST['assigned_to'] ?? '');
+        $assigned_to = ($assigned_to_raw === '__OTHER__') ? trim($_POST['assigned_to_custom'] ?? '') : $assigned_to_raw;
+        if (mb_strlen($assigned_to) > 255) $assigned_to = mb_substr($assigned_to, 0, 250) . '...';
+
         $disposition_raw = $_POST['disposition'] ?? 'Pending';
         $disposition = ($disposition_raw === '__OTHER__') ? trim($_POST['disposition_custom'] ?? 'Other') : $disposition_raw;
         if (mb_strlen($disposition) > 255) {
@@ -148,17 +181,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open')");
         $stmt->execute([
             $ncr_num,
-            $_POST['category'] ?? 'Product',
-            $_POST['severity'] ?? 'Minor',
-            $_POST['source'] ?? 'Production',
-            $_POST['location'] ?? '',
-            $_POST['department'] ?? '',
+            $category,
+            $severity,
+            $source,
+            $location,
+            $department,
             $desc_en,
             $desc_ar,
-            trim($_POST['immediate_action'] ?? ''),
+            $immediate_action,
             $disposition,
             $user_cin,
-            trim($_POST['assigned_to'] ?? ''),
+            $assigned_to,
             $_POST['due_date'] ?: null
         ]);
         $msg = "✅ تم إنشاء تقرير عدم المطابقة: $ncr_num";
@@ -1745,44 +1778,45 @@ foreach ($ncrs as $ncr) {
                 <div class="form-row">
                     <div class="form-group">
                         <label>📂 الفئة <small>/ Category</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ نوع المشكلة: هل
-                            هي في المنتج أم العملية أم المادة؟</small>
-                        <select name="category">
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ نوع المشكلة: هل هي في المنتج أم العملية أم المادة؟</small>
+                        <select name="category" onchange="toggleNcrCustomField(this, 'ncr-category-custom')">
                             <option value="Product">📦 منتج / Product — مشكلة في المنتج النهائي</option>
                             <option value="Process">⚙️ عملية / Process — خلل في طريقة العمل</option>
                             <option value="Material">🧵 مادة / Material — عيب في المواد الخام</option>
                             <option value="Supplier">🚚 مورد / Supplier — مشكلة من المورد</option>
-                            <option value="Other">📝 أخرى / Other</option>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <input type="text" id="ncr-category-custom" name="category_custom" placeholder="اكتب الفئة المخصصة... / Custom category..." style="display:none; margin-top:8px;" class="form-control">
                     </div>
                     <div class="form-group">
                         <label>⚡ الشدة <small>/ Severity</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ مدى خطورة
-                            المشكلة المكتشفة</small>
-                        <select name="severity">
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ مدى خطورة المشكلة المكتشفة</small>
+                        <select name="severity" onchange="toggleNcrCustomField(this, 'ncr-severity-custom')">
                             <option value="Minor">📌 ثانوية / Minor — عيب صغير لا يؤثر على الوظيفة</option>
                             <option value="Major">⚠️ رئيسية / Major — عيب واضح يؤثر على الجودة</option>
                             <option value="Critical">🚨 حرجة / Critical — خطر على المنتج أو السلامة</option>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <input type="text" id="ncr-severity-custom" name="severity_custom" placeholder="اكتب الشدة... / Custom severity..." style="display:none; margin-top:8px;" class="form-control">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>🔍 المصدر <small>/ Source</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ أين تم اكتشاف
-                            المشكلة؟</small>
-                        <select name="source">
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ أين تم اكتشاف المشكلة؟</small>
+                        <select name="source" onchange="toggleNcrCustomField(this, 'ncr-source-custom')">
                             <option value="Production">🏭 الإنتاج / Production — أثناء التصنيع</option>
                             <option value="Internal Audit">🔎 تدقيق داخلي / Internal Audit — أثناء التفتيش</option>
                             <option value="Incoming">📥 استلام / Incoming — عند وصول المواد</option>
                             <option value="Customer">👤 زبون / Customer — شكوى زبون</option>
                             <option value="Supplier">🚚 مورد / Supplier — إبلاغ من المورد</option>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <input type="text" id="ncr-source-custom" name="source_custom" placeholder="اكتب المصدر... / Custom source..." style="display:none; margin-top:8px;" class="form-control">
                     </div>
                     <div class="form-group">
                         <label>⚖️ القرار <small>/ Disposition</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ماذا سنفعل
-                            بالمنتج غير المطابق؟</small>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ماذا سنفعل بالمنتج غير المطابق؟</small>
                         <select name="disposition" onchange="toggleNcrDispositionCustom(this)">
                             <option value="Pending">⏳ معلق / Pending — لم يُتخذ قرار بعد</option>
                             <option value="Rework">🔧 إعادة تشغيل / Rework — إصلاح المنتج</option>
@@ -1803,95 +1837,75 @@ foreach ($ncrs as $ncr) {
                 <div class="form-row">
                     <div class="form-group">
                         <label>📍 الموقع <small>/ Location</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ أين وقعت المشكلة
-                            في المصنع؟</small>
-                        <select name="location">
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ أين وقعت المشكلة في المصنع؟</small>
+                        <select name="location" onchange="toggleNcrCustomField(this, 'ncr-location-custom')">
                             <option value="">-- 📍 اختر الموقع --</option>
                             <?php foreach ($locations as $loc): ?>
                                 <option value="<?= htmlspecialchars($loc) ?>">
                                     <?= htmlspecialchars($loc) ?>
                                 </option>
                             <?php endforeach; ?>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <input type="text" id="ncr-location-custom" name="location_custom" placeholder="اكتب الموقع... / Custom location..." style="display:none; margin-top:8px;" class="form-control">
                     </div>
                     <div class="form-group">
                         <label>🏢 القسم <small>/ Department</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ القسم المعني
-                            بالمشكلة</small>
-                        <select name="department">
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ القسم المعني بالمشكلة</small>
+                        <select name="department" onchange="toggleNcrCustomField(this, 'ncr-department-custom')">
                             <option value="">-- 🏢 اختر القسم --</option>
                             <?php foreach ($departments as $dept): ?>
                                 <option value="<?= htmlspecialchars($dept) ?>">
                                     <?= htmlspecialchars($dept) ?>
                                 </option>
                             <?php endforeach; ?>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <input type="text" id="ncr-department-custom" name="department_custom" placeholder="اكتب القسم... / Custom department..." style="display:none; margin-top:8px;" class="form-control">
                     </div>
                 </div>
                 <div class="form-row single">
                     <div class="form-group">
                         <label>📋 وصف عدم المطابقة <small>/ Description (EN ↔ AR auto-sync)</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ اختر نوع المشكلة
-                            من القائمة، أو اكتب وصفاً يدوياً في الأسفل</small>
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ اختر نوع المشكلة من القائمة، أو اكتب وصفاً يدوياً في الأسفل</small>
                         <select name="description_en" id="ncr-desc-select" onchange="syncNcrDesc(this)">
                             <option value="">-- اختر نوع المشكلة / Select Issue --</option>
                             <optgroup label="🧵 المواد الأولية / Raw Materials & Fabric">
-                                <option value="Fabric Defect (Holes/Knots)">Fabric Defect (Holes/Knots) | عيوب في القماش
-                                    (ثقوب / عقد)</option>
-                                <option value="Color Shading / Mismatch">Color Shading / Mismatch | اختلاف درجات اللون
-                                    (Nuance)</option>
-                                <option value="Wrong Fabric / GSM Issue">Wrong Fabric / GSM Issue | قماش خاطئ / مشكلة في
-                                    الوزن</option>
-                                <option value="Damaged / Wrong Accessories">Damaged / Wrong Accessories | إكسسوارات
-                                    تالفة أو خاطئة</option>
-                                <option value="Dirty / Stained Material">Dirty / Stained Material | مواد أولية متسخة /
-                                    مبقعة</option>
+                                <option value="Fabric Defect (Holes/Knots)">Fabric Defect (Holes/Knots) | عيوب في القماش (ثقوب / عقد)</option>
+                                <option value="Color Shading / Mismatch">Color Shading / Mismatch | اختلاف درجات اللون (Nuance)</option>
+                                <option value="Wrong Fabric / GSM Issue">Wrong Fabric / GSM Issue | قماش خاطئ / مشكلة في الوزن</option>
+                                <option value="Damaged / Wrong Accessories">Damaged / Wrong Accessories | إكسسوارات تالفة أو خاطئة</option>
+                                <option value="Dirty / Stained Material">Dirty / Stained Material | مواد أولية متسخة / مبقعة</option>
                             </optgroup>
                             <optgroup label="✂️ القص / Cutting Section">
-                                <option value="Wrong Cutting Dimension">Wrong Cutting Dimension | أبعاد القص غير صحيحة
-                                </option>
+                                <option value="Wrong Cutting Dimension">Wrong Cutting Dimension | أبعاد القص غير صحيحة</option>
                                 <option value="Pattern Misalignment">Pattern Misalignment | عدم تطابق الباترون</option>
-                                <option value="Numbering / Bundling Error">Numbering / Bundling Error | خطأ في الترقيم
-                                    أو التحزيم</option>
+                                <option value="Numbering / Bundling Error">Numbering / Bundling Error | خطأ في الترقيم أو التحزيم</option>
                                 <option value="Fraying Edges">Fraying Edges | تنسيل حواف القماش</option>
                                 <option value="Missed Notches">Missed Notches | غياب علامات التقابل (Crans)</option>
                             </optgroup>
                             <optgroup label="🧷 الخياطة والتجميع / Sewing & Assembly">
-                                <option value="Broken / Skipped Stitches">Broken / Skipped Stitches | غرز مقطوعة / قفز
-                                    الغرز</option>
-                                <option value="Open Seam / Seam Failure">Open Seam / Seam Failure | خياطة مفتوحة / فشل
-                                    الدرزة</option>
-                                <option value="Asymmetry / Uneven Parts">Asymmetry / Uneven Parts | عدم تماثل الأجزاء
-                                </option>
-                                <option value="Puckering / Tension Issue">Puckering / Tension Issue | تكرمش القماش /
-                                    مشكلة شد الخيط</option>
-                                <option value="Needle Holes / Marks">Needle Holes / Marks | ثقوب الإبرة / آثار الأسنان
-                                </option>
-                                <option value="Oil Spots (Machine Oil)">Oil Spots (Machine Oil) | بقع زيت الماكينة
-                                </option>
-                                <option value="Wrong Label / Tag Placement">Wrong Label / Tag Placement | تركيب الملصق
-                                    في مكان خاطئ</option>
+                                <option value="Broken / Skipped Stitches">Broken / Skipped Stitches | غرز مقطوعة / قفز الغرز</option>
+                                <option value="Open Seam / Seam Failure">Open Seam / Seam Failure | خياطة مفتوحة / فشل الدرزة</option>
+                                <option value="Asymmetry / Uneven Parts">Asymmetry / Uneven Parts | عدم تماثل الأجزاء</option>
+                                <option value="Puckering / Tension Issue">Puckering / Tension Issue | تكرمش القماش / مشكلة شد الخيط</option>
+                                <option value="Needle Holes / Marks">Needle Holes / Marks | ثقوب الإبرة / آثار الأسنان</option>
+                                <option value="Oil Spots (Machine Oil)">Oil Spots (Machine Oil) | بقع زيت الماكينة</option>
+                                <option value="Wrong Label / Tag Placement">Wrong Label / Tag Placement | تركيب الملصق في مكان خاطئ</option>
                             </optgroup>
                             <optgroup label="📏 القياسات والإنهاء / Measurement & Finishing">
-                                <option value="Out of Tolerance (+/-)">Out of Tolerance (+/-) | خارج نطاق القياس المسموح
-                                </option>
+                                <option value="Out of Tolerance (+/-)">Out of Tolerance (+/-) | خارج نطاق القياس المسموح</option>
                                 <option value="Size Mismatch">Size Mismatch | خطأ في المقاس</option>
-                                <option value="Ironing Burn / Shine">Ironing Burn / Shine | حرق المكواة / لمعة غير
-                                    مرغوبة</option>
-                                <option value="Loose Threads (Uncut)">Loose Threads (Uncut) | خيوط سائبة (عدم التشطيب)
-                                </option>
+                                <option value="Ironing Burn / Shine">Ironing Burn / Shine | حرق المكواة / لمعة غير مرغوبة</option>
+                                <option value="Loose Threads (Uncut)">Loose Threads (Uncut) | خيوط سائبة (عدم التشطيب)</option>
                                 <option value="Dirty / Stained Product">Dirty / Stained Product | منتج متسخ</option>
-                                <option value="Folding / Packing Error">Folding / Packing Error | خطأ في الطي أو التغليف
-                                </option>
+                                <option value="Folding / Packing Error">Folding / Packing Error | خطأ في الطي أو التغليف</option>
                             </optgroup>
                             <optgroup label="⚙️ النظام والإدارة / System & ISO">
-                                <option value="Missing Documentation">Missing Documentation | غياب الوثائق / أمر التصنيع
-                                </option>
-                                <option value="Safety Violation / Hazard">Safety Violation / Hazard | مخالفة إجراءات
-                                    السلامة</option>
+                                <option value="Missing Documentation">Missing Documentation | غياب الوثائق / أمر التصنيع</option>
+                                <option value="Safety Violation / Hazard">Safety Violation / Hazard | مخالفة إجراءات السلامة</option>
                                 <option value="Machine Breakdown">Machine Breakdown | عطل في الماكينة</option>
-                                <option value="Process Non-Conformity">Process Non-Conformity | عدم الالتزام بطريقة
-                                    العمل</option>
+                                <option value="Process Non-Conformity">Process Non-Conformity | عدم الالتزام بطريقة العمل</option>
                             </optgroup>
                             <optgroup label="📝 أخرى / Other">
                                 <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
@@ -1913,67 +1927,55 @@ foreach ($ncrs as $ncr) {
                 <div class="form-row single">
                     <div class="form-group">
                         <label>🚑 الإجراء الفوري <small>/ Immediate Action</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ما هو أول إجراء
-                            تم اتخاذه فوراً بعد اكتشاف المشكلة؟</small>
-                        <select name="immediate_action" id="ncr-action-select">
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ما هو أول إجراء تم اتخاذه فوراً بعد اكتشاف المشكلة؟</small>
+                        <select name="immediate_action" id="ncr-action-select" onchange="toggleNcrCustomField(this, 'ncr-immediate-action-custom')">
                             <option value="">-- 🚑 اختر الإجراء الفوري / Select Action --</option>
-                            <option value="Rework / Repair | إعادة العمل / إصلاح">🔧 إعادة العمل / إصلاح — Rework /
-                                Repair</option>
-                            <option value="Scrap / Reject | إتلاف / رفض نهائي">🗑️ إتلاف / رفض نهائي — Scrap / Reject
-                            </option>
-                            <option value="100% Sorting / Inspection | فرز شامل 100%">🔍 فرز شامل 100% — 100% Sorting
-                            </option>
-                            <option value="Quarantine / Isolate | حجز / عزل الكمية">🔒 حجز / عزل الكمية — Quarantine
-                            </option>
-                            <option value="Concession / Special Release | قبول استثنائي">✅ قبول استثنائي — Concession
-                            </option>
-                            <option value="Return to Supplier | إرجاع للمورد">↩️ إرجاع للمورد — Return to Supplier
-                            </option>
-                            <option value="Machine Adjustment | تعديل/ضبط الماكينة">⚙️ تعديل / ضبط الماكينة — Machine
-                                Adjustment</option>
-                            <option value="Clean / Spot Removal | تنظيف / إزالة البقع">🧹 تنظيف / إزالة البقع — Spot
-                                Removal</option>
+                            <option value="Rework / Repair | إعادة العمل / إصلاح">🔧 إعادة العمل / إصلاح — Rework / Repair</option>
+                            <option value="Scrap / Reject | إتلاف / رفض نهائي">🗑️ إتلاف / رفض نهائي — Scrap / Reject</option>
+                            <option value="100% Sorting / Inspection | فرز شامل 100%">🔍 فرز شامل 100% — 100% Sorting</option>
+                            <option value="Quarantine / Isolate | حجز / عزل الكمية">🔒 حجز / عزل الكمية — Quarantine</option>
+                            <option value="Concession / Special Release | قبول استثنائي">✅ قبول استثنائي — Concession</option>
+                            <option value="Return to Supplier | إرجاع للمورد">↩️ إرجاع للمورد — Return to Supplier</option>
+                            <option value="Machine Adjustment | تعديل/ضبط الماكينة">⚙️ تعديل / ضبط الماكينة — Machine Adjustment</option>
+                            <option value="Clean / Spot Removal | تنظيف / إزالة البقع">🧹 تنظيف / إزالة البقع — Spot Removal</option>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <textarea id="ncr-immediate-action-custom" name="immediate_action_custom" rows="2" placeholder="اكتب الإجراء الفوري... / Custom immediate action..." style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>👤 المسؤول <small>/ Assigned To</small></label>
-                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ من سيتولى متابعة
-                            حل هذه المشكلة؟</small>
-                        <select name="assigned_to">
+                        <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ من سيتولى متابعة حل هذه المشكلة؟</small>
+                        <select name="assigned_to" onchange="toggleNcrCustomField(this, 'ncr-assigned-to-custom')">
                             <option value="">-- اختر المسؤول / Select --</option>
                             <optgroup label="🏭 الإنتاج / Production">
                                 <option value="Line Supervisor | رئيس الفريق">Line Supervisor | رئيس الفريق</option>
                                 <option value="Floor Manager | رئيس الورشة">Floor Manager | رئيس الورشة</option>
-                                <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج
-                                </option>
+                                <option value="Production Manager | مدير الإنتاج">Production Manager | مدير الإنتاج</option>
                             </optgroup>
                             <optgroup label="🔍 الجودة والتقنية / Quality & Technical">
-                                <option value="Quality Controller (QC) | مراقب الجودة">Quality Controller (QC) | مراقب
-                                    الجودة</option>
+                                <option value="Quality Controller (QC) | مراقب الجودة">Quality Controller (QC) | مراقب الجودة</option>
                                 <option value="Quality Manager | مدير الجودة">Quality Manager | مدير الجودة</option>
-                                <option value="Technical Manager | المدير التقني">Technical Manager | المدير التقني
-                                </option>
+                                <option value="Technical Manager | المدير التقني">Technical Manager | المدير التقني</option>
                                 <option value="Method Agent | مسؤول الطرائق">Method Agent | مسؤول الطرائق</option>
                             </optgroup>
                             <optgroup label="🔧 الصيانة / Maintenance">
                                 <option value="Mechanic | ميكانيكي">Mechanic | ميكانيكي</option>
-                                <option value="Maintenance Manager | مدير الصيانة">Maintenance Manager | مدير الصيانة
-                                </option>
+                                <option value="Maintenance Manager | مدير الصيانة">Maintenance Manager | مدير الصيانة</option>
                             </optgroup>
                             <optgroup label="📦 الإمداد / Supply Chain">
                                 <option value="Warehouse Manager | أمين المخزن">Warehouse Manager | أمين المخزن</option>
-                                <option value="Purchasing Manager | مدير المشتريات">Purchasing Manager | مدير المشتريات
-                                </option>
+                                <option value="Purchasing Manager | مدير المشتريات">Purchasing Manager | مدير المشتريات</option>
                             </optgroup>
                             <optgroup label="💼 الإدارة / Admin & HR">
-                                <option value="HR Manager | مدير الموارد البشرية">HR Manager | مدير الموارد البشرية
-                                </option>
+                                <option value="HR Manager | مدير الموارد البشرية">HR Manager | مدير الموارد البشرية</option>
                                 <option value="HSE Officer | مسؤول السلامة">HSE Officer | مسؤول السلامة</option>
                                 <option value="Factory Director | مدير المصنع">Factory Director | مدير المصنع</option>
                             </optgroup>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <input type="text" id="ncr-assigned-to-custom" name="assigned_to_custom" placeholder="اكتب المسؤول... / Custom responsible..." style="display:none; margin-top:8px;" class="form-control">
                     </div>
                     <div class="form-group">
                         <label>📅 الموعد النهائي <small>/ Due Date</small></label>
@@ -2326,6 +2328,16 @@ foreach ($ncrs as $ncr) {
             }
         }
 
+        function toggleNcrCustomField(sel, targetId) {
+            const customField = document.getElementById(targetId);
+            if (sel.value === '__OTHER__') {
+                customField.style.display = 'block';
+            } else {
+                customField.style.display = 'none';
+                customField.value = '';
+            }
+        }
+
         function toggleCarCustomField(sel, targetId) {
             const customField = document.getElementById(targetId);
             if (sel.value === '__OTHER__') {
@@ -2656,16 +2668,18 @@ foreach ($ncrs as $ncr) {
             const disp = form.querySelector('[name="disposition"]');
             const loc = form.querySelector('[name="location"]');
             const dept = form.querySelector('[name="department"]');
+            const action = form.querySelector('[name="immediate_action"]');
             const assigned = form.querySelector('[name="assigned_to"]');
 
-            const catText = cat ? cat.options[cat.selectedIndex]?.text || '-' : '-';
-            const sevText = sev ? sev.options[sev.selectedIndex]?.text || '-' : '-';
-            const srcText = src ? src.options[src.selectedIndex]?.text || '-' : '-';
+            const catText = cat ? (cat.value === '__OTHER__' ? form.querySelector('[name="category_custom"]')?.value || '-' : cat.options[cat.selectedIndex]?.text || '-') : '-';
+            const sevText = sev ? (sev.value === '__OTHER__' ? form.querySelector('[name="severity_custom"]')?.value || '-' : sev.options[sev.selectedIndex]?.text || '-') : '-';
+            const srcText = src ? (src.value === '__OTHER__' ? form.querySelector('[name="source_custom"]')?.value || '-' : src.options[src.selectedIndex]?.text || '-') : '-';
             const descText = desc ? (desc.value === '__OTHER__' ? form.querySelector('[name="description_custom_en"]')?.value || '-' : desc.options[desc.selectedIndex]?.text || '-') : '-';
             const dispText = disp ? (disp.value === '__OTHER__' ? form.querySelector('[name="disposition_custom"]')?.value || '-' : disp.options[disp.selectedIndex]?.text || '-') : '-';
-            const locText = loc ? (loc.options[loc.selectedIndex]?.text || '-') : '-';
-            const deptText = dept ? (dept.options[dept.selectedIndex]?.text || '-') : '-';
-            const assignedText = assigned ? (assigned.options[assigned.selectedIndex]?.text || '-') : '-';
+            const locText = loc ? (loc.value === '__OTHER__' ? form.querySelector('[name="location_custom"]')?.value || '-' : loc.options[loc.selectedIndex]?.text || '-') : '-';
+            const deptText = dept ? (dept.value === '__OTHER__' ? form.querySelector('[name="department_custom"]')?.value || '-' : dept.options[dept.selectedIndex]?.text || '-') : '-';
+            const actionText = action ? (action.value === '__OTHER__' ? form.querySelector('[name="immediate_action_custom"]')?.value || '-' : action.options[action.selectedIndex]?.text || '-') : '-';
+            const assignedText = assigned ? (assigned.value === '__OTHER__' ? form.querySelector('[name="assigned_to_custom"]')?.value || '-' : assigned.options[assigned.selectedIndex]?.text || '-') : '-';
 
             // Close the selection modal first to avoid overlay issues
             closeModal('ncr-modal');
@@ -2680,6 +2694,7 @@ foreach ($ncrs as $ncr) {
                         <p>⚡ <strong>الشدة:</strong> ${sevText}</p>
                         <p>📡 <strong>المصدر:</strong> ${srcText}</p>
                         <p>📋 <strong>الوصف:</strong> ${descText}</p>
+                        <p>🚑 <strong>الإجراء الفوري:</strong> ${actionText}</p>
                         <p>⚖️ <strong>القرار:</strong> ${dispText}</p>
                         <p>📍 <strong>الموقع:</strong> ${locText}</p>
                         <p>🏢 <strong>القسم:</strong> ${deptText}</p>
