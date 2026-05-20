@@ -56,6 +56,13 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS `car_reports` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+// --- Ensure disposition column size is enough for custom user input ---
+try {
+    $pdo->exec("ALTER TABLE `ncr_reports` MODIFY COLUMN `disposition` VARCHAR(255) DEFAULT 'Pending'");
+} catch (PDOException $e) {
+    // Silently continue if ALTER fails
+}
+
 // --- Helper: Generate next NCR/CAR number ---
 function next_number($pdo, $prefix, $table, $column)
 {
@@ -129,6 +136,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $desc_ar = $desc_map[$desc_en_raw] ?? trim($_POST['description_ar'] ?? '');
         }
 
+        $disposition_raw = $_POST['disposition'] ?? 'Pending';
+        $disposition = ($disposition_raw === '__OTHER__') ? trim($_POST['disposition_custom'] ?? 'Other') : $disposition_raw;
+        if (mb_strlen($disposition) > 255) {
+            $disposition = mb_substr($disposition, 0, 250) . '...';
+        }
+
         $stmt = $pdo->prepare("INSERT INTO ncr_reports 
             (ncr_number, category, severity, source, location, department, description_en, description_ar, 
              immediate_action, disposition, reported_by, assigned_to, due_date, status)
@@ -143,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $desc_en,
             $desc_ar,
             trim($_POST['immediate_action'] ?? ''),
-            $_POST['disposition'] ?? 'Pending',
+            $disposition,
             $user_cin,
             trim($_POST['assigned_to'] ?? ''),
             $_POST['due_date'] ?: null
@@ -187,10 +200,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $root_cause = ($root_cause_raw === '__OTHER__') ? trim($_POST['root_cause_custom'] ?? '') : $root_cause_raw;
 
         $corrective_raw = trim($_POST['corrective_action'] ?? '');
-        $corrective = !empty($corrective_raw) ? $corrective_raw : trim($_POST['corrective_action_custom'] ?? '');
+        if ($corrective_raw === '__OTHER__') {
+            $corrective = trim($_POST['corrective_action_custom'] ?? '');
+        } else {
+            $corrective = !empty($corrective_raw) ? $corrective_raw : trim($_POST['corrective_action_custom'] ?? '');
+        }
 
         $preventive_raw = trim($_POST['preventive_action'] ?? '');
-        $preventive = !empty($preventive_raw) ? $preventive_raw : trim($_POST['preventive_action_custom'] ?? '');
+        if ($preventive_raw === '__OTHER__') {
+            $preventive = trim($_POST['preventive_action_custom'] ?? '');
+        } else {
+            $preventive = !empty($preventive_raw) ? $preventive_raw : trim($_POST['preventive_action_custom'] ?? '');
+        }
 
         $stmt = $pdo->prepare("INSERT INTO car_reports 
             (car_number, ncr_id, root_cause, corrective_action, preventive_action, 
@@ -1762,13 +1783,21 @@ foreach ($ncrs as $ncr) {
                         <label>⚖️ القرار <small>/ Disposition</small></label>
                         <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ماذا سنفعل
                             بالمنتج غير المطابق؟</small>
-                        <select name="disposition">
+                        <select name="disposition" onchange="toggleNcrDispositionCustom(this)">
                             <option value="Pending">⏳ معلق / Pending — لم يُتخذ قرار بعد</option>
                             <option value="Rework">🔧 إعادة تشغيل / Rework — إصلاح المنتج</option>
                             <option value="Use As-Is">✅ استعمال كما هو — قبول رغم العيب</option>
                             <option value="Scrap">🗑️ إتلاف / Scrap — التخلص النهائي</option>
                             <option value="Return to Supplier">↩️ إرجاع للمورد — إعادة المواد</option>
+                            <option value="Expedite Material">🚀 تسريع المواد / Expedite Material</option>
+                            <option value="Mark Boundaries">📍 تحديد الحدود / Mark Boundaries</option>
+                            <option value="Return to Home">🏠 إعادة للمكان / Return to Home</option>
+                            <option value="Reassign Operators">👥 إعادة توزيع العمال / Reassign Operators</option>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
+                        <textarea id="ncr-disposition-custom" name="disposition_custom" rows="2"
+                            placeholder="اكتب القرار المتخذ... / Write custom disposition..."
+                            style="display:none; margin-top:8px;"></textarea>
                     </div>
                 </div>
                 <div class="form-row">
@@ -2019,7 +2048,7 @@ foreach ($ncrs as $ncr) {
                                 style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
                         <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ ماذا سنفعل لحل
                             المشكلة الحالية؟</small>
-                        <select name="corrective_action" id="car-corrective">
+                        <select name="corrective_action" id="car-corrective" onchange="toggleCarCustomField(this, 'car-corrective-custom')">
                             <option value="">-- 🛠️ اختر الإجراء / Select Action --</option>
                             <option value="Operator Retraining / Briefing | إعادة تدريب / توجيه العامل">🎓 إعادة تدريب /
                                 توجيه العامل — Retraining</option>
@@ -2035,6 +2064,7 @@ foreach ($ncrs as $ncr) {
                                 Material Exchange</option>
                             <option value="Process Audit Conducted | إجراء تدقيق فوري للعملية">🔍 إجراء تدقيق فوري —
                                 Process Audit</option>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
                         <textarea id="car-corrective-custom" name="corrective_action_custom" rows="2"
                             placeholder="صف الإجراء التصحيحي..." style="display:none; margin-top:8px;"></textarea>
@@ -2046,7 +2076,7 @@ foreach ($ncrs as $ncr) {
                                 style="font-size:0.75em; color:#2e7d32; display:none;">💡 مقترح</span></label>
                         <small style="display:block; color:#888; margin:-4px 0 6px; font-size:0.8em;">⬅ كيف نمنع تكرار
                             هذه المشكلة مستقبلاً؟</small>
-                        <select name="preventive_action" id="car-preventive">
+                        <select name="preventive_action" id="car-preventive" onchange="toggleCarCustomField(this, 'car-preventive-custom')">
                             <option value="">-- 🛡️ اختر الإجراء / Select Action --</option>
                             <option value="Update SOP / Work Instructions | تحديث إجراءات العمل القياسية">📝 تحديث
                                 إجراءات العمل (SOP) — Update SOP</option>
@@ -2062,6 +2092,7 @@ foreach ($ncrs as $ncr) {
                                 (Polyvalence)</option>
                             <option value="Install Better Lighting / Tools | تحسين الإضاءة / أدوات">💡 تحسين الإضاءة /
                                 الأدوات — Lighting/Tools</option>
+                            <option value="__OTHER__">✏️ أخرى — كتابة يدوية / Other — Custom</option>
                         </select>
                         <textarea id="car-preventive-custom" name="preventive_action_custom" rows="2"
                             placeholder="كيف نمنع تكرار المشكلة؟" style="display:none; margin-top:8px;"></textarea>
@@ -2282,6 +2313,26 @@ foreach ($ncrs as $ncr) {
             } else {
                 caHint.style.display = 'none';
                 paHint.style.display = 'none';
+            }
+        }
+
+        function toggleNcrDispositionCustom(sel) {
+            const customField = document.getElementById('ncr-disposition-custom');
+            if (sel.value === '__OTHER__') {
+                customField.style.display = 'block';
+            } else {
+                customField.style.display = 'none';
+                customField.value = '';
+            }
+        }
+
+        function toggleCarCustomField(sel, targetId) {
+            const customField = document.getElementById(targetId);
+            if (sel.value === '__OTHER__') {
+                customField.style.display = 'block';
+            } else {
+                customField.style.display = 'none';
+                customField.value = '';
             }
         }
 
@@ -2602,6 +2653,7 @@ foreach ($ncrs as $ncr) {
             const sev = form.querySelector('[name="severity"]');
             const src = form.querySelector('[name="source"]');
             const desc = form.querySelector('[name="description_en"]');
+            const disp = form.querySelector('[name="disposition"]');
             const loc = form.querySelector('[name="location"]');
             const dept = form.querySelector('[name="department"]');
             const assigned = form.querySelector('[name="assigned_to"]');
@@ -2609,7 +2661,8 @@ foreach ($ncrs as $ncr) {
             const catText = cat ? cat.options[cat.selectedIndex]?.text || '-' : '-';
             const sevText = sev ? sev.options[sev.selectedIndex]?.text || '-' : '-';
             const srcText = src ? src.options[src.selectedIndex]?.text || '-' : '-';
-            const descText = desc ? (desc.options[desc.selectedIndex]?.text || desc.value || '-') : '-';
+            const descText = desc ? (desc.value === '__OTHER__' ? form.querySelector('[name="description_custom_en"]')?.value || '-' : desc.options[desc.selectedIndex]?.text || '-') : '-';
+            const dispText = disp ? (disp.value === '__OTHER__' ? form.querySelector('[name="disposition_custom"]')?.value || '-' : disp.options[disp.selectedIndex]?.text || '-') : '-';
             const locText = loc ? (loc.options[loc.selectedIndex]?.text || '-') : '-';
             const deptText = dept ? (dept.options[dept.selectedIndex]?.text || '-') : '-';
             const assignedText = assigned ? (assigned.options[assigned.selectedIndex]?.text || '-') : '-';
@@ -2627,6 +2680,7 @@ foreach ($ncrs as $ncr) {
                         <p>⚡ <strong>الشدة:</strong> ${sevText}</p>
                         <p>📡 <strong>المصدر:</strong> ${srcText}</p>
                         <p>📋 <strong>الوصف:</strong> ${descText}</p>
+                        <p>⚖️ <strong>القرار:</strong> ${dispText}</p>
                         <p>📍 <strong>الموقع:</strong> ${locText}</p>
                         <p>🏢 <strong>القسم:</strong> ${deptText}</p>
                         <p>👤 <strong>المسؤول:</strong> ${assignedText}</p>
@@ -2660,7 +2714,13 @@ foreach ($ncrs as $ncr) {
             const getSelText = (name) => {
                 const el = form.querySelector(`[name="${name}"]`);
                 if (!el) return '-';
-                if (el.tagName === 'SELECT') return el.options[el.selectedIndex]?.text || '-';
+                if (el.tagName === 'SELECT') {
+                    if (el.value === '__OTHER__') {
+                        const customEl = form.querySelector(`[name="${name}_custom"]`);
+                        return customEl?.value || 'أخرى / Other';
+                    }
+                    return el.options[el.selectedIndex]?.text || '-';
+                }
                 return el.value || '-';
             };
 
