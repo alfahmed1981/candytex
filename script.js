@@ -198,20 +198,42 @@ function createIssueModal() {
                     <input type="text" id="modal_who_custom" placeholder="✏️ اكتب اسم المسؤول يدوياً / Enter responsible person..." style="display:none; width:100%; margin-top:8px; padding:12px; border:2px solid #007bff; border-radius:6px; font-size:15px; box-sizing:border-box;">
                 </div>
 
-                <!-- Due Date & Status (Hidden for new) -->
+                <!-- Dates Row -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
                     <div>
-                        <label style="display:block; font-weight:bold; margin-bottom:5px;">Due Date / الموعد</label>
-                        <input type="date" id="modal_date" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                        <label style="display:block; font-weight:bold; margin-bottom:5px;">
+                            📅 تاريخ الحادثة / Incident Date
+                        </label>
+                        <input type="date" id="modal_day_date" style="width:100%; padding:12px; border:2px solid #fd7e14; border-radius:6px; font-size:16px; box-sizing:border-box;">
+                        <small style="color:#fd7e14; font-size:11px;">&#x26A0;️ يحدّد لون خانة SQD+C</small>
                     </div>
-                     <div>
-                        <label style="display:block; font-weight:bold; margin-bottom:5px;">Status / الحالة</label>
-                         <input type="text" value="Open" readonly style="width:100%; padding:12px; background:#f0f0f0; border:1px solid #ccc; border-radius:6px; font-size:16px; color:#666;">
+                    <div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px;">Due Date / الموعد</label>
+                        <input type="date" id="modal_date" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <!-- SQDC Status to set -->
+                <div style="margin-bottom:15px; padding:12px; background:#fff8e1; border-radius:8px; border:1px solid #ffc107;">
+                    <label style="display:block; font-weight:bold; margin-bottom:8px;">🎨 تحديث حالة اليوم في لوحة SQD+C / Update Day Status</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                            <input type="radio" name="modal_sqdc_status" value="orange" style="accent-color:#fd7e14;">
+                            <span style="background:#fd7e14; color:white; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold;">⚠️ إجراء (Orange)</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                            <input type="radio" name="modal_sqdc_status" value="red" style="accent-color:#dc3545;">
+                            <span style="background:#dc3545; color:white; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold;">❌ خطر (Red)</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                            <input type="radio" name="modal_sqdc_status" value="none" checked style="accent-color:#6c757d;">
+                            <span style="background:#6c757d; color:white; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold;">○ بدون تغيير</span>
+                        </label>
                     </div>
                 </div>
 
                 <div style="margin-top:20px; display:flex; gap:10px;">
-                    <button onclick="submitIssueFromModal()" style="flex:1; background:#28a745; color:white; padding:15px; border:none; border-radius:8px; font-size:18px; font-weight:bold; cursor:pointer;">💾 ADD / إضافة</button>
+                    <button onclick="submitIssueFromModal()" style="flex:1; background:#28a745; color:white; padding:15px; border:none; border-radius:8px; font-size:18px; font-weight:bold; cursor:pointer;">💾 حفظ / Save</button>
                     <button onclick="closeIssueModal()" style="flex:0; background:#6c757d; color:white; padding:15px 25px; border:none; border-radius:8px; font-size:16px; cursor:pointer;">Cancel</button>
                 </div>
 
@@ -236,11 +258,26 @@ function openIssueModal(presetCategory = null, presetDate = null) {
         if (el) { el.value = ''; el.style.display = 'none'; }
     });
 
+    // Reset SQDC status radio
+    const noneRadio = document.querySelector('input[name="modal_sqdc_status"][value="none"]');
+    if (noneRadio) noneRadio.checked = true;
+
     // Date Logic
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('modal_date');
     dateInput.value = presetDate || today;
     dateInput.max = today; // Prevent future dates
+
+    // Incident date: same as presetDate (the SQDC day that was clicked)
+    const dayDateInput = document.getElementById('modal_day_date');
+    dayDateInput.value = presetDate || today;
+    dayDateInput.max = today;
+
+    // If coming from a red/orange click, pre-select the status radio
+    if (pendingRedUpdate) {
+        const redRadio = document.querySelector('input[name="modal_sqdc_status"][value="red"]');
+        if (redRadio) redRadio.checked = true;
+    }
 
     // Trigger update for dropdowns
     updateModalOptions();
@@ -317,6 +354,8 @@ function submitIssueFromModal() {
     const action = resolveField('modal_action', 'modal_action_custom');
     const who = resolveField('modal_who', 'modal_who_custom');
     const date = document.getElementById('modal_date').value;
+    const dayDate = document.getElementById('modal_day_date').value;
+    const sqdc_status = document.querySelector('input[name="modal_sqdc_status"]:checked')?.value || 'none';
 
     // Determine which element to highlight for validation
     const getValidationEl = (selectId, customId) => {
@@ -348,31 +387,53 @@ function submitIssueFromModal() {
         return;
     }
 
-    // Add to Local Data
     const newRow = {
         category: cat,
         issue: issue,
         action_plan: action,
         responsible: who,
         due_date: date,
-        status: 'Open' // Default
+        day_date: dayDate,
+        status: 'Open'
     };
 
-    cmData.push(newRow);
-    renderTable(cmData);
     closeIssueModal();
 
-    // Scroll to bottom
-    setTimeout(() => {
-        const table = document.getElementById('cm-table');
-        const rows = table.querySelectorAll('tbody tr');
-        const lastRow = rows[rows.length - 1];
-        if (lastRow) {
-            lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            lastRow.style.backgroundColor = '#d4edda';
-            setTimeout(() => lastRow.style.backgroundColor = '', 2000);
+    // --- Save immediately to DB + update SQDC grid in one step ---
+    fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'save_countermeasures',
+            data: [newRow],
+            csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            Swal.fire('❌ خطأ', data.message || 'Save failed', 'error');
+            return;
         }
-    }, 100);
+
+        // Determine which SQDC status to apply
+        // Priority: pendingRedUpdate > modal radio > none
+        const targetDate = pendingRedUpdate ? pendingRedUpdate.date : dayDate;
+        const targetCat  = pendingRedUpdate ? pendingRedUpdate.category : cat;
+        let   targetStatus = pendingRedUpdate ? 'red' : sqdc_status;
+
+        if (targetStatus && targetStatus !== 'none' && targetDate && targetCat) {
+            // Update SQDC grid color then reload
+            pendingRedUpdate = null;
+            performStatusUpdate(targetCat, targetDate, targetStatus);
+        } else {
+            pendingRedUpdate = null;
+            location.reload();
+        }
+    })
+    .catch(() => {
+        Swal.fire('❌ خطأ', 'تعذر حفظ المشكلة. حاول مجدداً.', 'error');
+    });
 }
 
 
@@ -438,6 +499,7 @@ function openModal(type, day, currentYear, currentMonth) {
 
 function closeModal() { document.getElementById('statusModal').style.display = 'none'; }
 
+// selectStatus: orange now pre-selects radio in modal
 function selectStatus(status) {
     const dateStr = `${targetYear}-${targetMonth}-${currentDay}`;
     const category = currentCategory;
@@ -450,13 +512,19 @@ function selectStatus(status) {
         });
     } else if (status === 'orange') {
         Swal.fire({ title: 'تحذير', html: msg, icon: 'warning', showCancelButton: true, confirmButtonText: '⚠️ إضافة مشكلة', cancelButtonText: 'حفظ فقط' }).then((r) => {
-            performStatusUpdate(category, dateStr, status, r.isConfirmed);
-            if (r.isConfirmed) openIssueModal(category, dateStr);
+            if (r.isConfirmed) {
+                // Open issue modal — it will save CM + update SQDC to orange
+                pendingRedUpdate = { category, date: dateStr, status: 'orange' };
+                openIssueModal(category, dateStr);
+            } else {
+                // Just update the SQDC day without an issue
+                performStatusUpdate(category, dateStr, status);
+            }
         });
     } else if (status === 'red') {
         Swal.fire({ title: 'توقف', html: msg, icon: 'error', confirmButtonColor: '#d33', confirmButtonText: '🚨 تسجيل المشكلة' }).then(() => {
-            openIssueModal(category, dateStr);
             pendingRedUpdate = { category, date: dateStr, status: 'red' };
+            openIssueModal(category, dateStr);
         });
     } else if (status === 'gray') {
         performStatusUpdate(category, dateStr, status);
