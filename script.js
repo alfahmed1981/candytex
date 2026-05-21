@@ -174,25 +174,28 @@ function createIssueModal() {
                 <!-- Issue Select -->
                 <div style="margin-bottom:15px;">
                     <label style="display:block; font-weight:bold; margin-bottom:5px;">Issue / المشكلة</label>
-                    <select id="modal_issue" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                    <select id="modal_issue" onchange="handleOtherSelect('modal_issue', 'modal_issue_custom')" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
                         <!-- Populated dynamic -->
                     </select>
+                    <input type="text" id="modal_issue_custom" placeholder="✏️ اكتب المشكلة يدوياً / Describe issue manually..." style="display:none; width:100%; margin-top:8px; padding:12px; border:2px solid #007bff; border-radius:6px; font-size:15px; box-sizing:border-box;">
                 </div>
 
                 <!-- Action Select -->
                 <div style="margin-bottom:15px;">
                     <label style="display:block; font-weight:bold; margin-bottom:5px;">Action / الإجراء</label>
-                    <select id="modal_action" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                    <select id="modal_action" onchange="handleOtherSelect('modal_action', 'modal_action_custom')" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
                          <!-- Populated dynamic -->
                     </select>
+                    <input type="text" id="modal_action_custom" placeholder="✏️ صف الإجراء يدوياً / Describe action manually..." style="display:none; width:100%; margin-top:8px; padding:12px; border:2px solid #007bff; border-radius:6px; font-size:15px; box-sizing:border-box;">
                 </div>
 
                 <!-- Responsible Select -->
                 <div style="margin-bottom:15px;">
                     <label style="display:block; font-weight:bold; margin-bottom:5px;">Who / المسؤول</label>
-                    <select id="modal_who" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
+                    <select id="modal_who" onchange="handleOtherSelect('modal_who', 'modal_who_custom')" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px; font-size:16px;">
                          <!-- Populated dynamic -->
                     </select>
+                    <input type="text" id="modal_who_custom" placeholder="✏️ اكتب اسم المسؤول يدوياً / Enter responsible person..." style="display:none; width:100%; margin-top:8px; padding:12px; border:2px solid #007bff; border-radius:6px; font-size:15px; box-sizing:border-box;">
                 </div>
 
                 <!-- Due Date & Status (Hidden for new) -->
@@ -227,6 +230,12 @@ function openIssueModal(presetCategory = null, presetDate = null) {
     // Reset Fields
     document.getElementById('modal_cat').value = presetCategory || 'S';
 
+    // Reset custom text inputs
+    ['modal_issue_custom', 'modal_action_custom', 'modal_who_custom'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.value = ''; el.style.display = 'none'; }
+    });
+
     // Date Logic
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('modal_date');
@@ -241,6 +250,24 @@ function openIssueModal(presetCategory = null, presetDate = null) {
 
 function closeIssueModal() {
     document.getElementById('issueModal').style.display = 'none';
+}
+
+// Show/hide custom text input when "Other" is selected
+function handleOtherSelect(selectId, customInputId) {
+    const sel = document.getElementById(selectId);
+    const input = document.getElementById(customInputId);
+    if (!sel || !input) return;
+
+    const isOther = sel.value.toLowerCase().includes('other') || sel.value.includes('أخرى');
+    if (isOther) {
+        input.style.display = 'block';
+        input.focus();
+        // Add a slide-in animation
+        input.style.animation = 'slideInCustom 0.25s ease';
+    } else {
+        input.style.display = 'none';
+        input.value = '';
+    }
 }
 
 function updateModalOptions() {
@@ -274,29 +301,47 @@ function updateModalOptions() {
 
 function submitIssueFromModal() {
     const cat = document.getElementById('modal_cat').value;
-    const issue = document.getElementById('modal_issue').value;
-    const action = document.getElementById('modal_action').value;
-    const who = document.getElementById('modal_who').value;
+
+    // Resolve values: use custom text if "Other" was selected
+    const resolveField = (selectId, customId) => {
+        const sel = document.getElementById(selectId);
+        const custom = document.getElementById(customId);
+        const isOther = sel.value.toLowerCase().includes('other') || sel.value.includes('أخرى');
+        if (isOther) {
+            return custom ? custom.value.trim() : '';
+        }
+        return sel.value;
+    };
+
+    const issue = resolveField('modal_issue', 'modal_issue_custom');
+    const action = resolveField('modal_action', 'modal_action_custom');
+    const who = resolveField('modal_who', 'modal_who_custom');
     const date = document.getElementById('modal_date').value;
+
+    // Determine which element to highlight for validation
+    const getValidationEl = (selectId, customId) => {
+        const sel = document.getElementById(selectId);
+        const isOther = sel.value.toLowerCase().includes('other') || sel.value.includes('أخرى');
+        return isOther ? document.getElementById(customId) : sel;
+    };
 
     if (!cat || !issue || !action || !who || !date) {
         // Highlight empty fields
         const fields = [
-            { id: 'modal_issue', val: issue, name: 'المشكلة / Issue' },
-            { id: 'modal_action', val: action, name: 'الإجراء / Action' },
-            { id: 'modal_who', val: who, name: 'المسؤول / Who' },
-            { id: 'modal_date', val: date, name: 'الموعد / Due Date' }
+            { el: getValidationEl('modal_issue', 'modal_issue_custom'), val: issue, name: 'المشكلة / Issue' },
+            { el: getValidationEl('modal_action', 'modal_action_custom'), val: action, name: 'الإجراء / Action' },
+            { el: getValidationEl('modal_who', 'modal_who_custom'), val: who, name: 'المسؤول / Who' },
+            { el: document.getElementById('modal_date'), val: date, name: 'الموعد / Due Date' }
         ];
         const missing = [];
         fields.forEach(f => {
-            const el = document.getElementById(f.id);
             if (!f.val) {
-                el.style.border = '2px solid #dc3545';
-                el.style.boxShadow = '0 0 5px rgba(220,53,69,0.4)';
+                f.el.style.border = '2px solid #dc3545';
+                f.el.style.boxShadow = '0 0 5px rgba(220,53,69,0.4)';
                 missing.push(f.name);
             } else {
-                el.style.border = '1px solid #ccc';
-                el.style.boxShadow = 'none';
+                f.el.style.border = '';
+                f.el.style.boxShadow = 'none';
             }
         });
         Swal.fire({ title: '⚠️ حقول ناقصة', html: missing.join('<br>'), icon: 'warning', customClass: { container: 'swal-over-modal' } });
@@ -538,6 +583,10 @@ style.textContent = `
     .btn-save { background: #28a745; color: white; margin-right: 5px; }
     .btn-del { background: #dc3545; color: white; }
     .swal-over-modal { z-index: 9999 !important; }
+    @keyframes slideInCustom {
+        from { opacity: 0; transform: translateY(-6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 `;
 document.head.appendChild(style);
 
