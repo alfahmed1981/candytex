@@ -93,9 +93,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $birth = $_POST['edit_birth_date'] ?? null;
         if ($birth === '')
             $birth = null;
+        
+        $password = trim($_POST['edit_password'] ?? '');
+
         audit_log($pdo, 'edit_user', "Edited user ID: $id — Name: $name, Role: $role");
-        $stmt = $pdo->prepare("UPDATE users SET name=?, phone=?, email=?, whatsapp=?, role=?, department=?, location=?, status=?, birth_date=? WHERE id=?");
-        $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $role, $dept, $loc, $status, $birth, $id]);
+        
+        if (!empty($password)) {
+            $hashed = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("UPDATE users SET name=?, phone=?, email=?, whatsapp=?, role=?, department=?, location=?, status=?, birth_date=?, password=? WHERE id=?");
+            $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $role, $dept, $loc, $status, $birth, $hashed, $id]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE users SET name=?, phone=?, email=?, whatsapp=?, role=?, department=?, location=?, status=?, birth_date=? WHERE id=?");
+            $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $role, $dept, $loc, $status, $birth, $id]);
+        }
+
         header("Location: admin.php?msg=Updated");
         exit;
     }
@@ -806,6 +817,11 @@ foreach ($users as $u) {
 
                 <label>Birth Date / تاريخ الميلاد</label>
                 <input type="date" name="edit_birth_date" id="edit_birth_date">
+
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+                <label style="color:#d35400;">New Password / كلمة المرور الجديدة</label>
+                <input type="text" name="edit_password" id="edit_password" placeholder="Leave blank to keep current password / اتركها فارغة إذا لم ترد التغيير">
+
 
                 <div class="modal-actions">
                     <button type="button" class="btn" style="background:#6c757d;" onclick="closeEditModal()">Cancel /
