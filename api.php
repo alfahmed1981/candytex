@@ -167,6 +167,8 @@ try {
         $dept = trim($input['department'] ?? '');
         $loc = trim($input['location'] ?? '');
         $bdate = $input['birth_date'] ?? '';
+        $new_password = $input['new_password'] ?? '';
+        $confirm_password = $input['confirm_password'] ?? '';
 
         if (empty($name) || empty($phone) || empty($dept) || empty($loc) || empty($bdate)) {
             api_response(false, [], 'All fields are required');
@@ -174,9 +176,19 @@ try {
         if (!validate_date($bdate)) {
             api_response(false, [], 'Invalid date format');
         }
+        
+        if (!empty($new_password)) {
+            if ($new_password !== $confirm_password) {
+                api_response(false, [], 'Passwords do not match');
+            }
+            $hashed = password_hash($new_password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("UPDATE users SET name = ?, phone = ?, email = ?, whatsapp = ?, department = ?, location = ?, birth_date = ?, password = ? WHERE cin = ?");
+            $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $dept, $loc, $bdate, $hashed, $_SESSION['user_cin']]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE users SET name = ?, phone = ?, email = ?, whatsapp = ?, department = ?, location = ?, birth_date = ? WHERE cin = ?");
+            $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $dept, $loc, $bdate, $_SESSION['user_cin']]);
+        }
 
-        $stmt = $pdo->prepare("UPDATE users SET name = ?, phone = ?, email = ?, whatsapp = ?, department = ?, location = ?, birth_date = ? WHERE cin = ?");
-        $stmt->execute([$name, $phone, $email ?: null, $whatsapp ?: null, $dept, $loc, $bdate, $_SESSION['user_cin']]);
         $_SESSION['user_name'] = $name;
         api_response(true);
 

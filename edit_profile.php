@@ -210,6 +210,24 @@ ob_start();
                 <input type="date" name="birth_date" required value="<?= $user['birth_date'] ?? '' ?>">
             </div>
 
+            <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+            <div class="info-box" style="background:#fff3cd; color:#856404;">
+                Leave password fields blank if you don't want to change it.<br>
+                اترك حقول كلمة المرور فارغة إذا كنت لا ترغب في تغييرها.
+            </div>
+
+            <!-- New Password -->
+            <div class="form-group">
+                <label>New Password / كلمة المرور الجديدة</label>
+                <input type="password" name="new_password" id="new_password" placeholder="Enter new password...">
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+                <label>Confirm Password / تأكيد كلمة المرور</label>
+                <input type="password" name="confirm_password" id="confirm_password" placeholder="Confirm new password...">
+            </div>
+
             <button type="submit">💾 Save Changes / حفظ التغييرات</button>
             <button type="button" class="back-btn" onclick="window.location.href='index.php'">← Back to Dashboard /
                 العودة</button>
@@ -219,6 +237,13 @@ ob_start();
     <script>
         document.getElementById('profileForm').addEventListener('submit', function (e) {
             e.preventDefault();
+
+            const newPass = document.getElementById('new_password').value;
+            const confPass = document.getElementById('confirm_password').value;
+            if (newPass !== '' && newPass !== confPass) {
+                Swal.fire('Error', 'Passwords do not match / كلمات المرور غير متطابقة', 'error');
+                return;
+            }
 
             const formData = new FormData(this);
             const data = Object.fromEntries(formData.entries());
