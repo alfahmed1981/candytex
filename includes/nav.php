@@ -27,8 +27,8 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
 <div class="top-nav">
     <div class="top-nav-header">
         <h3>📊 SQD+C Board</h3>
-        <span class="user-info">👤
-            <?= htmlspecialchars($nav_user_name) ?>
+        <span class="user-info">
+            <a href="edit_profile.php" style="color:white; text-decoration:none;">👤 <?= htmlspecialchars($nav_user_name) ?> ⚙️</a>
         </span>
     </div>
     <div class="nav-links">
@@ -76,6 +76,7 @@ $nav_is_impersonating = !empty($_SESSION['is_impersonating']);
         <p>
             <?= htmlspecialchars($_SESSION['user_cin'] ?? '') ?>
         </p>
+        <a href="edit_profile.php" style="display:inline-block; margin-top:5px; color:#fff; text-decoration:none; background:#ff9f43; padding:5px 10px; border-radius:5px; font-size:12px; font-weight:bold;">⚙️ Edit Profile / تعديل الحساب</a>
     </div>
     <hr>
     <a href="index.php" class="logout-btn" style="background:#007bff;">📊 لوحة القيادة</a>
